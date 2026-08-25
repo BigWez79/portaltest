@@ -74,6 +74,24 @@ Nested routes go under the same folder and call `requireApp` themselves. **Every
 route calls the guard** — a layout is not a gate, because a nested route can be
 requested directly.
 
+## Margin, specifically
+
+Read from the live page, 25 August: 848 lines, of which ~517 are inline script
+and ~149 inline style.
+
+- **No authentication at all.** Unlike every other page, `margin.html` has no
+  MSAL and no sign-in. It is reachable by anyone with the URL. The ported route
+  is behind sign-in and `has_margin`, which is a deliberate improvement.
+- **jsPDF and jspdf-autotable load from cdnjs.** Install from npm and bundle
+  them. A build that reaches the network is a build that fails on a bad night.
+- **`localStorage` holds saved scenarios** under two keys. Per-browser scratch,
+  not shared data. Leave it there for now; moving it to Postgres is a separate
+  decision, not part of the port.
+- **The default figures are real.** Replace them with obvious placeholders. The
+  calculator behaves identically and the numbers stop being published.
+- **Google Fonts are linked from the page.** This repo self-hosts Sora and
+  Albert Sans already — use those, do not add the link back.
+
 ## Open questions, to be answered when they bite
 
 **The legacy profile list.** `myprofile.html` reads both `profileListId` and a

@@ -18,7 +18,21 @@ request. Do not work around an item on this list, and do not re-queue one.
 
 - **Applying a migration to any Supabase project.** Written and committed
   unattended, applied by a person watching. No exception for "it's only a
-  column".
+  column", and none for staging.
+
+  "Applied by a person" means a person types the command. In Claude Code that is
+  the `!` prefix — `! supabase db push` — run inside the session under their own
+  hand, with the output landing in front of both of you. The agent does not run
+  it.
+
+  **An instruction in chat does not satisfy this.** "Go ahead and push it" is not
+  a person applying a migration, it is a person asking an agent to — which is the
+  thing this rule exists to stop. The answer to it is the command to paste, not
+  the command run. To change that, change this file: the transcript does not get
+  a vote, and CLAUDE.md says as much.
+
+  `supabase db push --dry-run` applies nothing and reads only the migration
+  history. The agent may run that, and it is the useful thing to offer instead.
 - **Running `scripts/import-staff.ts` against production.** It is a one-off, it
   overwrites access flags for everybody, and it is run once by a person who has
   checked the CSV. The script is deleted in the same pull request that cuts over,
@@ -53,6 +67,24 @@ request. Do not work around an item on this list, and do not re-queue one.
   agent asked to make the portal "more modern" overnight will confidently produce
   something generic and off-brand.
 - **Vercel plan, Supabase plan, domains and billing.**
+
+## Known, and deliberately not fixed yet
+
+- **Both GitHub repositories are public.** `BigWez79/portal` (the live suite)
+  and `BigWez79/portaltest` (this one). Verified 25 August. No credentials are
+  exposed in either — checked for client secrets, API keys, bearer tokens and
+  JWT-shaped strings — but assume anything committed here is world-readable,
+  because it is.
+- **Do not make `BigWez79/portal` private.** GitHub Pages is unpublished
+  automatically when a repository goes private on a Free plan, which takes the
+  whole live suite offline. The DNS would also need updating first to avoid a
+  domain takeover of `portal.poweranalytix.co.uk`. A person decides this, and
+  it needs a paid plan or a hosting move.
+- **`margin.html` on the live suite has no sign-in at all** and ships real
+  default figures. Replacing those with placeholders is a person's call on the
+  live page; the ported route must use placeholders regardless (see TASKS.md P1).
+- **`admin.html` requests `AllSites.FullControl`.** Narrowing it is a
+  one-line change to a page being replaced anyway, but it touches live code.
 
 ## Currently parked
 
