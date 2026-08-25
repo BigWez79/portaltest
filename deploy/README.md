@@ -7,7 +7,7 @@ commits code unattended.
 | Job | When | What it does |
 |---|---|---|
 | `uk.poweranalytix.portal.overnight` | 03:00 daily | Works `TASKS.md` through `./overnight.sh` |
-| `uk.poweranalytix.portal.staging-keepalive` | 07:00 daily | One request, so `portal-staging` does not pause |
+| `uk.poweranalytix.portal.staging-keepalive` | 07:00 daily | Pings `portal-staging`, then checks its auth settings |
 
 The reasoning lives in the plists themselves, next to the lines it explains, the
 way `i-love-isle-of-wight/deploy/` does it. This file is only how to install
@@ -75,6 +75,37 @@ papered over:
   keys. A plist cannot unset a file. It is `0600` and gitignored and the nightly
   run only compiles and tests, but do not read "no Supabase variables" as "the
   run cannot see staging credentials".
+
+## `check-auth-config.sh`
+
+Reads `/auth/v1/settings` from the linked project and fails if it is not what
+`BLOCKED.md` requires:
+
+| Setting | Must be | Because |
+|---|---|---|
+| `disable_signup` | `true` | Otherwise any address on earth can request a sign-in link and get an `auth.users` row |
+| `mailer_autoconfirm` | `false` | Otherwise a link need not be clicked — knowing an address is enough |
+| `external.anonymous_users` | `false` | Otherwise anonymous sessions bypass the staff list |
+
+```
+./deploy/check-auth-config.sh     # 0 fine · 2 a setting is wrong · 78 cannot check
+```
+
+**It is not part of `npm run verify` and must not become part of it.** Verify
+runs on fixtures, reaches no live service and needs no credential — that is what
+makes it identical at 03:00 on the Mac Studio and on a laptop on a train. It is
+also why it is structurally blind to this: on 2026-08-25 `portal-staging` was
+found with `disable_signup: false` while verify was green, had always been
+green, and would have stayed green. `src/app/actions/auth.ts` even carried a
+comment asserting signups were off.
+
+The daily keep-alive runs it, because that job already exists and already holds
+the anon key. Exit codes stay distinct: `1` staging did not answer, `2` staging
+answered and is configured wrongly.
+
+It reports and does not fix. These are project settings and a person changes
+them in the dashboard — `supabase config push` would be the workaround
+`BLOCKED.md` forbids, and is deliberately not used.
 
 ## Why the keep-alive is a separate job
 
