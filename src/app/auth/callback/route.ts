@@ -11,31 +11,37 @@ import { supabaseServer } from "@/lib/supabase/server";
  * the whole reason this route exists rather than letting Supabase's own
  * /auth/v1/verify endpoint finish the job.
  *
- * That choice only works if the email templates cooperate, and by default they
- * do not. Supabase ships templates built on {{ .ConfirmationURL }}, which is
+ * TWO WAYS IN, because the email that actually gets sent decides which.
  *
- *   https://<ref>.supabase.co/auth/v1/verify?token=…&type=…&redirect_to=…
+ * `?code=`  — what the stock templates produce, and therefore what happens
+ *             today. Supabase's {{ .ConfirmationURL }} points at its own
+ *             /auth/v1/verify, which verifies and then redirects here.
+ *             @supabase/ssr hard-codes flowType: "pkce", so that redirect
+ *             carries a code rather than a fragment, and exchangeCodeForSession
+ *             finishes the job — on the server, which is what matters.
  *
- * Supabase verifies that itself and redirects to redirect_to with the session
- * in the URL *fragment*, which only client-side JavaScript can read. This route
- * would then see no token_hash and bounce the person to /?error=link, and the
- * session would be sitting in the address bar of a page that never reads it.
+ * `token_hash` — what a custom template produces, via {{ .TokenHash }}. Kept
+ *             ready for when it can be used.
  *
- * So the templates are the side that changes. They are in
- * supabase/email-templates/, they are pasted in by a person (BLOCKED.md: email
- * templates are a project setting), and they point here with {{ .TokenHash }}.
+ * The templates in supabase/email-templates/ are the better answer and cannot
+ * currently be applied: Supabase does not allow template edits on the built-in
+ * email service, only with custom SMTP. Pointing SMTP at Resend is a person's
+ * job (BLOCKED.md) and is not done. So the code moved instead. When SMTP lands,
+ * paste the templates and the token_hash branch below takes over with no
+ * further change here.
  *
- * The alternative — accepting Supabase's PKCE `?code=` redirect and calling
- * exchangeCodeForSession — is also server-side and was considered. It loses on
- * one point that matters for a staff portal: PKCE needs the code-verifier
- * cookie set by the browser that *asked* for the link, so a link requested on a
- * laptop and opened on a phone fails. token_hash works across devices, which is
- * how people actually read email.
+ * That order of preference is not arbitrary. PKCE needs the code-verifier
+ * cookie set by the browser that *asked* for the link, so:
  *
- * Supabase accepts wildcard redirect URLs, so every Vercel preview can complete
- * a real sign-in — which is why the templates build the link from
- * {{ .RedirectTo }} (what the app passed as emailRedirectTo) rather than
- * hard-coding a host.
+ *   request on a laptop, open on a laptop  -> works
+ *   request on a laptop, open on a phone   -> fails, and always will
+ *
+ * token_hash has no such constraint. Until the templates can be applied, that
+ * cross-device case is broken and no amount of code here fixes it — the log
+ * below names it rather than leaving it to be guessed at.
+ *
+ * Either way nothing about the session is handled in the browser, which is the
+ * point of this route existing at all.
  */
 export const dynamic = "force-dynamic";
 
@@ -60,6 +66,7 @@ const bounce = (origin: string) => NextResponse.redirect(new URL("/?error=link",
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type");
   const next = url.searchParams.get("next");
@@ -78,14 +85,29 @@ export async function GET(request: Request) {
     return bounce(url.origin);
   }
 
+  // The PKCE code, which is what the stock templates deliver. Checked first
+  // because it is what actually arrives today.
+  if (code) {
+    const client = await supabaseServer();
+    const { error } = await client.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      console.error(
+        `[auth] callback: exchangeCodeForSession failed — ${error.message}. ` +
+          `If this says the verifier is missing, the link was opened in a different ` +
+          `browser from the one that asked for it; PKCE cannot do that. A custom ` +
+          `email template using {{ .TokenHash }} can — see supabase/email-templates/.`,
+      );
+      return bounce(url.origin);
+    }
+
+    return NextResponse.redirect(new URL(destination, url.origin));
+  }
+
   if (!tokenHash) {
-    // Almost always the template, not the link. Say so, because the symptom on
-    // its own — "the magic link just goes back to the sign-in page" — sent one
-    // session looking in the wrong place entirely.
     console.error(
-      "[auth] callback: no token_hash. The email template is probably still on " +
-        "{{ .ConfirmationURL }}, which verifies at Supabase and returns the session " +
-        "in a URL fragment this route cannot see. See supabase/email-templates/.",
+      "[auth] callback: neither code nor token_hash. Nothing usable arrived — " +
+        "check what the email link actually points at.",
     );
     return bounce(url.origin);
   }

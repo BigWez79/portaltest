@@ -1,5 +1,13 @@
 # Email templates
 
+> **Not usable yet, and that is not an oversight.** Supabase only allows email
+> template edits on a project with custom SMTP, and pointing SMTP at Resend is a
+> person's job that has not happened (`BLOCKED.md`). Until it does, the stock
+> templates are what goes out, and `src/app/auth/callback/route.ts` handles what
+> they actually produce — a PKCE `?code=`. These are ready for the day SMTP
+> lands: paste them, and the `token_hash` branch in that route takes over with
+> no code change. Read on for why they are still worth having.
+
 Two templates, pasted into the dashboard by a person. `BLOCKED.md` lists email
 templates under project settings, and `supabase config push` would be the
 workaround it forbids — so these live here, in version control, and a person
