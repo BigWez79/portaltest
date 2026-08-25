@@ -9,6 +9,8 @@ export type StaffRow = {
   hasInvoices: boolean;
   hasTimesheet: boolean;
   hasExpenses: boolean;
+  hasMargin: boolean;
+  hasTaxBreakdown: boolean;
   invitedAt?: string | null;
   lastSeenAt?: string | null;
 };
@@ -18,12 +20,16 @@ export type Access = {
   email: string;
   isAdmin: boolean;
   isBootstrapAdmin: boolean;
+  /** an active staff row exists — what My Profile needs, no flag involved */
+  isStaff: boolean;
   /** signed in, but no active staff row was found */
   unknownToStaffList: boolean;
   apps: {
     invoices: boolean;
     timesheet: boolean;
     expenses: boolean;
+    margin: boolean;
+    taxBreakdown: boolean;
   };
 };
 
@@ -32,8 +38,10 @@ type Identity = {
   name?: string | null;
 };
 
-export const STAFF_COLUMNS =
-  "email, full_name, active, is_admin, has_invoices, has_timesheet, has_expenses, invited_at, last_seen_at";
+// Kept as one string literal on purpose: supabase-js infers the row type from
+// the literal, and a concatenation turns the whole select into an error type.
+// prettier-ignore
+export const STAFF_COLUMNS = "email, full_name, active, is_admin, has_invoices, has_timesheet, has_expenses, has_margin, has_tax_breakdown, invited_at, last_seen_at";
 
 export function toStaffRow(row: Record<string, unknown>): StaffRow {
   return {
@@ -44,6 +52,8 @@ export function toStaffRow(row: Record<string, unknown>): StaffRow {
     hasInvoices: row.has_invoices === true,
     hasTimesheet: row.has_timesheet === true,
     hasExpenses: row.has_expenses === true,
+    hasMargin: row.has_margin === true,
+    hasTaxBreakdown: row.has_tax_breakdown === true,
     invitedAt: (row.invited_at as string | null) ?? null,
     lastSeenAt: (row.last_seen_at as string | null) ?? null,
   };
@@ -110,11 +120,14 @@ export async function resolveAccess(identity: Identity): Promise<Access> {
     email,
     isAdmin: grant(row?.isAdmin),
     isBootstrapAdmin,
+    isStaff: isBootstrapAdmin || active,
     unknownToStaffList: !row && !isBootstrapAdmin,
     apps: {
       invoices: grant(row?.hasInvoices),
       timesheet: grant(row?.hasTimesheet),
       expenses: grant(row?.hasExpenses),
+      margin: grant(row?.hasMargin),
+      taxBreakdown: grant(row?.hasTaxBreakdown),
     },
   };
 }

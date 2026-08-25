@@ -22,6 +22,30 @@ export function TileIcon({ id }: { id: string }) {
           <path d="M3 10h18M7 15h4" />
         </svg>
       );
+    case "margin":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 19L19 5" />
+          <circle cx="7.5" cy="7.5" r="2.5" />
+          <circle cx="16.5" cy="16.5" r="2.5" />
+        </svg>
+      );
+    case "taxBreakdown":
+      // A pie with one slice pulled out — a breakdown, and not another document
+      // shape that reads like the Invoices glyph at tile size.
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M11 4.2A8 8 0 1 0 19.8 13H11Z" />
+          <path d="M14.5 3.2A8 8 0 0 1 21 9.7l-6.5 1.3Z" />
+        </svg>
+      );
+    case "profile":
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="3.5" />
+          <path d="M5 20a7 7 0 0 1 14 0" />
+        </svg>
+      );
     case "admin":
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">

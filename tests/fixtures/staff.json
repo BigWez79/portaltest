@@ -8,7 +8,9 @@
     "hasTimesheet": true,
     "hasExpenses": true,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasMargin": true,
+    "hasTaxBreakdown": true
   },
   {
     "email": "invoices.only@example.test",
@@ -19,7 +21,9 @@
     "hasTimesheet": false,
     "hasExpenses": false,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasMargin": false,
+    "hasTaxBreakdown": false
   },
   {
     "email": "timesheet.only@example.test",
@@ -30,7 +34,9 @@
     "hasTimesheet": true,
     "hasExpenses": false,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasMargin": false,
+    "hasTaxBreakdown": false
   },
   {
     "email": "expenses.only@example.test",
@@ -41,7 +47,9 @@
     "hasTimesheet": false,
     "hasExpenses": true,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasMargin": false,
+    "hasTaxBreakdown": false
   },
   {
     "email": "admin.only@example.test",
@@ -52,7 +60,9 @@
     "hasTimesheet": false,
     "hasExpenses": false,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasMargin": false,
+    "hasTaxBreakdown": false
   },
   {
     "email": "no.flags@example.test",
@@ -63,7 +73,9 @@
     "hasTimesheet": false,
     "hasExpenses": false,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasMargin": false,
+    "hasTaxBreakdown": false
   },
   {
     "email": "left.the.company@example.test",
@@ -74,7 +86,9 @@
     "hasTimesheet": true,
     "hasExpenses": true,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasMargin": true,
+    "hasTaxBreakdown": true
   },
   {
     "email": "invited@example.test",
@@ -85,6 +99,34 @@
     "hasTimesheet": false,
     "hasExpenses": false,
     "invitedAt": "2026-08-24T09:00:00.000Z",
-    "lastSeenAt": null
+    "lastSeenAt": null,
+    "hasMargin": false,
+    "hasTaxBreakdown": false
+  },
+  {
+    "email": "margin.only@example.test",
+    "fullName": "Marge Margin",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": false,
+    "hasTimesheet": false,
+    "hasExpenses": false,
+    "hasMargin": true,
+    "hasTaxBreakdown": false,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+  },
+  {
+    "email": "tax.only@example.test",
+    "fullName": "Tex Tax",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": false,
+    "hasTimesheet": false,
+    "hasExpenses": false,
+    "hasMargin": false,
+    "hasTaxBreakdown": true,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
   }
 ]

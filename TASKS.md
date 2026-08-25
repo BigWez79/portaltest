@@ -89,8 +89,9 @@ longer tells anybody to run it.
 - Turning off email signups and pointing Supabase Auth's SMTP at Resend
 - Exporting the SharePoint Staff list to CSV and running the one-off import
 - Pointing `portal.poweranalytix.co.uk` at Vercel
-- Porting Invoices, Timesheets and Expenses (`docs/PORTING-APPS.md`) — queued
-  per app once its repository has been read
+- Porting the seven apps (`docs/PORTING-APPS.md`) — agreed in principle, queued
+  one at a time. Margin and Tax Breakdown are first and need no data migration.
+- Narrowing `admin.html`'s `AllSites.FullControl` on the live suite
 
 ---
 
@@ -98,5 +99,8 @@ longer tells anybody to run it.
 
 - **Portal v3.0 scaffold** — sign-in, tiles, admin screen. First commit.
 - **Off Microsoft** — Supabase Auth, RLS, staff admin screen, CSV import.
-- **One app** — the three apps became guarded routes; shared-cookie machinery
-  dropped. 51 checks.
+- **One app** — the apps became guarded routes; shared-cookie machinery
+  dropped.
+- **Matched the live suite** — surveyed `BigWez79/portal` and found the portal
+  had been rebuilt against a six-week-old copy: seven tiles, not four. Added
+  Margin, Tax Breakdown and My Profile, two access flags, three routes. 64 checks.

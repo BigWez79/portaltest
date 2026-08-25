@@ -11,6 +11,8 @@ const PERMISSIONS: Array<{ flag: Flag; label: string; short: string }> = [
   { flag: "hasInvoices", label: "Invoices", short: "Inv" },
   { flag: "hasTimesheet", label: "Timesheets", short: "Time" },
   { flag: "hasExpenses", label: "Expenses", short: "Exp" },
+  { flag: "hasMargin", label: "Margin", short: "Marg" },
+  { flag: "hasTaxBreakdown", label: "Tax", short: "Tax" },
   { flag: "isAdmin", label: "Admin", short: "Admin" },
 ];
 

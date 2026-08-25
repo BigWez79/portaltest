@@ -1,4 +1,4 @@
-import { expect, resetStaff, signInAs, signOutCompletely, test } from "./harness";
+import { expect, expectExactlyTiles, resetStaff, signInAs, signOutCompletely, test } from "./harness";
 
 // Two of these ask for a page that must 404; the browser logs that itself.
 test.describe("admin screen — who can reach it", () => {
@@ -82,7 +82,10 @@ test.describe.serial("admin screen — changing access", () => {
     await signInAs(page, "invoices.only@example.test");
     await page.goto("/");
     await expect(page.getByTestId("tile-invoices")).toHaveCount(0);
-    await expect(page.getByTestId("no-access")).toBeVisible();
+    // Not "no access" — My Profile has no flag, so an active person always
+    // keeps that one. Removing their last *app* leaves exactly Profile.
+    await expect(page.getByTestId("tile-profile")).toBeVisible();
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
   test("an admin cannot remove their own admin access", async ({ page }) => {
@@ -96,7 +99,7 @@ test.describe.serial("admin screen — changing access", () => {
     await expect(page.getByTestId("toggle-everything@example.test-active")).toBeDisabled();
   });
 
-  test("inviting somebody adds them with no access", async ({ page }) => {
+  test("inviting somebody adds them with no app access", async ({ page }) => {
     await page.goto("/admin");
     await page.getByTestId("invite-name").fill("Newton New");
     await page.getByTestId("invite-email").fill("newton@example.test");
@@ -106,9 +109,12 @@ test.describe.serial("admin screen — changing access", () => {
     const row = page.getByTestId("row-newton@example.test");
     await expect(row).toBeVisible();
 
+    // An invited person is active, so they get My Profile and nothing else
+    // until an admin grants an app.
     await signInAs(page, "newton@example.test");
     await page.goto("/");
-    await expect(page.getByTestId("no-access")).toBeVisible();
+    await expectExactlyTiles(page, ["profile"]);
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
   test("inviting the same address twice is refused", async ({ page }) => {

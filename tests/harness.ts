@@ -59,7 +59,15 @@ export async function resetStaff(page: Page) {
   expect(res.ok(), "the fixture store should be resettable").toBeTruthy();
 }
 
-export const ALL_TILES = ["invoices", "timesheet", "expenses", "admin"] as const;
+export const ALL_TILES = [
+  "invoices",
+  "timesheet",
+  "expenses",
+  "margin",
+  "taxBreakdown",
+  "profile",
+  "admin",
+] as const;
 
 /**
  * Asserts the exact set of tiles — and that the others are absent from the DOM,

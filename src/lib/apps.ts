@@ -48,6 +48,31 @@ export const APP_TILES: AppTile[] = [
     grants: (a) => a.apps.expenses,
   },
   {
+    id: "margin",
+    name: "Margin & Profit Split",
+    blurb: "Work out margin and how a job splits.",
+    href: "/margin",
+    tone: "brand",
+    grants: (a) => a.apps.margin,
+  },
+  {
+    id: "taxBreakdown",
+    name: "Tax Breakdown",
+    blurb: "Break a figure down by tax treatment.",
+    href: "/tax-breakdown",
+    tone: "brand",
+    grants: (a) => a.apps.taxBreakdown,
+  },
+  {
+    id: "profile",
+    name: "My Profile",
+    blurb: "Your details, rates and defaults.",
+    href: "/profile",
+    tone: "brand",
+    // No flag. Every active staff member gets this, as on the live portal.
+    grants: (a) => a.isStaff,
+  },
+  {
     id: "admin",
     name: "Admin",
     blurb: "Staff access, invites, and who can reach what.",

@@ -20,6 +20,8 @@ create table if not exists public.staff (
   has_invoices  boolean     not null default false,
   has_timesheet boolean     not null default false,
   has_expenses  boolean     not null default false,
+  has_margin    boolean     not null default false,
+  has_tax_breakdown boolean not null default false,
   invited_at    timestamptz,
   last_seen_at  timestamptz,
   created_at    timestamptz not null default now(),

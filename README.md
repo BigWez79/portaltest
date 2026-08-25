@@ -3,8 +3,10 @@
 One app for the whole suite: sign-in, the four apps, and the screen where staff
 access is granted. Replaces `portal_index.html` v2.0. No Microsoft dependency.
 
-Invoices, Timesheets and Expenses have guarded routes here with a placeholder
-inside; they still run as their own deployments until each is folded in.
+Seven tiles: Invoices, Timesheets, Expenses, Margin & Profit Split, Tax
+Breakdown, My Profile and Admin. All but Admin still run as single HTML pages in
+`BigWez79/portal` and have guarded placeholder routes here until each is folded
+in.
 
 The agent-facing rules are in [`CLAUDE.md`](./CLAUDE.md); what needs a person is
 in [`BLOCKED.md`](./BLOCKED.md); the queue is [`TASKS.md`](./TASKS.md); how the
@@ -116,5 +118,5 @@ is used twice: to invite somebody, and by the one-off CSV import.
 | Access admin | a SharePoint list | the Admin tile, with an audit trail |
 | Tiles you cannot open | in the HTML, hidden with CSS | not rendered |
 | Preview sign-in | impossible (no wildcard redirect URIs) | works |
-| Tests | none | 51 Playwright checks at four widths |
+| Tests | none | 64 Playwright checks at four widths |
 | Release | edit the file, upload it | merge to `main` |

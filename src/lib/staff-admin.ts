@@ -2,7 +2,15 @@ import "server-only";
 import { siteUrl, staffSource } from "./env";
 import { STAFF_COLUMNS, toStaffRow, type StaffRow } from "./staff";
 
-export const FLAGS = ["active", "isAdmin", "hasInvoices", "hasTimesheet", "hasExpenses"] as const;
+export const FLAGS = [
+  "active",
+  "isAdmin",
+  "hasInvoices",
+  "hasTimesheet",
+  "hasExpenses",
+  "hasMargin",
+  "hasTaxBreakdown",
+] as const;
 export type Flag = (typeof FLAGS)[number];
 
 const COLUMN: Record<Flag, string> = {
@@ -11,6 +19,8 @@ const COLUMN: Record<Flag, string> = {
   hasInvoices: "has_invoices",
   hasTimesheet: "has_timesheet",
   hasExpenses: "has_expenses",
+  hasMargin: "has_margin",
+  hasTaxBreakdown: "has_tax_breakdown",
 };
 
 /**
@@ -83,6 +93,8 @@ export async function inviteStaff(
         hasInvoices: false,
         hasTimesheet: false,
         hasExpenses: false,
+        hasMargin: false,
+        hasTaxBreakdown: false,
         invitedAt: "2026-08-25T00:00:00.000Z",
         lastSeenAt: null,
       });

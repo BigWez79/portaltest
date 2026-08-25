@@ -3,7 +3,14 @@ import { notFound } from "next/navigation";
 import { getCurrentUser } from "./current-user";
 import { resolveAccess, type Access } from "./staff";
 
-export type AppKey = "invoices" | "timesheet" | "expenses" | "admin";
+export type AppKey =
+  | "invoices"
+  | "timesheet"
+  | "expenses"
+  | "margin"
+  | "taxBreakdown"
+  | "profile"
+  | "admin";
 
 /**
  * The gate every app route goes through. One function, so a new route is
@@ -21,7 +28,16 @@ export async function requireApp(key: AppKey): Promise<Access> {
   if (!user) notFound();
 
   const access = await resolveAccess(user);
-  const allowed = key === "admin" ? access.isAdmin : access.apps[key];
+
+  // Admin needs the admin flag; My Profile needs only an active staff row —
+  // that is how the live portal has always worked. Everything else is a flag.
+  const allowed =
+    key === "admin"
+      ? access.isAdmin
+      : key === "profile"
+        ? access.isStaff
+        : access.apps[key];
+
   if (!allowed) notFound();
 
   return access;

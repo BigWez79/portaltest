@@ -1,70 +1,115 @@
-# Folding the three apps in
+# Folding the suite in
 
-Invoices, Timesheets and Expenses become routes in this repository. This is the
-shape they land in, and the order they arrive.
+Nine apps move off SharePoint into this repository, one at a time. This is the
+agreed shape, the order, and the decisions already taken.
 
-## Why one app rather than four
+Survey of what is actually live: `BigWez79/portal`, commit `5d550d2`, read
+25 August 2026.
 
-Four deployments sharing a session means four repositories, four test suites,
-four sets of environment variables, and a cookie scoped across origins that has
-to be right in all of them before anybody signs in. One app has none of that: a
-person is signed in or they is not, `requireApp` says which routes they may open,
-and the switcher is a list of links.
+## What is being moved
 
-The cost is real and worth saying out loud: **a bad deploy takes all four down
-together.** That is what the test suite is for, and why every route is covered by
-the access matrix. Nothing merges on a red build.
+Nine pages, ~6,700 lines, all single-file HTML with inline MSAL and Graph calls,
+served by GitHub Pages from one repository at `portal.poweranalytix.co.uk`.
+There are no subdomains — the `invoices.poweranalytix.co.uk` links in older
+copies are stale.
 
-## The shape each app lands in
+| App | Lines | Lists | Writes | State |
+|---|---:|---:|---:|---|
+| Portal | 209 | 1 | 0 | rebuilt |
+| Margin & Profit Split | 848 | 0 | 0 | route ready |
+| Tax Breakdown | 557 | 0 | 0 | route ready |
+| Monthly Overview | 383 | 4 | 0 | not routed yet |
+| My Profile | 375 | 5 | 2 | route ready |
+| Expenses | 586 | 4 | 5 | route ready |
+| Invoices | 1,004 | 6 | 12 | route ready |
+| Admin | 1,099 | 16 | 13 | rebuilt (staff only) |
+| Timesheets | 1,623 | 8 | 8 | route ready |
 
-Each app is already a route, guarded, with a placeholder inside it:
+"Route ready" means the route exists here, behind `requireApp`, showing a
+placeholder. Porting one is replacing that placeholder.
 
-```
-src/app/invoices/page.tsx     requireApp("invoices")  -> <PortedAppNotice/>
-src/app/timesheets/page.tsx   requireApp("timesheet") -> <PortedAppNotice/>
-src/app/expenses/page.tsx     requireApp("expenses")  -> <PortedAppNotice/>
-```
+## Decisions already taken
 
-Porting one means replacing `<PortedAppNotice/>` with that app's screens. The
-gate, the shell, the switcher and the tests around them already work — they were
-built and proved before any of the app code arrived, so a port cannot
-accidentally ship an unguarded route.
+**Everything moves.** All nine, one at a time, until nothing reads
+`graph.microsoft.com`. Agreed 25 August.
 
-Nested routes go under the same folder (`src/app/invoices/[id]/page.tsx`) and
-call `requireApp("invoices")` themselves. **Every route calls the guard.** A
-parent layout is not a gate — a nested route can be requested directly.
+**Own records only; admins see all.** When a table lands in Postgres, a person
+reads their own rows and an active admin reads everybody's. This matches what
+the live pages already do — Timesheets and Expenses filter on
+`StaffEmail eq <you>`, Overview narrows to you, Admin reads everyone — so
+nobody loses a view they have today. No manager-sees-team relationship is being
+built.
 
-## What each port actually involves
+**My Profile has no flag.** Every active staff member gets it, as on the live
+portal. `requireApp("profile")` checks `access.isStaff`, not a column.
 
-Roughly in order of effort:
+## The order, and why
+
+1. **Margin**, then **Tax Breakdown**. Neither touches Graph — they are
+   calculators. No migration, no policy, no data. They are the honest test of
+   whether a page moves across cleanly while nothing is at stake.
+2. **My Profile.** The smallest thing with real data behind it, and it forces
+   the legacy-profile question (below) early rather than late.
+3. **Monthly Overview.** Read-only, so it proves the read path and the RLS
+   policies without risking a write.
+4. **Expenses.** Smallest of the three big ones. First real write path.
+5. **Timesheets.** Largest single file, and the one people open daily.
+6. **Invoices.** Produces documents customers see.
+7. **Admin.** Last, because it is the tool you would need in order to fix any of
+   the others. Staff management is already rebuilt; customers and invoice admin
+   follow their own apps.
+
+## What each port involves
 
 1. **Delete the sign-in.** No MSAL, no client id, no tenant id, no redirect
-   handling. The person is already signed in or they never reached the route.
+   handling. The person is signed in or they never reached the route.
 2. **Delete the access check.** `requireApp` did it.
-3. **Move the data.** This is the large one. If the app stores its records in
-   SharePoint lists — the way the portal stored staff — those become Postgres
-   tables with row level security, a migration, and a one-off import. Expect this
-   to be most of the work for each app, and to need decisions about who may read
-   whose records.
-4. **Move the screens.** Markup and styles come across largely as they are; they
-   already share a design with the portal.
+3. **Move the data.** A migration per list, an import, and an RLS policy. This
+   is most of the work.
+4. **Move the screens.** Markup and styles come across largely as they are.
 5. **Server actions for anything that writes**, each re-checking the caller.
    Rendering a control is not a check.
 
-## Order, and why
+Nested routes go under the same folder and call `requireApp` themselves. **Every
+route calls the guard** — a layout is not a gate, because a nested route can be
+requested directly.
 
-1. **Timesheets** — the simplest, and the one most people open daily. It proves
-   the pattern with the least at stake.
-2. **Expenses** — same shape. Move it once Timesheets has been live a week.
-3. **Invoices** — last, because it touches customer-facing documents. It goes
-   when the approach has stopped producing surprises.
+## Open questions, to be answered when they bite
 
-Until an app is ported, its route shows the placeholder and the old app keeps
-running on its own subdomain. People who need it go there directly. That is the
-seam, and it closes one app at a time.
+**The legacy profile list.** `myprofile.html` reads both `profileListId` and a
+`legacyProfileListId`, and `timesheet.html` reads the legacy one too. Whether
+the legacy list is still authoritative for anybody decides whether it becomes a
+table or is read once and retired. Answer this from the data during the My
+Profile port — do not guess.
 
-## Retiring the old deployments
+**Staff names versus staff records.** Under "own records only", a person can
+read their own `staff` row and no other. Any ported page that needs to *display
+a colleague's name* — Monthly Overview builds exactly such a lookup today —
+will get nothing back. The likely answer is a `staff_directory` view exposing
+only email, full name and active to any signed-in staff member, with the access
+flags left behind the existing policy. Decide it when Overview is ported, not
+before.
 
-An app's old subdomain is turned off by a person, after the ported route has been
-live for a week — not in the same change that ports it. The Entra registration
-those apps share goes at the same time as the last one.
+**Two settings lists.** Expenses and Invoices each reference a different
+settings list. Whether these become one table or two depends on whether the
+contents overlap. Look before merging them.
+
+## While the migration is running
+
+Ported pages live here; unported ones stay on GitHub Pages at the old address.
+The two cannot share a sign-in, so people hold two sessions until an app has
+moved. With nine apps that is not a fortnight, and it is the main cost of doing
+this incrementally rather than in one cutover.
+
+An app's old page is turned off by a person, a week after its route has been
+live — never in the same change that ports it.
+
+## One thing worth fixing on the live suite regardless
+
+`admin.html` requests `AllSites.FullControl`, broader than the
+`Sites.ReadWrite.All` every other page asks for and far broader than reading a
+few lists needs. It is delegated, so it cannot exceed what that person could do
+by hand, but a single cross-site scripting bug on that page would inherit their
+whole SharePoint estate rather than one list. Narrowing it to
+`Sites.ReadWrite.All`, or `Sites.Selected` on the PowerAnalytix site, is a
+one-line change to a page that is being replaced anyway.

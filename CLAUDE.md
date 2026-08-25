@@ -5,11 +5,14 @@ Read this every run. Where this file and a chat transcript disagree, this file w
 ## What this is
 
 The Power Analytix suite. One app, one deploy, one sign-in: the portal, the
-staff admin screen, and routes for Invoices, Timesheets and Expenses.
+staff admin screen, and routes for the seven apps behind it — Invoices,
+Timesheets, Expenses, Margin & Profit Split, Tax Breakdown, My Profile and
+Admin.
 
-Those three still run as separate deployments on their own subdomains. Their
-routes here exist and are guarded, with a placeholder inside; porting one means
-replacing that placeholder. See `docs/PORTING-APPS.md`.
+All of those except Admin still run as single HTML pages in `BigWez79/portal`,
+served by GitHub Pages. Their routes here exist and are guarded, with a
+placeholder inside; porting one means replacing that placeholder. Order,
+decisions and open questions are in `docs/PORTING-APPS.md`.
 
 It replaces `portal_index.html` v2.0, which held a `Sites.ReadWrite.All` Graph
 token in the browser and hid tiles with CSS. There is no Microsoft dependency
@@ -50,6 +53,11 @@ left anywhere in this project. Do not add one back.
 9. **Every route calls `requireApp`.** A layout is not a gate — a nested route
    can be requested directly. One app means one unguarded route exposes whatever
    is behind it.
+10. **My Profile has no flag.** Every active staff member gets it, as on the
+   live portal. Do not "fix" this by adding a `has_profile` column.
+11. **A person reads their own records; an active admin reads everybody's.**
+   That is the agreed policy for every table that lands here. Do not widen it
+   without a decision.
 
 ## Definition of done
 
@@ -93,10 +101,11 @@ src/lib/supabase/server.ts      request-scoped client (RLS) + the service-role c
 src/lib/current-user.ts         "who is this" — the one place that answers it
 src/lib/staff.ts                the caller's own row, and access resolution
 src/lib/staff-admin.ts          list, set a flag, invite
-src/lib/apps.ts                 the four tiles
+src/lib/apps.ts                 the seven tiles
 src/lib/notify.ts               access-change email; a no-op with no Resend key
 src/app/page.tsx                the portal — the tiles
-src/app/invoices|timesheets|expenses/  guarded routes, placeholder inside
+src/app/{invoices,timesheets,expenses,margin,tax-breakdown,profile}/
+                                guarded routes, placeholder inside
 src/app/admin/page.tsx          staff access
 src/app/actions/                server actions — each re-checks the caller
 src/app/auth/callback/          where a magic link lands
