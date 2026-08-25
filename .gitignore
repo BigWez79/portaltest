@@ -1,0 +1,40 @@
+# --- secrets: this block goes in before the first `git add` ---
+# A pattern of `.env` does not match a file called `.env.txt`. Both are covered.
+.env
+.env.*
+*.env
+.env.txt
+*.pem
+*.key
+.vercel
+
+# ...but the template, which contains no values, must be committed.
+!.env.example
+
+# --- generated: ignored before anything generates them ---
+node_modules/
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+*.tsbuildinfo
+
+# --- test output ---
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+tests/.artifacts/
+
+# --- supabase local ---
+supabase/.branches/
+supabase/.temp/
+
+# --- os / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+npm-debug.log*

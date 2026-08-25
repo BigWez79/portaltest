@@ -1,0 +1,82 @@
+[
+  {
+    "email": "everything@example.test",
+    "upn": "everything@example.test",
+    "officialName": "Ada Everything",
+    "active": true,
+    "isAdmin": true,
+    "hasInvoices": true,
+    "hasTimesheet": true,
+    "hasExpenses": true
+  },
+  {
+    "email": "invoices.only@example.test",
+    "upn": "invoices.only@example.test",
+    "officialName": "Ivor Invoices",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": true,
+    "hasTimesheet": false,
+    "hasExpenses": false
+  },
+  {
+    "email": "timesheet.only@example.test",
+    "upn": "timesheet.only@example.test",
+    "officialName": "Tessa Timesheet",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": false,
+    "hasTimesheet": true,
+    "hasExpenses": false
+  },
+  {
+    "email": "expenses.only@example.test",
+    "upn": "expenses.only@example.test",
+    "officialName": "Eve Expenses",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": false,
+    "hasTimesheet": false,
+    "hasExpenses": true
+  },
+  {
+    "email": "admin.only@example.test",
+    "upn": "admin.only@example.test",
+    "officialName": "Adam Admin",
+    "active": true,
+    "isAdmin": true,
+    "hasInvoices": false,
+    "hasTimesheet": false,
+    "hasExpenses": false
+  },
+  {
+    "email": "no.flags@example.test",
+    "upn": "no.flags@example.test",
+    "officialName": "Nora Noflags",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": false,
+    "hasTimesheet": false,
+    "hasExpenses": false
+  },
+  {
+    "email": "left.the.company@example.test",
+    "upn": "left.the.company@example.test",
+    "officialName": "Lee Leaver",
+    "active": false,
+    "isAdmin": true,
+    "hasInvoices": true,
+    "hasTimesheet": true,
+    "hasExpenses": true
+  },
+  {
+    "email": "mailbox@example.test",
+    "upn": "different.upn@example.test",
+    "officialName": "Mabel Mismatch",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": false,
+    "hasTimesheet": true,
+    "hasExpenses": false
+  }
+]
