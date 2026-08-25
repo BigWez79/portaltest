@@ -5,12 +5,17 @@ import { expect, signInAs, signOutCompletely, test } from "./harness";
  * checks that stop a port shipping an unguarded page: the route exists and is
  * gated before any of the app's own code arrives.
  */
+/**
+ * `landmark` is what proves the page actually rendered. It is "not-ported" for
+ * the routes still waiting on their app's own code, and the app's own root once
+ * that app has been folded in — Margin is the first of those.
+ */
 const FLAGGED = [
-  { path: "/invoices", holder: "invoices.only@example.test" },
-  { path: "/timesheets", holder: "timesheet.only@example.test" },
-  { path: "/expenses", holder: "expenses.only@example.test" },
-  { path: "/margin", holder: "margin.only@example.test" },
-  { path: "/tax-breakdown", holder: "tax.only@example.test" },
+  { path: "/invoices", holder: "invoices.only@example.test", landmark: "not-ported" },
+  { path: "/timesheets", holder: "timesheet.only@example.test", landmark: "not-ported" },
+  { path: "/expenses", holder: "expenses.only@example.test", landmark: "not-ported" },
+  { path: "/margin", holder: "margin.only@example.test", landmark: "margin-calculator" },
+  { path: "/tax-breakdown", holder: "tax.only@example.test", landmark: "not-ported" },
 ];
 
 test.describe("app routes", () => {
@@ -21,7 +26,7 @@ test.describe("app routes", () => {
       await signInAs(page, route.holder);
       const res = await page.goto(route.path);
       expect(res?.status()).toBe(200);
-      await expect(page.getByTestId("not-ported")).toBeVisible();
+      await expect(page.getByTestId(route.landmark)).toBeVisible();
     });
 
     test(`${route.path} 404s without the flag`, async ({ page }) => {
@@ -35,7 +40,7 @@ test.describe("app routes", () => {
       await signOutCompletely(page);
       await page.goto(route.path);
       await expect(page.getByTestId("login-view")).toBeVisible();
-      await expect(page.getByTestId("not-ported")).toHaveCount(0);
+      await expect(page.getByTestId(route.landmark)).toHaveCount(0);
     });
 
     test(`${route.path} 404s for a deactivated person who used to have it`, async ({

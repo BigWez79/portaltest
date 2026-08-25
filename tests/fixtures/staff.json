@@ -128,5 +128,31 @@
     "hasTaxBreakdown": true,
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z"
+  },
+  {
+    "email": "grantable@example.test",
+    "fullName": "Grace Grantable",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": false,
+    "hasTimesheet": false,
+    "hasExpenses": false,
+    "hasMargin": false,
+    "hasTaxBreakdown": false,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+  },
+  {
+    "email": "revocable@example.test",
+    "fullName": "Rex Revocable",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": true,
+    "hasTimesheet": false,
+    "hasExpenses": false,
+    "hasMargin": false,
+    "hasTaxBreakdown": false,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
   }
 ]

@@ -436,6 +436,11 @@ button[disabled] {
   gap: 18px;
 }
 
+/* A ported app that came from a wider page of its own. margin.html is 1080. */
+.app-wrap.wide {
+  max-width: 1080px;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .app-wrap {
     animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
@@ -748,4 +753,806 @@ tr.inactive .toggle.on {
 
 .toggle.off[disabled] {
   color: #b3b9cb;
+}
+
+/* ---------------------------------------------------------------------------
+   Margin & Profit Split
+
+   Ported from margin.html on the live suite, which carries its own copy of the
+   suite palette. Two tokens the portal does not otherwise use — the teal accent
+   and the "good" green — are declared here rather than added to :root, so this
+   app's look stays inside this app.
+
+   The staff table is the one thing that is not a straight transcription: seven
+   columns will not fit a 390px phone, and the working rules say the page must
+   not scroll sideways. The block scrolls inside itself instead.
+   --------------------------------------------------------------------------- */
+
+.margin-app {
+  --accent2: #0ea394;
+  --good: #1e9e57;
+  --panel2: #f3f6fd;
+  --a: var(--brand);
+  --b: var(--accent2);
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.margin-app h2 {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.2px;
+}
+
+.margin-app h2.stacked {
+  margin-top: 22px;
+}
+
+.margin-app h2 .tag {
+  font-size: 0.68rem;
+  color: var(--brand-dk);
+  font-weight: 600;
+  background: #eef4ff;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1px solid #cfddf7;
+}
+
+.margin-app .lede {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  max-width: 720px;
+}
+
+.margin-app label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.margin-app input[type="text"],
+.margin-app input[type="number"],
+.margin-app input[type="date"],
+.margin-app select {
+  width: 100%;
+  font-family: inherit;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 9px 10px;
+  border-radius: 9px;
+  font-size: 0.92rem;
+  outline: none;
+}
+
+.margin-app input:focus,
+.margin-app select:focus {
+  border-color: var(--brand);
+}
+
+.margin-app input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.margin-app input[type="number"]::-webkit-outer-spin-button,
+.margin-app input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.margin-app .prefix {
+  position: relative;
+}
+
+.margin-app .prefix span {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.margin-app .prefix input {
+  padding-left: 22px;
+}
+
+.margin-app .row {
+  display: grid;
+  gap: 7px;
+  align-items: end;
+  margin-bottom: 9px;
+}
+
+.margin-app .item-row {
+  grid-template-columns: 1.6fr 1fr auto;
+}
+
+.margin-app .mini {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.margin-app .note {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 10px 0 0;
+}
+
+.margin-app .foot {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.margin-app .sub {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding: 8px 2px 0;
+  border-top: 1px dashed var(--line);
+  margin-top: 6px;
+}
+
+.margin-app .sub b {
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.margin-app .sub.no-rule {
+  border-top: none;
+}
+
+/* buttons — the portal's global button rule is sized for the sign-in card */
+.margin-app button {
+  font-size: 0.85rem;
+  border-radius: 9px;
+  padding: 9px 14px;
+}
+
+.margin-app button.add {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+  font-weight: 600;
+}
+
+.margin-app button.add:hover {
+  filter: brightness(1.08);
+}
+
+.margin-app button.del {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.margin-app button.del:hover {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+.margin-app .btn-addstaff {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--brand);
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  margin-top: 2px;
+}
+
+.margin-app .btn-addstaff:hover {
+  border-color: var(--brand);
+  background: var(--panel2);
+}
+
+.margin-app .btn-reset {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 7px 14px;
+}
+
+.margin-app .btn-reset:hover {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+/* toolbar */
+.margin-app .toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.margin-app .tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.margin-app .saved {
+  font-size: 0.78rem;
+  color: var(--good);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.margin-app .saved.show {
+  opacity: 1;
+}
+
+.margin-app .period-toggle {
+  display: inline-flex;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.margin-app .period-toggle button {
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 16px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: 0;
+}
+
+.margin-app .period-toggle button.active {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* scenarios bar */
+.margin-app .scbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
+}
+
+.margin-app .scbar .grp {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.margin-app .scbar label {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
+.margin-app .scbar input[type="text"] {
+  width: 130px;
+}
+
+.margin-app .scbar select {
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.margin-app .scbar .spacer {
+  flex: 1 1 auto;
+}
+
+.margin-app .btn-sc {
+  border: none;
+  font-size: 0.83rem;
+  font-weight: 600;
+  padding: 8px 14px;
+}
+
+.margin-app .btn-sc.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+}
+
+.margin-app .btn-sc.primary:hover {
+  filter: brightness(1.08);
+}
+
+.margin-app .btn-sc.ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.margin-app .btn-sc.ghost:hover {
+  border-color: var(--brand);
+  color: var(--ink);
+}
+
+.margin-app .btn-sc.pdf {
+  background: var(--accent2);
+  color: #fff;
+}
+
+.margin-app .btn-sc.pdf:hover {
+  filter: brightness(1.08);
+}
+
+.margin-app .btn-sc.danger:hover {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+.margin-app .sc-stamp {
+  font-size: 0.72rem;
+  color: var(--muted);
+  width: 100%;
+}
+
+.margin-app .sc-stamp:empty {
+  display: none;
+}
+
+/* the two input cards */
+.margin-app .margin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .margin-app .margin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* A grid item's default min-width is its content, which would let the staff
+   block push the whole card — and the page — wider than the viewport. */
+.margin-app .margin-grid > *,
+.margin-app .results > * {
+  min-width: 0;
+}
+
+.margin-app .date-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+
+.margin-app .wdbox {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.margin-app .wdbox .k {
+  font-size: 0.66rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.margin-app .wdbox .v {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.margin-app .wdbox .r {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+/* staff table */
+.margin-app .staff-block {
+  margin-top: 18px;
+}
+
+.margin-app .staff-scroll {
+  overflow-x: auto;
+  min-width: 0;
+  margin: 0 -2px;
+  padding: 0 2px;
+}
+
+/* Narrow enough to fit the card at 1024 and up, wide enough that the seven
+   columns are still readable. Below that the block scrolls, not the page. */
+.margin-app .staff-grid {
+  min-width: 430px;
+}
+
+.margin-app .staff-row {
+  grid-template-columns: 2.4fr 0.78fr 0.4fr 0.4fr 0.4fr 0.36fr 0.72fr;
+  align-items: center;
+}
+
+.margin-app .staff-head {
+  align-items: end;
+}
+
+/* The day-rate cell is the other tight one: the £ prefix takes 22px of a 55px
+   box at 1024, which clipped a four-digit rate. Same trade as the months. */
+.margin-app .staff-row .prefix span {
+  left: 7px;
+}
+
+.margin-app .staff-row .prefix input {
+  padding-left: 17px;
+  padding-right: 4px;
+}
+
+/* 6px each side on the live page. These columns are the narrowest on the row
+   and a two-digit day count was clipping at 1024; the padding is what gave. */
+.margin-app .staff-row .s-m1,
+.margin-app .staff-row .s-m2,
+.margin-app .staff-row .s-m3 {
+  text-align: center;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.margin-app .colhead {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+  padding-bottom: 2px;
+  align-self: end;
+}
+
+.margin-app .colhead.l {
+  text-align: left;
+}
+
+.margin-app .colhead.r {
+  text-align: right;
+}
+
+.margin-app .colhead small {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--accent2);
+  font-weight: 400;
+  min-height: 0.9em;
+}
+
+.margin-app .name-cell {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.margin-app .name-cell .s-name {
+  flex: 1;
+  /* 64px on the live page, which is 1080 wide with no switcher above it. */
+  min-width: 56px;
+}
+
+.margin-app select.s-owner {
+  flex: 0 0 auto;
+  width: 42px;
+  padding: 7px 2px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.margin-app select.s-owner.on {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+.margin-app .s-del {
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  width: 24px;
+  height: 28px;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.margin-app .s-del:hover {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+.margin-app .s-days {
+  font-size: 0.86rem;
+  text-align: center;
+  align-self: center;
+  color: var(--ink);
+}
+
+.margin-app .s-qcost {
+  font-size: 0.82rem;
+  color: var(--ink);
+  text-align: right;
+  align-self: center;
+  padding-right: 2px;
+}
+
+.margin-app .qc-cost {
+  font-size: 0.86rem;
+}
+
+.margin-app .qc-owner {
+  font-size: 0.62rem;
+  color: var(--accent2);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.margin-app .qc-fifty {
+  font-size: 0.62rem;
+  color: var(--accent2);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+/* the 50/50 switch */
+.margin-app .switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+  flex: 0 0 auto;
+  cursor: pointer;
+  margin: 0;
+}
+
+.margin-app .switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.margin-app .switch .sl {
+  position: absolute;
+  inset: 0;
+  background: var(--line);
+  border-radius: 20px;
+  transition: 0.15s;
+}
+
+.margin-app .switch .sl::before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 3px;
+  top: 3px;
+  background: #8ea0b2;
+  border-radius: 50%;
+  transition: 0.15s;
+}
+
+.margin-app .switch input:checked + .sl {
+  background: var(--brand);
+}
+
+.margin-app .switch input:checked + .sl::before {
+  transform: translateX(14px);
+  background: #fff;
+}
+
+.margin-app .switch input:focus-visible + .sl {
+  outline: 2px solid var(--brand-dk);
+  outline-offset: 2px;
+}
+
+/* results */
+.margin-app .results {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.margin-app .kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .margin-app .kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.margin-app .kpi {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.margin-app .kpi .k {
+  font-size: 0.74rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.margin-app .kpi .v {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.margin-app .kpi .q {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.margin-app .kpi.accent .v {
+  color: var(--brand);
+}
+
+.margin-app .kpi.good .v {
+  color: var(--good);
+}
+
+.margin-app .kpi.warn .v {
+  color: var(--err);
+}
+
+/* the split card */
+.margin-app .waterfall {
+  font-size: 0.86rem;
+}
+
+.margin-app .wf {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.margin-app .wf:last-child {
+  border-bottom: none;
+}
+
+.margin-app .wf b {
+  white-space: nowrap;
+}
+
+.margin-app .wf.neg b {
+  color: var(--err);
+}
+
+.margin-app .wf.pos b {
+  color: var(--good);
+}
+
+.margin-app .wf.total {
+  font-size: 1rem;
+  padding-top: 11px;
+}
+
+.margin-app .wf.total b {
+  color: var(--good);
+}
+
+.margin-app .slider-wrap {
+  margin: 16px 0 4px;
+}
+
+.margin-app .bar {
+  height: 14px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  border: 1px solid var(--line);
+}
+
+.margin-app .bar .segA {
+  background: var(--a);
+}
+
+.margin-app .bar .segB {
+  background: var(--b);
+}
+
+.margin-app input[type="range"] {
+  width: 100%;
+  accent-color: var(--brand);
+  margin-top: 12px;
+}
+
+.margin-app .owners {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 6px;
+}
+
+@media (max-width: 560px) {
+  .margin-app .owners,
+  .margin-app .date-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.margin-app .owner {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.margin-app .owner input[type="text"] {
+  font-weight: 600;
+  margin-bottom: 8px;
+  background: var(--card);
+}
+
+.margin-app .owner .amt {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.margin-app .owner.a .amt {
+  color: var(--a);
+}
+
+.margin-app .owner.b .amt {
+  color: var(--b);
+}
+
+.margin-app .owner .pc {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.margin-app .split-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.margin-app .split-inputs .prefix span {
+  left: auto;
+  right: 10px;
+}
+
+.margin-app .split-inputs .prefix input {
+  padding-left: 10px;
+  padding-right: 22px;
 }
