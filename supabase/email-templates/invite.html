@@ -1,0 +1,21 @@
+<!--
+  Supabase Dashboard -> Authentication -> Emails -> Invite user
+
+  Same change as magic-link.html, and the same reasoning. The only difference is
+  the type: an invite token is type=invite, and verifying it as type=magiclink
+  fails with a message that reads like an expired link.
+
+  This is the email auth.admin.inviteUserByEmail sends — the one the admin
+  screen's invite form triggers via inviteStaff() in src/lib/staff-admin.ts.
+-->
+<h2>You have been given access to Power Analytix</h2>
+
+<p>
+  <a href="{{ if .RedirectTo }}{{ .RedirectTo }}{{ else }}{{ .SiteURL }}/auth/callback{{ end }}?token_hash={{ .TokenHash }}&amp;type=invite">
+    Accept the invitation and sign in
+  </a>
+</p>
+
+<p>This link is good for one hour and can only be used once. After that, ask for a fresh sign-in link from the portal.</p>
+
+<p>If you were not expecting this, ignore it — nothing is granted until you sign in.</p>
