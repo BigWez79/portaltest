@@ -18,7 +18,21 @@ request. Do not work around an item on this list, and do not re-queue one.
 
 - **Applying a migration to any Supabase project.** Written and committed
   unattended, applied by a person watching. No exception for "it's only a
-  column".
+  column", and none for staging.
+
+  "Applied by a person" means a person types the command. In Claude Code that is
+  the `!` prefix — `! supabase db push` — run inside the session under their own
+  hand, with the output landing in front of both of you. The agent does not run
+  it.
+
+  **An instruction in chat does not satisfy this.** "Go ahead and push it" is not
+  a person applying a migration, it is a person asking an agent to — which is the
+  thing this rule exists to stop. The answer to it is the command to paste, not
+  the command run. To change that, change this file: the transcript does not get
+  a vote, and CLAUDE.md says as much.
+
+  `supabase db push --dry-run` applies nothing and reads only the migration
+  history. The agent may run that, and it is the useful thing to offer instead.
 - **Running `scripts/import-staff.ts` against production.** It is a one-off, it
   overwrites access flags for everybody, and it is run once by a person who has
   checked the CSV. The script is deleted in the same pull request that cuts over,
