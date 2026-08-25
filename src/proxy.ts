@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 /**
- * Refreshes the Supabase session cookie on every request, so a signed-in person
+ * Next.js calls this on every request. It was `middleware.ts` until Next 16
+ * renamed the convention to `proxy`; the job is unchanged.
+ *
+ * Refreshes the Supabase session cookie, so a signed-in person
  * is not thrown out mid-session when the access token expires.
  *
  * It does not decide *which* app somebody may open — requireApp does that, per
@@ -12,7 +15,7 @@ import { createServerClient } from "@supabase/ssr";
  */
 const PUBLIC_PATHS = ["/", "/auth/callback", "/api/test/session"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
 

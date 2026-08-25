@@ -12,6 +12,23 @@ guessing.
 
 ## Next up
 
+### 0. Test the CSV parser — before anybody runs the import
+`scripts/import-staff.ts` parses CSV by hand and has no test. It runs **once**,
+against production, and sets the access flags for every member of staff. Its
+failure mode is the quiet one: a mis-parsed column does not crash, it just
+grants the wrong people the wrong apps — and `--dry-run` prints counts rather
+than rows, so nothing would look wrong.
+
+Pin the mapping: `Title` → email, `Yes` → true, quoted fields containing
+commas, duplicate addresses, a row with no address, and a file with no active
+admin in it.
+
+This blocks the import, which blocks cutover. It is first for that reason.
+
+**Done when** the parser is covered by tests that run with no Supabase
+connection, including the "no active admin" warning, and `npm run verify`
+passes.
+
 ### 1. Rate-limit the sign-in form
 `requestMagicLink` will send a link every time the button is pressed. Supabase
 has its own limits, but nothing here stops somebody pasting an address and
@@ -30,11 +47,19 @@ who changed what, and when — reading through the admin RLS policy.
 person with their own name on it, and a non-admin still gets a 404 for `/admin`.
 
 ### 3. Deactivate on the admin screen should end the session too
-Turning `active` off stops the tiles rendering on the next load, but an open
-session stays valid until it expires. Revoke it.
+Worth being precise about what this is and is not. Deactivating somebody already
+takes effect on their **next page load**: every route reads the staff row fresh,
+so the tiles vanish and `requireApp` 404s. They are not still using the apps.
+
+What is left is that their session cookie stays valid, so they see a signed-in
+portal with a no-access notice rather than being signed out. That is untidy, and
+on the day somebody leaves badly it is the wrong signal to send. Revoke the
+session with `auth.admin.signOut(userId, "global")` when `active` goes false.
+
+This is a tidiness fix, not a hole. Do not let it jump the queue.
 
 **Done when** a test signs somebody in, deactivates them, and their next request
-lands on the sign-in card rather than the portal.
+lands on the sign-in card rather than a signed-in portal with a warning.
 
 ### 4. Accessibility pass on the admin table
 The toggles are buttons with `aria-pressed` and a visually hidden label. Check
@@ -50,16 +75,11 @@ the admin screen is the way access is granted, the script is a loaded gun: it
 overwrites every access flag from a CSV. Remove it, and its `import:staff`
 script, in the pull request that cuts the domain over.
 
+Last, and only after the import has actually run. Do not pick it up before then
+— and note it deletes the thing task 0 tests, which is the right order round.
+
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
-
-### 6. An import dry-run fixture test
-`scripts/import-staff.ts` parses CSV by hand and has no test. Pin the mapping:
-`Title` → email, `Yes` → true, quoted fields with commas, duplicate addresses,
-a row with no address, and a file with no admin in it.
-
-**Done when** the parser is covered by tests that run without a Supabase
-connection, including the "no active admin" warning.
 
 ---
 

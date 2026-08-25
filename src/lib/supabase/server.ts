@@ -33,7 +33,7 @@ export async function supabaseServer() {
           }
         } catch {
           // Called from a server component, where the cookie jar is read-only.
-          // middleware.ts refreshes the session, so this is safe to swallow.
+          // proxy.ts refreshes the session, so this is safe to swallow.
         }
       },
     },

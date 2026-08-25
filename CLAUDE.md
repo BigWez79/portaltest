@@ -86,7 +86,7 @@ received a 5xx. A test that expects a 404 declares it with
 ## Layout of the repo
 
 ```
-src/middleware.ts               refreshes the session; sends signed-out traffic home
+src/proxy.ts                    refreshes the session; sends signed-out traffic home
 src/lib/guard.ts                requireApp — the gate every app route goes through
 src/lib/env.ts                  every environment variable, read lazily
 src/lib/supabase/server.ts      request-scoped client (RLS) + the service-role client
