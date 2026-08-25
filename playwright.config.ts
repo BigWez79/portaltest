@@ -10,6 +10,8 @@ const baseURL = `http://127.0.0.1:${PORT}`;
  */
 export default defineConfig({
   testDir: "./tests",
+  // Deletes .tmp so a stale fixture store cannot outlive a change to the seed.
+  globalSetup: "./tests/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

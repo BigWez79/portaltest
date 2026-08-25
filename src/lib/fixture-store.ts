@@ -1,5 +1,5 @@
 import "server-only";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { StaffRow } from "./staff";
 
@@ -16,6 +16,11 @@ const WORKING = path.join(process.cwd(), ".tmp", "staff.json");
 
 async function load(): Promise<StaffRow[]> {
   try {
+    // A working copy older than the seed is stale: the fixture set changed
+    // under it. Reseed rather than testing yesterday's data.
+    const [seedStat, workingStat] = await Promise.all([stat(SEED), stat(WORKING)]);
+    if (seedStat.mtimeMs > workingStat.mtimeMs) throw new Error("seed is newer");
+
     return JSON.parse(await readFile(WORKING, "utf8")) as StaffRow[];
   } catch {
     const seed = JSON.parse(await readFile(SEED, "utf8")) as StaffRow[];
