@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.poweranalytix.portal.overnight</string>
+
+    <!-- ================================================================= --
+         NO SUPABASE VARIABLES ARE PASSED. That is the point of this file.
+
+         The suite does not need them. playwright.config.ts sets STAFF_SOURCE=
+         fixture and supplies its own throwaway SUPABASE_URL / ANON_KEY /
+         SERVICE_ROLE_KEY so the app can construct its clients, and staff rows
+         are read from tests/fixtures/staff.json. Nothing in `npm run verify`
+         reaches a real project. So the guarantee here is absence, not a flag:
+         there is no variable to set wrongly, no default to fall through to,
+         and no line anyone can add later that quietly re-enables it. A flag
+         can be flipped by a task editing this file; a variable that was never
+         passed cannot be.
+
+         Two things absence does NOT cover, so they are handled explicitly
+         below rather than assumed:
+
+           1. `supabase db push` authenticates with the CLI's own access token
+              in ~/.supabase, not with any environment variable. Withholding
+              SUPABASE_* does nothing to stop it. Hence
+              OVERNIGHT_APPLY_MIGRATIONS=0, which is a flag, and is weaker for
+              exactly the reason above — it is prose the runner has to honour.
+              BLOCKED.md is the real rule: a person types `! supabase db push`,
+              and an instruction in chat does not stand in for that.
+
+           2. `.env.local` is loaded by `next build` all on its own. It holds
+              live portal-staging keys. The plist cannot unset a file, so the
+              honest position is that absence covers what this file controls
+              and .env.local is the remaining route in. It is 0600, gitignored,
+              and the build only compiles — but do not read this comment as a
+              claim that the nightly run cannot see staging credentials.
+
+         RESEND_API_KEY is withheld on the same principle. src/lib/notify.ts is
+         a no-op without it, so an unattended run cannot send anyone email.
+
+         E2E_TEST_MODE is absent deliberately and must stay absent.
+         playwright.config.ts sets it for the suite and nothing else may — it
+         turns on a route that will sign in as anybody (CLAUDE.md, rule 7).
+         -- ================================================================= -->
+
+    <!-- PATH is set EXPLICITLY rather than trusted, which is I Love Wight's
+         lesson and not worth relearning: its 02:00 run on 2026-08-25 died
+         instantly with "claude CLI not on PATH". launchd starts from a
+         near-empty environment, and ~/.local/bin — where claude lives — is not
+         added by any login file. node, npm, supabase and git all survive a
+         login shell; claude alone did not.
+
+         zsh -lc so the job still gets a login shell, since overnight.sh needs
+         node, npm and git on PATH and a bare launchd environment has none of
+         them.
+
+         The guard is there because THE PORTAL HAS NO ./overnight.sh YET. This
+         job is inert until one exists. It fails loudly into the log rather
+         than silently doing nothing, which is the failure mode that wasted a
+         night on the other repo. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; cd /Users/wesleyhughes/portal || exit 1; [ -x ./overnight.sh ] || { printf '[%s] FATAL: ./overnight.sh is not present — the portal has no runner yet\n' "$(date '+%Y-%m-%d %H:%M:%S')"; exit 78; }; OVERNIGHT_APPLY_MIGRATIONS=0 exec ./overnight.sh</string>
+    </array>
+
+    <!-- 03:00, not 02:00. I Love Wight has 02:00 and this is the same Mac:
+         two headless Claude runs and two Playwright suites at once would
+         contend for CPU and make both nights slower and less predictable.
+         TASKS.md already measures its own tasks against "something working
+         alone at 3am", so this is the hour the queue was written for. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>3</integer>
+        <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/wesleyhughes/portal</string>
+
+    <!-- launchd's own view of the run. Detailed transcripts belong under
+         agent_logs/ exactly as they do for a manual run. agent_logs/ is in
+         .gitignore, added before anything wrote to it, because an untracked
+         file makes the tree dirty and aborts the next night. -->
+    <key>StandardOutPath</key>
+    <string>/Users/wesleyhughes/portal/agent_logs/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/wesleyhughes/portal/agent_logs/launchd.err.log</string>
+
+    <!-- Never at load: bootstrapping this job should not kick off a run that
+         commits code. If the Mac is asleep at 03:00, launchd runs it on wake
+         rather than skipping the night. -->
+    <key>RunAtLoad</key>
+    <false/>
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

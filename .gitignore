@@ -27,6 +27,11 @@ blob-report/
 .playwright/
 tests/.artifacts/
 
+# --- scheduled runs ---
+# Written by the LaunchAgents in deploy/. Ignored before anything generates it:
+# an untracked file makes the tree dirty and aborts the next night.
+agent_logs/
+
 # --- supabase local ---
 supabase/.branches/
 supabase/.temp/
