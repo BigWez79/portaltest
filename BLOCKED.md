@@ -54,6 +54,24 @@ request. Do not work around an item on this list, and do not re-queue one.
   something generic and off-brand.
 - **Vercel plan, Supabase plan, domains and billing.**
 
+## Known, and deliberately not fixed yet
+
+- **Both GitHub repositories are public.** `BigWez79/portal` (the live suite)
+  and `BigWez79/portaltest` (this one). Verified 25 August. No credentials are
+  exposed in either — checked for client secrets, API keys, bearer tokens and
+  JWT-shaped strings — but assume anything committed here is world-readable,
+  because it is.
+- **Do not make `BigWez79/portal` private.** GitHub Pages is unpublished
+  automatically when a repository goes private on a Free plan, which takes the
+  whole live suite offline. The DNS would also need updating first to avoid a
+  domain takeover of `portal.poweranalytix.co.uk`. A person decides this, and
+  it needs a paid plan or a hosting move.
+- **`margin.html` on the live suite has no sign-in at all** and ships real
+  default figures. Replacing those with placeholders is a person's call on the
+  live page; the ported route must use placeholders regardless (see TASKS.md P1).
+- **`admin.html` requests `AllSites.FullControl`.** Narrowing it is a
+  one-line change to a page being replaced anyway, but it touches live code.
+
 ## Currently parked
 
 - **Porting Invoices, Timesheets or Expenses.** The routes and the gate exist;
