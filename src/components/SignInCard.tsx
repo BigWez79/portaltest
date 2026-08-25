@@ -1,8 +1,14 @@
+"use client";
+
 import Image from "next/image";
-import { signIn } from "@/auth";
-import { isTestMode } from "@/lib/env";
+import { useActionState } from "react";
+import { requestMagicLink, type SignInState } from "@/app/actions/auth";
+
+const initial: SignInState = { status: "idle" };
 
 export function SignInCard({ error }: { error?: string }) {
+  const [state, formAction, pending] = useActionState(requestMagicLink, initial);
+
   return (
     <div className="wrap">
       <div className="card">
@@ -15,25 +21,55 @@ export function SignInCard({ error }: { error?: string }) {
             </div>
           </div>
           <div className="login-title">Suite Portal</div>
-          {error ? (
+
+          {error === "link" ? (
             <div className="msg" role="alert" data-testid="signin-error">
-              {error === "AccessDenied"
-                ? "That account is not part of the Power Analytix directory."
-                : "Sign-in did not complete. Try again."}
+              That link has expired or has already been used. Ask for a new one.
             </div>
           ) : null}
-          <p>Sign in once to access all Power Analytix apps.</p>
-          <form
-            action={async () => {
-              "use server";
-              if (isTestMode()) return;
-              await signIn("microsoft-entra-id", { redirectTo: "/" });
-            }}
-          >
-            <button className="btn-primary" type="submit" data-testid="signin">
-              Sign in with Microsoft
-            </button>
-          </form>
+
+          {state.status === "sent" ? (
+            <div className="msg ok" role="status" data-testid="link-sent">
+              <b>Check your email.</b> If that address is on the staff list, a sign-in
+              link is on its way. It is good for one hour.
+            </div>
+          ) : (
+            <>
+              <p>Sign in once to access all Power Analytix apps.</p>
+              <form action={formAction} className="signin-form">
+                <label className="field">
+                  <span className="field-label">Work email</span>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    autoComplete="email"
+                    autoFocus
+                    placeholder="you@poweranalytix.co.uk"
+                    data-testid="email"
+                  />
+                </label>
+
+                {state.status === "error" ? (
+                  <div className="msg" role="alert" data-testid="signin-error">
+                    {state.message}
+                  </div>
+                ) : null}
+
+                <button
+                  className="btn-primary"
+                  type="submit"
+                  disabled={pending}
+                  data-testid="signin"
+                >
+                  {pending ? "Sending…" : "Email me a sign-in link"}
+                </button>
+              </form>
+              <p className="fineprint">
+                No password to remember. The link signs you in on this device.
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

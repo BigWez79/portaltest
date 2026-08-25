@@ -1,7 +1,6 @@
 import Image from "next/image";
-import { signOut } from "@/auth";
+import { signOut } from "@/app/actions/auth";
 import { tilesFor } from "@/lib/apps";
-import { isTestMode } from "@/lib/env";
 import type { Access } from "@/lib/staff";
 import { TileIcon } from "./TileIcon";
 
@@ -46,13 +45,7 @@ export function Portal({ access }: { access: Access }) {
           </div>
         )}
 
-        <form
-          action={async () => {
-            "use server";
-            if (isTestMode()) return;
-            await signOut({ redirectTo: "/" });
-          }}
-        >
+        <form action={signOut}>
           <button className="btn-ghost" type="submit" data-testid="signout">
             Sign out
           </button>

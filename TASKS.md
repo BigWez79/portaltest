@@ -12,59 +12,58 @@ guessing.
 
 ## Next up
 
-### 1. A route for the Admin tile
-The Admin tile currently points at `/admin`, which does not exist. Add a route
-that renders a placeholder page behind the same access check as the tile, so a
-non-admin who types the URL gets the sign-in card rather than a 404 that leaks
-the route's existence.
+### 1. Rate-limit the sign-in form
+`requestMagicLink` will send a link every time the button is pressed. Supabase
+has its own limits, but nothing here stops somebody pasting an address and
+holding down enter. Add a per-address and per-IP limit, backed by a table so it
+survives a redeploy.
 
-**Done when** `tests/access-matrix.spec.ts` has a case proving a non-admin
-requesting `/admin` is not served admin content, and `npm run verify` passes.
+**Done when** a test asks for six links for one address inside a minute and the
+sixth is refused with the same neutral message as an unknown address, and the
+first five still arrive.
 
-### 2. Middleware so no route is unprotected by default
-Access is enforced per page today. Add `src/middleware.ts` that requires a
-session for everything except `/`, `/api/auth/*` and static assets, so a new
-route is protected before anyone remembers to protect it.
+### 2. Show the audit trail on the admin screen
+`staff_audit` records every change and nothing reads it. Add a panel per person —
+who changed what, and when — reading through the admin RLS policy.
 
-**Done when** a test requests an invented path while signed out and is redirected
-to `/`, and every existing test still passes.
+**Done when** an admin flips a flag and sees that change listed against that
+person with their own name on it, and a non-admin still gets a 404 for `/admin`.
 
-### 3. Structured logging for a staff-lookup miss
-`resolveAccess` currently `console.warn`s when nobody matches. Emit one
-structured line instead — address, whether it was a UPN or a mailbox match
-attempt, and the source — so a mismatch is diagnosable from Vercel's log without
-guessing.
+### 3. Deactivate on the admin screen should end the session too
+Turning `active` off stops the tiles rendering on the next load, but an open
+session stays valid until it expires. Revoke it.
 
-**Done when** a test asserts the miss line is emitted for an unknown address and
-is *not* emitted for a known one.
+**Done when** a test signs somebody in, deactivates them, and their next request
+lands on the sign-in card rather than the portal.
 
-### 4. A `--check` mode smoke test for the sync
-`scripts/sync-staff.ts --check` reports differences and exits non-zero. It has no
-test. Add one against a fake Graph response and a fake Supabase client so the
-mapping (`Title` -> `email`, `Yes` -> `true`, and so on) is pinned.
+### 4. Accessibility pass on the admin table
+The toggles are buttons with `aria-pressed` and a visually hidden label. Check
+the table's header association, focus order along a row, and that a screen
+reader announces which person a toggle belongs to.
 
-**Done when** the test covers a new row, a changed flag, an orphan and a row with
-an empty `Title`.
+**Done when** an automated axe pass runs against `/` and `/admin` with no
+violations at 390 and 1440, and the screenshots are attached.
 
-### 5. Accessibility pass on the tile grid
-Tiles are anchors carrying three spans. Check heading order, focus order, focus
-visibility and that each tile's accessible name is its app name rather than the
-whole blurb.
+### 5. An import dry-run fixture test
+`scripts/import-staff.ts` parses CSV by hand and has no test. Pin the mapping:
+`Title` → email, `Yes` → true, quoted fields with commas, duplicate addresses,
+a row with no address, and a file with no admin in it.
 
-**Done when** an automated axe pass runs in the suite with no violations at 390
-and 1440, and the screenshots are attached.
+**Done when** the parser is covered by tests that run without a Supabase
+connection, including the "no active admin" warning.
 
 ---
 
 ## Held — needs a person
 
-- Creating the Entra web app registration and its secret (BLOCKED.md)
 - Creating the Supabase projects and applying `0001_staff.sql` (BLOCKED.md)
-- Pointing `portal.poweranalytix.co.uk` at Vercel (BLOCKED.md)
-- Deciding whether Supabase becomes the master for staff access (BLOCKED.md)
+- Turning off email signups and pointing Supabase Auth's SMTP at Resend
+- Exporting the SharePoint Staff list to CSV and running the one-off import
+- Pointing `portal.poweranalytix.co.uk` at Vercel
+- Migrating Invoices, Timesheets and Expenses (`docs/SUITE-IDENTITY.md`)
 
 ---
 
 ## Done
 
-_(nothing yet — this repo is the first commit)_
+- **Portal v3.0 scaffold** — sign-in, tiles, admin screen, 37 checks. First commit.

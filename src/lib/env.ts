@@ -1,11 +1,12 @@
 /**
  * Every environment variable the portal reads, in one place.
  *
- * Nothing here is prefixed NEXT_PUBLIC_. That is deliberate: Next.js inlines any
- * NEXT_PUBLIC_* variable into the client bundle, and one of these is a Supabase
- * service-role key. `npm run check:secrets` fails the build if that ever changes.
+ * Nothing here is prefixed NEXT_PUBLIC_, and nothing needs to be: the portal
+ * talks to Supabase only from the server. No Supabase key of any kind — not even
+ * the anon key — is sent to a browser. `npm run check:secrets` reads the built
+ * output and fails if that ever changes.
  *
- * Reads are lazy so that `next build` does not need production credentials.
+ * Reads are lazy so `next build` does not need production credentials.
  */
 
 function required(name: string): string {
@@ -28,33 +29,52 @@ export const isTestMode = () => process.env.E2E_TEST_MODE === "1";
 export const staffSource = () =>
   (optional("STAFF_SOURCE", "supabase") as "supabase" | "fixture");
 
-export const entra = {
-  get tenantId() {
-    return required("ENTRA_TENANT_ID");
-  },
-  /**
-   * Pinned to the tenant on purpose. Auth.js defaults this to
-   * https://login.microsoftonline.com/common/v2.0, which lets any Microsoft
-   * account on earth begin a sign-in. See tests/tenant-pinning.spec.ts.
-   */
-  get issuer() {
-    return `https://login.microsoftonline.com/${required("ENTRA_TENANT_ID")}/v2.0`;
-  },
-};
-
 export const supabase = {
   get url() {
     return required("SUPABASE_URL");
   },
+  /** Public by design, but still kept server-side. RLS is what protects the data. */
+  get anonKey() {
+    return required("SUPABASE_ANON_KEY");
+  },
+  /** Invites and the import script only. Never used to read staff rows. */
   get serviceRoleKey() {
     return required("SUPABASE_SERVICE_ROLE_KEY");
   },
 };
 
 /**
- * Fallback allow-list carried over from portal v2.0. A bootstrap admin sees
- * every tile even with no staff row, so the portal can never lock its own
- * administrator out while the staff table is empty or mid-sync.
+ * The session cookie is set on this domain so one sign-in covers the whole
+ * suite: portal, invoices, timesheet and expenses all read the same cookie.
+ * Unset locally, where the cookie is host-only.
+ */
+export const sessionCookieDomain = () => optional("SESSION_COOKIE_DOMAIN") || undefined;
+
+/** Absolute origin, needed to build magic-link callback URLs. */
+export const siteUrl = () => {
+  const explicit = optional("SITE_URL");
+  if (explicit) return explicit.replace(/\/$/, "");
+  const vercel = optional("VERCEL_URL");
+  if (vercel) return `https://${vercel}`;
+  return "http://localhost:3000";
+};
+
+export const resend = {
+  get apiKey() {
+    return optional("RESEND_API_KEY");
+  },
+  get from() {
+    return optional("RESEND_FROM", "Power Analytix <no-reply@poweranalytix.co.uk>");
+  },
+  get enabled() {
+    return optional("RESEND_API_KEY") !== "";
+  },
+};
+
+/**
+ * Fallback allow-list. A bootstrap admin sees every tile and can reach the admin
+ * screen even with no staff row, so the portal can never lock its own
+ * administrator out — during the import, or after a bad flag edit.
  */
 export const bootstrapAdmins = (): string[] =>
   optional("BOOTSTRAP_ADMINS")

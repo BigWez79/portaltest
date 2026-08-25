@@ -42,8 +42,8 @@ export const APP_TILES: AppTile[] = [
   {
     id: "admin",
     name: "Admin",
-    blurb: "Timesheet overview, expense claims, invoice admin.",
-    href: "https://portal.poweranalytix.co.uk/admin",
+    blurb: "Staff access, invites, and who can reach what.",
+    href: "/admin",
     tone: "admin",
     grants: (a) => a.isAdmin,
   },

@@ -5,8 +5,8 @@ const baseURL = `http://127.0.0.1:${PORT}`;
 
 /**
  * The suite runs against a production build, in test mode, reading staff rows
- * from tests/fixtures/staff.json. It never reaches Entra, Graph or Supabase —
- * so it runs identically on the Mac Studio at 02:00 and on a laptop.
+ * from tests/fixtures/staff.json. It sends no email and reaches no Supabase
+ * project, so it runs identically on the Mac Studio at 02:00 and on a laptop.
  */
 export default defineConfig({
   testDir: "./tests",
@@ -45,12 +45,12 @@ export default defineConfig({
       E2E_TEST_MODE: "1",
       STAFF_SOURCE: "fixture",
       BOOTSTRAP_ADMINS: "",
-      // Auth.js is constructed at import time; these are never used because the
-      // suite never signs in through Entra, but they have to be present.
-      AUTH_SECRET: "e2e-only-not-a-real-secret",
-      AUTH_MICROSOFT_ENTRA_ID_ID: "e2e-client-id",
-      AUTH_MICROSOFT_ENTRA_ID_SECRET: "e2e-client-secret",
-      ENTRA_TENANT_ID: "00000000-0000-0000-0000-000000000000",
+      // Present so the app can construct its clients; never used, because the
+      // suite plants sessions directly and reads staff from the fixture store.
+      SUPABASE_URL: "http://127.0.0.1:54321",
+      SUPABASE_ANON_KEY: "e2e-anon-key",
+      SUPABASE_SERVICE_ROLE_KEY: "e2e-service-role-key",
+      SITE_URL: baseURL,
     },
   },
 });

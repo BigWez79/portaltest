@@ -1,9 +1,12 @@
 # Power Analytix Suite Portal
 
-One sign-in for the whole suite. Replaces `portal_index.html` v2.0.
+One sign-in for the whole suite, and the screen where staff access is granted.
+Replaces `portal_index.html` v2.0. No Microsoft dependency.
 
 The agent-facing rules are in [`CLAUDE.md`](./CLAUDE.md); what needs a person is
-in [`BLOCKED.md`](./BLOCKED.md); the queue is [`TASKS.md`](./TASKS.md).
+in [`BLOCKED.md`](./BLOCKED.md); the queue is [`TASKS.md`](./TASKS.md); how the
+other three apps join this identity is in
+[`docs/SUITE-IDENTITY.md`](./docs/SUITE-IDENTITY.md).
 
 ## Running it
 
@@ -19,77 +22,95 @@ npm run dev
 npm run verify    # typecheck -> build -> check:secrets -> test:e2e
 ```
 
-The Playwright suite needs no credentials and reaches no live service. It runs a
-production build with `E2E_TEST_MODE=1` and `STAFF_SOURCE=fixture`, reading staff
-rows from `tests/fixtures/staff.json` and planting sessions through
-`/api/test/session` — which returns 404 in every other environment.
+The Playwright suite needs no credentials, sends no email and reaches no Supabase
+project. It runs a production build with `E2E_TEST_MODE=1` and
+`STAFF_SOURCE=fixture`, reading staff from `tests/fixtures/staff.json` and
+planting sessions through `/api/test/session` — which returns 404 in every other
+environment.
 
-On a machine where `npx playwright install chromium` cannot run, point the suite
-at an existing browser:
+On a machine where `npx playwright install chromium` cannot run:
 
 ```bash
 E2E_CHROMIUM_PATH=/path/to/chrome E2E_NO_SANDBOX=1 npx playwright test
 ```
 
+## How sign-in works
+
+1. Somebody types their work email and asks for a link.
+2. Supabase sends it, through whatever SMTP the project is configured with
+   (Resend). `shouldCreateUser` is false and email signups are off, so an address
+   that is not on the staff list gets nothing — and is told the same thing as one
+   that is, because different answers make the form a staff directory.
+3. The link lands on `/auth/callback`, which exchanges the token for a session
+   **on the server**. No Supabase key of any kind is ever sent to a browser.
+4. The session cookie is set on `SESSION_COOKIE_DOMAIN`, so one sign-in covers
+   the portal and, once they move, all three apps.
+
+Supabase accepts wildcard redirect URLs, so every Vercel preview can complete a
+real sign-in — which the Entra version could not.
+
 ## Setup a person has to do once
 
-Both of these are on the blocked list; they are written down here so the sequence
-is not guesswork.
+All of this is on the blocked list; it is written down here so the sequence is
+not guesswork.
 
-**1. A new Entra app registration** — separate from the SPA registration that
-Timesheets and Expenses share. That one is a public client and must not be given
-a secret.
-
-- Platform: **Web**
-- Redirect URI: `https://portal.poweranalytix.co.uk/api/auth/callback/microsoft-entra-id`
-- API permissions: `openid`, `profile`, `email`. **No Graph scopes.**
-- Supported account types: **this organizational directory only**
-- Create a client secret; put the *value* in `AUTH_MICROSOFT_ENTRA_ID_SECRET`
-
-Entra does not accept wildcard redirect URIs, so Vercel preview deployments
-cannot complete a real Microsoft sign-in. Previews use the test-mode seeder;
-real sign-in is verified once, on a fixed staging URL, before cutover.
-
-**2. Supabase** — one project for production and one for staging. Apply
-`supabase/migrations/0001_staff.sql` by hand:
+**1. Two Supabase projects** — production and staging. In each:
 
 ```bash
 supabase link --project-ref <ref>
 supabase db push          # a person runs this, watching
 ```
 
-The `staff` table has RLS enabled and **no policies**. That is deliberate: sign-in
-is Entra, not Supabase Auth, so there is no Supabase JWT to write a policy
-against. Deny-by-default plus a service-role read from the server is the honest
-version. Do not add an anon policy.
+Then, in the dashboard:
 
-## Environment
+- **Authentication → Providers → Email**: enable, and turn **"Enable email
+  signups" off**. This is what stops anybody requesting a link.
+- **Authentication → SMTP**: point it at Resend, so sign-in and invitation mail
+  comes from your domain rather than Supabase's shared sender.
+- **Authentication → URL configuration**: site URL
+  `https://portal.poweranalytix.co.uk`, and add the Vercel preview wildcard to
+  additional redirect URLs.
 
-Every variable is documented in [`.env.example`](./.env.example). One rule worth
-repeating: nothing here is prefixed `NEXT_PUBLIC_`, because Next.js inlines those
-into the client bundle and one of them is a service-role key. `npm run
-check:secrets` reads the built output and fails if that ever changes.
-
-## Where the staff data comes from
-
-SharePoint remains the master while Invoices, Timesheets and Expenses read it.
-`scripts/sync-staff.ts` copies it into Supabase one way, on a schedule:
+**2. Import the staff list, once.** Export the SharePoint Staff list to CSV in
+the browser, then:
 
 ```bash
-npm run sync:staff -- --check   # report differences, write nothing, exit 1 if any
-npm run sync:staff              # apply
+npm run import:staff -- staff.csv --dry-run   # read it back, change nothing
+npm run import:staff -- staff.csv
 ```
 
-Access is still granted where it is granted today — in the SharePoint list. The
-portal just stops reading it from inside a browser.
+It sends no invitations. Check the list on the admin screen first, then invite
+people from there when you are ready for them to arrive. Make sure
+`BOOTSTRAP_ADMINS` is set before you rely on this — it is the way back in if the
+import lands with no admin.
+
+**3. Vercel** — set the environment variables from `.env.example`, including
+`SESSION_COOKIE_DOMAIN=.poweranalytix.co.uk`, then point DNS at it.
+
+## Security posture
+
+`staff` has row level security on with real policies, because Supabase Auth means
+there is finally a JWT to write policies against:
+
+| Who | Can |
+|---|---|
+| anyone signed in | read their own row |
+| an active admin | read every row, add a person, change flags |
+| anyone | delete — **nobody**, there is no delete policy |
+
+The application reads staff with the caller's own session, so Postgres decides
+what comes back rather than this codebase remembering to filter. The service role
+is used twice: to invite somebody, and by the one-off CSV import.
 
 ## What changed from v2.0
 
 | | v2.0 | v3.0 |
 |---|---|---|
-| Sign-in | MSAL in the browser | Auth.js, confidential client, httpOnly cookie |
-| Graph scope | `Sites.ReadWrite.All`, in the browser | none |
-| Staff lookup | browser reads ~500 SharePoint rows | server reads one Supabase row |
+| Sign-in | MSAL in the browser | Supabase magic link, exchanged server-side |
+| Graph scope | `Sites.ReadWrite.All`, in the browser | no Microsoft at all |
+| Staff lookup | browser reads ~500 SharePoint rows | server reads one row, through RLS |
+| Access admin | a SharePoint list | the Admin tile, with an audit trail |
 | Tiles you cannot open | in the HTML, hidden with CSS | not rendered |
-| Tests | none | 24 Playwright checks at four widths |
+| Preview sign-in | impossible (no wildcard redirect URIs) | works |
+| Tests | none | 37 Playwright checks at four widths |
 | Release | edit the file, upload it | merge to `main` |

@@ -5,26 +5,31 @@ request. Do not work around an item on this list, and do not re-queue one.
 
 ## Credentials and identity
 
-- **The Entra app registrations.** Redirect URIs, client secrets, API
-  permissions, consent. An agent that can edit a registration can lock the whole
-  company out of the whole suite.
-- **Rotating any secret.** `AUTH_SECRET`, the Entra client secret, the Supabase
-  service-role key, the sync client secret. They live in Vercel's environment and
-  in a password manager. They do not enter a chat, a commit or an agent's
-  context.
+- **Supabase project settings.** Auth providers, email templates, SMTP, redirect
+  URLs, JWT settings. In particular: **email signups stay disabled**. They are
+  what stops any address on earth requesting a sign-in link.
+- **Rotating any key.** Service role, anon, Resend. They live in Vercel's
+  environment and in a password manager. They do not enter a chat, a commit or an
+  agent's context.
+- **`SESSION_COOKIE_DOMAIN`.** Changing it signs the whole company out, and gets
+  the sub-apps' sessions wrong in a way that is hard to see from one browser.
 
 ## Data
 
-- **Applying a migration to any Supabase project.** Migrations are written and
-  committed unattended, and applied by a person watching. There is no exception
-  for "it's only a column".
-- **Any write to the SharePoint Staff list.** The sync reads. While Invoices,
-  Timesheets and Expenses still read that list, it is the master and this repo
-  does not touch it.
+- **Applying a migration to any Supabase project.** Written and committed
+  unattended, applied by a person watching. No exception for "it's only a
+  column".
+- **Running `scripts/import-staff.ts` against production.** It is a one-off, it
+  overwrites access flags for everybody, and it is run once by a person who has
+  checked the CSV.
+- **Loosening a row level security policy.** Especially: do not add an `anon`
+  policy on `staff`, and do not replace the RLS read in `staff.ts` with a
+  service-role read to "fix" a query.
 - **Deleting a staff row.** People who leave are deactivated, never deleted — the
-  row is the only record of what they had.
-- **Bulk edits to production `staff` data.** Access is granted where it is
-  granted today.
+  row and its audit trail are the only record of what they had.
+- **Editing `staff` in the Supabase table editor** in place of the admin screen.
+  The screen writes an audit row; the table editor does too, but with no
+  `changed_by`. Use the screen.
 
 ## Release
 
@@ -34,22 +39,23 @@ request. Do not work around an item on this list, and do not re-queue one.
   way and it is the front door for everyone.
 - **Retiring the old static portal.** The v2.0 file is archived on a branch, not
   deleted, and only after the new one has been live for a week.
+- **Turning off the Entra registration** the sub-apps still share. It stays until
+  Invoices is the last one across — see `docs/SUITE-IDENTITY.md`.
 
 ## Product and money
 
-- **Adding, removing or renaming a tile** without a person saying so. The four
-  apps are the four apps.
-- **Anything that changes what a staff member can reach.** Access rules are a
-  decision, not a task.
-- **The look of the page.** Ported from v2.0 as it is. Restyling needs live
-  iteration — an agent asked to make the portal "more modern" overnight will
-  confidently produce something generic and off-brand.
-- **Vercel plan, domains and billing.**
+- **Adding, removing or renaming a tile** without a person saying so.
+- **Changing who can grant access**, or adding a second place where access is
+  granted. One admin screen, or access is not auditable.
+- **The look of the page.** Ported from v2.0. Restyling needs live iteration — an
+  agent asked to make the portal "more modern" overnight will confidently produce
+  something generic and off-brand.
+- **Vercel plan, Supabase plan, domains and billing.**
 
 ## Currently parked
 
-- **Supabase as the master for staff access.** Blocked until Invoices,
-  Timesheets and Expenses stop reading the SharePoint list. Until then the sync
-  direction is fixed.
-- **Admin app.** The Admin tile points at `/admin`, which is not built in this
-  repo yet. Do not scaffold it without a task that says to.
+- **Migrating Invoices, Timesheets or Expenses.** Those are separate
+  repositories. The design is written down in `docs/SUITE-IDENTITY.md`; the work
+  is not queued here.
+- **Anything that reads `graph.microsoft.com`.** There is no Microsoft dependency
+  left in this project and it does not come back.

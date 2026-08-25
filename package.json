@@ -2,7 +2,7 @@
   "name": "poweranalytix-portal",
   "version": "3.0.0",
   "private": true,
-  "description": "Power Analytix Suite Portal — one sign-in for the whole suite.",
+  "description": "Power Analytix Suite Portal \u2014 one sign-in for the whole suite.",
   "engines": {
     "node": ">=20.9.0"
   },
@@ -10,20 +10,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
     "verify": "npm run typecheck && npm run build && npm run check:secrets && npm run test:e2e",
-    "sync:staff": "tsx scripts/sync-staff.ts"
+    "import:staff": "tsx scripts/import-staff.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.58.0",
     "next": "^16.3.2",
-    "next-auth": "^5.0.0-beta.32",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "resend": "^6.22.1",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

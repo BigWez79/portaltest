@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import { isTestMode } from "./env";
 
 export type CurrentUser = {
+  id: string;
   email: string;
-  upn: string | null;
   name: string | null;
 };
 
@@ -14,9 +14,8 @@ export const E2E_COOKIE = "e2e-session";
  * The one place the app asks "who is this".
  *
  * Under the e2e suite (E2E_TEST_MODE=1) the answer comes from a cookie planted
- * by /api/test/session, so the suite never touches Entra — Entra will not
- * accept a wildcard redirect URI and Vercel preview hostnames change on every
- * push. Everywhere else it is the real Auth.js session, and the test branch is
+ * by /api/test/session, so the suite never sends an email or reaches Supabase.
+ * Everywhere else it is the Supabase session, and the test branch is
  * unreachable: the seeder route 404s and this function ignores the cookie.
  */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -28,8 +27,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       const parsed = JSON.parse(decodeURIComponent(raw)) as Partial<CurrentUser>;
       if (!parsed.email) return null;
       return {
+        id: parsed.id ?? `e2e-${parsed.email}`,
         email: parsed.email.toLowerCase(),
-        upn: parsed.upn ? parsed.upn.toLowerCase() : null,
         name: parsed.name ?? null,
       };
     } catch {
@@ -37,14 +36,20 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     }
   }
 
-  const { auth } = await import("@/auth");
-  const session = await auth();
-  const email = session?.user?.email;
-  if (!email) return null;
+  const { supabaseServer } = await import("./supabase/server");
+  const client = await supabaseServer();
+
+  // getUser() revalidates the token with Supabase rather than trusting the
+  // cookie's contents. Slower than reading the session, and the right default.
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+
+  if (!user?.email) return null;
 
   return {
-    email: email.toLowerCase(),
-    upn: session.user.upn ?? null,
-    name: session.user.name ?? null,
+    id: user.id,
+    email: user.email.toLowerCase(),
+    name: (user.user_metadata?.full_name as string | undefined) ?? null,
   };
 }

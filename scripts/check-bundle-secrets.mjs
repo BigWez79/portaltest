@@ -27,7 +27,7 @@ const PRERENDER_DIR = path.join(ROOT, ".next", "server", "app");
 const failures = [];
 
 /* 1. No sensitive NEXT_PUBLIC_* names, wherever they are defined. */
-const FORBIDDEN_PUBLIC = /^NEXT_PUBLIC_.*(SUPABASE|SECRET|KEY|TOKEN|PASSWORD|SERVICE)/i;
+const FORBIDDEN_PUBLIC = /^NEXT_PUBLIC_.*(SUPABASE|SECRET|KEY|TOKEN|PASSWORD|SERVICE|RESEND)/i;
 for (const name of Object.keys(process.env)) {
   if (FORBIDDEN_PUBLIC.test(name)) {
     failures.push(`${name} is NEXT_PUBLIC_ and looks like a credential — Next inlines it.`);
@@ -37,16 +37,16 @@ for (const name of Object.keys(process.env)) {
 /* 2. The build output must not contain any live credential value. */
 const NEEDLES = [
   ["SUPABASE_SERVICE_ROLE_KEY value", process.env.SUPABASE_SERVICE_ROLE_KEY],
-  ["AUTH_MICROSOFT_ENTRA_ID_SECRET value", process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET],
-  ["AUTH_SECRET value", process.env.AUTH_SECRET],
-  ["SYNC_CLIENT_SECRET value", process.env.SYNC_CLIENT_SECRET],
+  ["SUPABASE_ANON_KEY value", process.env.SUPABASE_ANON_KEY],
+  ["RESEND_API_KEY value", process.env.RESEND_API_KEY],
 ].filter(([, v]) => typeof v === "string" && v.length >= 12);
 
 /* 3. Patterns that should never appear in anything shipped to a browser. */
 const PATTERNS = [
   [/service_role/, "the literal string service_role"],
   [/SUPABASE_SERVICE_ROLE_KEY/, "the service-role variable name"],
-  [/Sites\.ReadWrite\.All/, "a tenant-wide Graph scope"],
+  [/SUPABASE_ANON_KEY/, "the anon key variable name"],
+  [/re_[A-Za-z0-9]{20,}/, "something shaped like a Resend API key"],
 ];
 
 function walk(dir, match) {

@@ -1,82 +1,90 @@
 [
   {
     "email": "everything@example.test",
-    "upn": "everything@example.test",
-    "officialName": "Ada Everything",
+    "fullName": "Ada Everything",
     "active": true,
     "isAdmin": true,
     "hasInvoices": true,
     "hasTimesheet": true,
-    "hasExpenses": true
+    "hasExpenses": true,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
   },
   {
     "email": "invoices.only@example.test",
-    "upn": "invoices.only@example.test",
-    "officialName": "Ivor Invoices",
+    "fullName": "Ivor Invoices",
     "active": true,
     "isAdmin": false,
     "hasInvoices": true,
     "hasTimesheet": false,
-    "hasExpenses": false
+    "hasExpenses": false,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
   },
   {
     "email": "timesheet.only@example.test",
-    "upn": "timesheet.only@example.test",
-    "officialName": "Tessa Timesheet",
+    "fullName": "Tessa Timesheet",
     "active": true,
     "isAdmin": false,
     "hasInvoices": false,
     "hasTimesheet": true,
-    "hasExpenses": false
+    "hasExpenses": false,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
   },
   {
     "email": "expenses.only@example.test",
-    "upn": "expenses.only@example.test",
-    "officialName": "Eve Expenses",
+    "fullName": "Eve Expenses",
     "active": true,
     "isAdmin": false,
     "hasInvoices": false,
     "hasTimesheet": false,
-    "hasExpenses": true
+    "hasExpenses": true,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
   },
   {
     "email": "admin.only@example.test",
-    "upn": "admin.only@example.test",
-    "officialName": "Adam Admin",
+    "fullName": "Adam Admin",
     "active": true,
     "isAdmin": true,
     "hasInvoices": false,
     "hasTimesheet": false,
-    "hasExpenses": false
+    "hasExpenses": false,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
   },
   {
     "email": "no.flags@example.test",
-    "upn": "no.flags@example.test",
-    "officialName": "Nora Noflags",
+    "fullName": "Nora Noflags",
     "active": true,
     "isAdmin": false,
     "hasInvoices": false,
     "hasTimesheet": false,
-    "hasExpenses": false
+    "hasExpenses": false,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
   },
   {
     "email": "left.the.company@example.test",
-    "upn": "left.the.company@example.test",
-    "officialName": "Lee Leaver",
+    "fullName": "Lee Leaver",
     "active": false,
     "isAdmin": true,
     "hasInvoices": true,
     "hasTimesheet": true,
-    "hasExpenses": true
+    "hasExpenses": true,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z"
   },
   {
-    "email": "mailbox@example.test",
-    "upn": "different.upn@example.test",
-    "officialName": "Mabel Mismatch",
+    "email": "invited@example.test",
+    "fullName": "Ines Invited",
     "active": true,
     "isAdmin": false,
     "hasInvoices": false,
-    "hasTimesheet": true,
-    "hasExpenses": false
+    "hasTimesheet": false,
+    "hasExpenses": false,
+    "invitedAt": "2026-08-24T09:00:00.000Z",
+    "lastSeenAt": null
   }
 ]

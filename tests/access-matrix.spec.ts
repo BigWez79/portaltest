@@ -6,6 +6,7 @@ test.describe("access matrix", () => {
     await page.goto("/");
 
     await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("email")).toBeVisible();
     await expect(page.getByTestId("signin")).toBeVisible();
     await expectExactlyTiles(page, []);
     await expect(page.getByTestId("tiles")).toHaveCount(0);
@@ -79,21 +80,7 @@ test.describe("access matrix", () => {
     await expectExactlyTiles(page, []);
   });
 
-  test("the row is found when Entra returns the UPN rather than the mailbox", async ({
-    page,
-  }) => {
-    // Mabel's Staff row is keyed on mailbox@example.test but Entra hands back
-    // different.upn@example.test. Matching on only one of the two loses her.
-    await signInAs(page, "different.upn@example.test", {
-      upn: "different.upn@example.test",
-    });
-    await page.goto("/");
-
-    await expect(page.getByTestId("user-name")).toHaveText("Mabel Mismatch");
-    await expectExactlyTiles(page, ["timesheet"]);
-  });
-
-  test("the official name from the staff row wins over the Entra display name", async ({
+  test("the name on the staff row wins over the name on the session", async ({
     page,
   }) => {
     await signInAs(page, "invoices.only@example.test", { name: "ivor.invoices" });
