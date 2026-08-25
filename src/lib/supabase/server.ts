@@ -2,7 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { sessionCookieDomain, supabase as env } from "../env";
+import { supabase as env } from "../env";
 
 /**
  * The request-scoped client. Uses the anon key and the caller's session cookie,
@@ -10,18 +10,16 @@ import { sessionCookieDomain, supabase as env } from "../env";
  * own row and nothing else, and that is enforced by Postgres rather than by this
  * codebase remembering to filter.
  *
- * The cookie is scoped to SESSION_COOKIE_DOMAIN (.poweranalytix.co.uk in
- * production) so one sign-in covers the portal and all three apps.
+ * The cookie is host-only. All four apps are routes in this one deployment, so
+ * there is no session shared across origins to get wrong.
  */
 export async function supabaseServer() {
   const jar = await cookies();
-  const domain = sessionCookieDomain();
 
   return createServerClient(env.url, env.anonKey, {
     cookieOptions: {
-      domain,
       sameSite: "lax",
-      secure: domain !== undefined,
+      secure: process.env.NODE_ENV === "production",
       path: "/",
     },
     cookies: {

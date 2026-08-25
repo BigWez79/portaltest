@@ -1,7 +1,8 @@
 import type { Access } from "./staff";
+import type { AppKey } from "./guard";
 
 export type AppTile = {
-  id: string;
+  id: AppKey;
   name: string;
   blurb: string;
   href: string;
@@ -10,16 +11,23 @@ export type AppTile = {
 };
 
 /**
- * The four tiles, unchanged from portal v2.0. Hrefs stay absolute: Invoices,
- * Timesheets and Expenses are separate apps on their own subdomains and none of
- * them move in this rebuild.
+ * The four tiles.
+ *
+ * Every href is a route inside this app. Invoices, Timesheets and Expenses used
+ * to be separate deployments on their own subdomains; they are being folded in
+ * here so there is one repo, one test suite, one deploy and one sign-in, with no
+ * session shared across origins to get wrong.
+ *
+ * Adding a tile means: an entry here, a glyph in TileIcon, a route under
+ * src/app that calls requireApp, a column in a migration, a Flag in
+ * staff-admin.ts, a column in StaffTable, and a case in the access matrix.
  */
 export const APP_TILES: AppTile[] = [
   {
     id: "invoices",
     name: "Invoices",
     blurb: "Create, edit and print customer invoices.",
-    href: "https://invoices.poweranalytix.co.uk/",
+    href: "/invoices",
     tone: "brand",
     grants: (a) => a.apps.invoices,
   },
@@ -27,7 +35,7 @@ export const APP_TILES: AppTile[] = [
     id: "timesheet",
     name: "Timesheets",
     blurb: "Log your daily hours and activities.",
-    href: "https://timesheet.poweranalytix.co.uk/",
+    href: "/timesheets",
     tone: "brand",
     grants: (a) => a.apps.timesheet,
   },
@@ -35,7 +43,7 @@ export const APP_TILES: AppTile[] = [
     id: "expenses",
     name: "Expenses",
     blurb: "Log expenses, mileage and monthly claims.",
-    href: "https://expenses.poweranalytix.co.uk/",
+    href: "/expenses",
     tone: "brand",
     grants: (a) => a.apps.expenses,
   },

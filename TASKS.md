@@ -44,7 +44,16 @@ reader announces which person a toggle belongs to.
 **Done when** an automated axe pass runs against `/` and `/admin` with no
 violations at 390 and 1440, and the screenshots are attached.
 
-### 5. An import dry-run fixture test
+### 5. Delete the import script at cutover
+`scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
+the admin screen is the way access is granted, the script is a loaded gun: it
+overwrites every access flag from a CSV. Remove it, and its `import:staff`
+script, in the pull request that cuts the domain over.
+
+**Done when** the script is gone, `npm run verify` still passes, and README no
+longer tells anybody to run it.
+
+### 6. An import dry-run fixture test
 `scripts/import-staff.ts` parses CSV by hand and has no test. Pin the mapping:
 `Title` → email, `Yes` → true, quoted fields with commas, duplicate addresses,
 a row with no address, and a file with no admin in it.
@@ -60,10 +69,14 @@ connection, including the "no active admin" warning.
 - Turning off email signups and pointing Supabase Auth's SMTP at Resend
 - Exporting the SharePoint Staff list to CSV and running the one-off import
 - Pointing `portal.poweranalytix.co.uk` at Vercel
-- Migrating Invoices, Timesheets and Expenses (`docs/SUITE-IDENTITY.md`)
+- Porting Invoices, Timesheets and Expenses (`docs/PORTING-APPS.md`) — queued
+  per app once its repository has been read
 
 ---
 
 ## Done
 
-- **Portal v3.0 scaffold** — sign-in, tiles, admin screen, 37 checks. First commit.
+- **Portal v3.0 scaffold** — sign-in, tiles, admin screen. First commit.
+- **Off Microsoft** — Supabase Auth, RLS, staff admin screen, CSV import.
+- **One app** — the three apps became guarded routes; shared-cookie machinery
+  dropped. 51 checks.

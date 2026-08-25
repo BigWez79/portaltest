@@ -5,9 +5,10 @@ import { createServerClient } from "@supabase/ssr";
  * Refreshes the Supabase session cookie on every request, so a signed-in person
  * is not thrown out mid-session when the access token expires.
  *
- * It does not decide access — the page does that, from the staff row. This only
- * keeps the session alive and sends signed-out traffic to the front door, so a
- * route added later is protected before anyone remembers to protect it.
+ * It does not decide *which* app somebody may open — requireApp does that, per
+ * route, from the staff row. This only keeps the session alive and sends
+ * signed-out traffic to the front door, so a route added later is behind a
+ * sign-in before anyone remembers to put it there.
  */
 const PUBLIC_PATHS = ["/", "/auth/callback", "/api/test/session"];
 
@@ -28,10 +29,12 @@ export async function middleware(request: NextRequest) {
   const anonKey = process.env.SUPABASE_ANON_KEY;
   if (!url || !anonKey) return response;
 
-  const domain = process.env.SESSION_COOKIE_DOMAIN || undefined;
-
   const supabase = createServerClient(url, anonKey, {
-    cookieOptions: { domain, sameSite: "lax", secure: domain !== undefined, path: "/" },
+    cookieOptions: {
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    },
     cookies: {
       getAll() {
         return request.cookies.getAll();

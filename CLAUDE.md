@@ -4,11 +4,12 @@ Read this every run. Where this file and a chat transcript disagree, this file w
 
 ## What this is
 
-The Power Analytix Suite Portal: sign-in, four tiles, and the screen where staff
-access is granted. It is the front door to Invoices, Timesheets and Expenses,
-which are separate apps on their own subdomains and are **not** in this
-repository — yet. They move onto this identity next; see
-`docs/SUITE-IDENTITY.md`.
+The Power Analytix suite. One app, one deploy, one sign-in: the portal, the
+staff admin screen, and routes for Invoices, Timesheets and Expenses.
+
+Those three still run as separate deployments on their own subdomains. Their
+routes here exist and are guarded, with a placeholder inside; porting one means
+replacing that placeholder. See `docs/PORTING-APPS.md`.
 
 It replaces `portal_index.html` v2.0, which held a `Sites.ReadWrite.All` Graph
 token in the browser and hid tiles with CSS. There is no Microsoft dependency
@@ -35,8 +36,8 @@ left anywhere in this project. Do not add one back.
 3. **A tile a person may not open is not rendered.** Not hidden, not disabled —
    absent from the DOM. `tests/harness.ts:expectExactlyTiles` asserts this and
    must not be weakened to `toBeHidden()`.
-4. **`/admin` 404s for anyone who is not an active admin.** Not 403 — a 403
-   confirms the route exists.
+4. **A route 404s for anyone without its flag.** Not 403 — a 403 confirms the
+   route exists, which tells somebody what to go looking for.
 5. **Every server action re-checks the caller.** A server action is a public
    endpoint; rendering the control is not what stops a non-admin calling it.
 6. **The sign-in form answers the same way for any address.** Different
@@ -44,8 +45,11 @@ left anywhere in this project. Do not add one back.
 7. **`E2E_TEST_MODE` is never set in a deployed environment.** It turns on a
    route that will sign in as anybody. `playwright.config.ts` sets it, and
    nothing else does.
-8. **`getUser()`, never `getSession()`.** The session cookie is shared across
-   four subdomains; trusting its contents is not on.
+8. **`getUser()`, never `getSession()`.** `getSession` trusts the cookie's
+   contents; `getUser` revalidates it against Supabase.
+9. **Every route calls `requireApp`.** A layout is not a gate — a nested route
+   can be requested directly. One app means one unguarded route exposes whatever
+   is behind it.
 
 ## Definition of done
 
@@ -73,15 +77,17 @@ received a 5xx. A test that expects a 404 declares it with
   at 390, 768, 1024 and 1440 and attaches them to the run.
 - Tests that write use the fixture store and run `test.describe.serial` after
   `resetStaff(page)`. Suites clean up after themselves or they poison each other.
-- Adding a tile means: an entry in `src/lib/apps.ts`, a glyph in
-  `src/components/TileIcon.tsx`, a column in a migration, a `Flag` in
-  `src/lib/staff-admin.ts`, a column in `StaffTable`, and a case in
-  `tests/access-matrix.spec.ts`. All six, or none.
+- Adding an app means: an entry in `src/lib/apps.ts`, a glyph in
+  `src/components/TileIcon.tsx`, a route under `src/app` that calls
+  `requireApp`, a column in a migration, a `Flag` in `src/lib/staff-admin.ts`, a
+  column in `StaffTable`, and cases in `tests/access-matrix.spec.ts` and
+  `tests/app-routes.spec.ts`. All of them, or none.
 
 ## Layout of the repo
 
 ```
-src/middleware.ts               refreshes the session; guards new routes by default
+src/middleware.ts               refreshes the session; sends signed-out traffic home
+src/lib/guard.ts                requireApp — the gate every app route goes through
 src/lib/env.ts                  every environment variable, read lazily
 src/lib/supabase/server.ts      request-scoped client (RLS) + the service-role client
 src/lib/current-user.ts         "who is this" — the one place that answers it
@@ -89,7 +95,8 @@ src/lib/staff.ts                the caller's own row, and access resolution
 src/lib/staff-admin.ts          list, set a flag, invite
 src/lib/apps.ts                 the four tiles
 src/lib/notify.ts               access-change email; a no-op with no Resend key
-src/app/page.tsx                the portal
+src/app/page.tsx                the portal — the tiles
+src/app/invoices|timesheets|expenses/  guarded routes, placeholder inside
 src/app/admin/page.tsx          staff access
 src/app/actions/                server actions — each re-checks the caller
 src/app/auth/callback/          where a magic link lands
@@ -97,7 +104,7 @@ src/app/api/test/session/       test-mode seeder; 404 in production
 scripts/import-staff.ts         one-off CSV import; not part of running the app
 scripts/check-bundle-secrets.mjs post-build scan of what a browser receives
 supabase/migrations/            written by the machine, applied by a person
-docs/SUITE-IDENTITY.md          how the other three apps join this identity
+docs/PORTING-APPS.md            how the other three apps are folded in
 tests/                          Playwright; fixture staff data, no live services
 ```
 

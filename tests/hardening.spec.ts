@@ -46,14 +46,16 @@ test.describe("hardening", () => {
     expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   });
 
-  test("the sign-in card leaks no tile hrefs", async ({ page }) => {
+  test("the sign-in card leaks no app routes", async ({ page }) => {
     await signOutCompletely(page);
     await page.goto("/");
 
-    const html = await page.content();
-    expect(html).not.toContain("invoices.poweranalytix.co.uk");
-    expect(html).not.toContain("timesheet.poweranalytix.co.uk");
-    expect(html).not.toContain("expenses.poweranalytix.co.uk");
+    const hrefs = await page.locator("a[href]").evaluateAll((els) =>
+      els.map((e) => e.getAttribute("href")),
+    );
+    for (const route of ["/invoices", "/timesheets", "/expenses", "/admin"]) {
+      expect(hrefs, `a signed-out page should not link to ${route}`).not.toContain(route);
+    }
   });
 
   test("asking for a link says the same thing whoever you are", async ({ page }) => {

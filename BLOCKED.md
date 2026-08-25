@@ -11,8 +11,8 @@ request. Do not work around an item on this list, and do not re-queue one.
 - **Rotating any key.** Service role, anon, Resend. They live in Vercel's
   environment and in a password manager. They do not enter a chat, a commit or an
   agent's context.
-- **`SESSION_COOKIE_DOMAIN`.** Changing it signs the whole company out, and gets
-  the sub-apps' sessions wrong in a way that is hard to see from one browser.
+- **Anything that widens the session cookie beyond this host.** One deployment
+  means a host-only cookie. Do not reintroduce a cross-origin session.
 
 ## Data
 
@@ -21,7 +21,8 @@ request. Do not work around an item on this list, and do not re-queue one.
   column".
 - **Running `scripts/import-staff.ts` against production.** It is a one-off, it
   overwrites access flags for everybody, and it is run once by a person who has
-  checked the CSV.
+  checked the CSV. The script is deleted in the same pull request that cuts over,
+  so it cannot be run a second time by accident.
 - **Loosening a row level security policy.** Especially: do not add an `anon`
   policy on `staff`, and do not replace the RLS read in `staff.ts` with a
   service-role read to "fix" a query.
@@ -39,8 +40,9 @@ request. Do not work around an item on this list, and do not re-queue one.
   way and it is the front door for everyone.
 - **Retiring the old static portal.** The v2.0 file is archived on a branch, not
   deleted, and only after the new one has been live for a week.
-- **Turning off the Entra registration** the sub-apps still share. It stays until
-  Invoices is the last one across — see `docs/SUITE-IDENTITY.md`.
+- **Turning off an old app's subdomain**, or the Entra registration the three
+  still share. Each goes a week after its route has been live — never in the same
+  change that ports it. See `docs/PORTING-APPS.md`.
 
 ## Product and money
 
@@ -54,8 +56,12 @@ request. Do not work around an item on this list, and do not re-queue one.
 
 ## Currently parked
 
-- **Migrating Invoices, Timesheets or Expenses.** Those are separate
-  repositories. The design is written down in `docs/SUITE-IDENTITY.md`; the work
-  is not queued here.
+- **Porting Invoices, Timesheets or Expenses.** The routes and the gate exist;
+  the apps' own code has not arrived yet. The shape is written down in
+  `docs/PORTING-APPS.md`, and each port is queued only once its repository has
+  been read.
+- **Moving an app's records into Postgres.** Whichever of the three keep their
+  data in SharePoint lists, that migration is a decision about who may read whose
+  records — not a task.
 - **Anything that reads `graph.microsoft.com`.** There is no Microsoft dependency
   left in this project and it does not come back.

@@ -43,13 +43,6 @@ export const supabase = {
   },
 };
 
-/**
- * The session cookie is set on this domain so one sign-in covers the whole
- * suite: portal, invoices, timesheet and expenses all read the same cookie.
- * Unset locally, where the cookie is host-only.
- */
-export const sessionCookieDomain = () => optional("SESSION_COOKIE_DOMAIN") || undefined;
-
 /** Absolute origin, needed to build magic-link callback URLs. */
 export const siteUrl = () => {
   const explicit = optional("SITE_URL");

@@ -1,12 +1,15 @@
 # Power Analytix Suite Portal
 
-One sign-in for the whole suite, and the screen where staff access is granted.
-Replaces `portal_index.html` v2.0. No Microsoft dependency.
+One app for the whole suite: sign-in, the four apps, and the screen where staff
+access is granted. Replaces `portal_index.html` v2.0. No Microsoft dependency.
+
+Invoices, Timesheets and Expenses have guarded routes here with a placeholder
+inside; they still run as their own deployments until each is folded in.
 
 The agent-facing rules are in [`CLAUDE.md`](./CLAUDE.md); what needs a person is
 in [`BLOCKED.md`](./BLOCKED.md); the queue is [`TASKS.md`](./TASKS.md); how the
-other three apps join this identity is in
-[`docs/SUITE-IDENTITY.md`](./docs/SUITE-IDENTITY.md).
+other three apps get folded in is in
+[`docs/PORTING-APPS.md`](./docs/PORTING-APPS.md).
 
 ## Running it
 
@@ -43,8 +46,8 @@ E2E_CHROMIUM_PATH=/path/to/chrome E2E_NO_SANDBOX=1 npx playwright test
    that is, because different answers make the form a staff directory.
 3. The link lands on `/auth/callback`, which exchanges the token for a session
    **on the server**. No Supabase key of any kind is ever sent to a browser.
-4. The session cookie is set on `SESSION_COOKIE_DOMAIN`, so one sign-in covers
-   the portal and, once they move, all three apps.
+4. The session cookie is host-only. There is one deployment, so one sign-in
+   covers every route and there is no cross-origin session to get wrong.
 
 Supabase accepts wildcard redirect URLs, so every Vercel preview can complete a
 real sign-in — which the Entra version could not.
@@ -84,8 +87,8 @@ people from there when you are ready for them to arrive. Make sure
 `BOOTSTRAP_ADMINS` is set before you rely on this — it is the way back in if the
 import lands with no admin.
 
-**3. Vercel** — set the environment variables from `.env.example`, including
-`SESSION_COOKIE_DOMAIN=.poweranalytix.co.uk`, then point DNS at it.
+**3. Vercel** — set the environment variables from `.env.example`, then point DNS
+at it.
 
 ## Security posture
 
@@ -106,11 +109,12 @@ is used twice: to invite somebody, and by the one-off CSV import.
 
 | | v2.0 | v3.0 |
 |---|---|---|
+| Shape | a launcher linking to three subdomains | one app; the apps are routes |
 | Sign-in | MSAL in the browser | Supabase magic link, exchanged server-side |
 | Graph scope | `Sites.ReadWrite.All`, in the browser | no Microsoft at all |
-| Staff lookup | browser reads ~500 SharePoint rows | server reads one row, through RLS |
+| Staff lookup | browser reads the whole SharePoint list | server reads one row, through RLS |
 | Access admin | a SharePoint list | the Admin tile, with an audit trail |
 | Tiles you cannot open | in the HTML, hidden with CSS | not rendered |
 | Preview sign-in | impossible (no wildcard redirect URIs) | works |
-| Tests | none | 37 Playwright checks at four widths |
+| Tests | none | 51 Playwright checks at four widths |
 | Release | edit the file, upload it | merge to `main` |
