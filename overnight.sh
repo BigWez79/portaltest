@@ -66,8 +66,9 @@ LOG_DIR="${PORTAL_LOG_DIR:-$HOME/Library/Logs/PowerAnalytix}"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 CLAUDE_ARGS=(-p --output-format text --dangerously-skip-permissions)
 
-# A run that has not finished in this long is not going to. 20 minutes for the
-# agent, 25 for verify — the suite alone is 64 tests across four widths.
+# A run that has not finished in this long is not going to. 80 minutes for the
+# agent, 25 for verify — the suite alone is 64 tests across four widths, and a
+# cold `next build` before it.
 CLAUDE_TIMEOUT="${CLAUDE_TIMEOUT:-4800}"
 VERIFY_TIMEOUT="${VERIFY_TIMEOUT:-1500}"
 
@@ -154,6 +155,45 @@ claim_lock() {
 
 release_lock() { rm -rf "$LOCK_DIR" 2>/dev/null || true; }
 
+# Leave the tree as the next run needs to find it. Every exit matters, not just
+# the good one: a run that dies after the agent has written files leaves them
+# behind, and a dirty tree is precisely what aborts tomorrow night -- so a bad
+# night would quietly cost two. Runs from the EXIT trap, so it must never call
+# fatal and never assume where it is.
+# Set only once this run has made its own branch. Before that, every file in
+# the tree belongs to somebody else -- and the trap is installed BEFORE the
+# dirty-tree check, so without this a run that correctly refused to start on
+# your uncommitted work would have committed it on the way out. That is the
+# opposite of the guard it was defending.
+OWNS_BRANCH=0
+
+tidy_tree() {
+  [ "$OWNS_BRANCH" = "1" ] || return 0
+  cd "$REPO" 2>/dev/null || return 0
+  local left here
+  left="$(git status --porcelain 2>/dev/null || true)"
+  if [ -n "$left" ]; then
+    here="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+    case "$here" in
+      "$BRANCH")
+        if printf '%s\n' "$left" | grep -Eq '\.env|\.log|agent_logs/'; then
+          log "leaving the tree dirty deliberately: something in it must not be committed"
+          printf '%s\n' "$left" | sed 's/^/    /'
+          return 0
+        fi
+        log "committing what the run left behind, so tomorrow night can start"
+        git add -A >/dev/null 2>&1 || true
+        git commit -q -m "overnight: leftovers from an incomplete run" >/dev/null 2>&1 || true
+        ;;
+      *)
+        log "tree is dirty on $here, which is not the branch this run made -- not touching it"
+        return 0
+        ;;
+    esac
+  fi
+  git checkout main >/dev/null 2>&1 || true
+}
+
 # --------------------------------------------------------------------------
 # Preflight. Every one of these is a night that was lost once, somewhere.
 # --------------------------------------------------------------------------
@@ -168,7 +208,7 @@ done
 [ -f CLAUDE.md ] || fatal 78 "no CLAUDE.md in $REPO"
 
 claim_lock
-trap 'release_lock' EXIT
+trap 'tidy_tree; release_lock' EXIT
 
 # A lock left by a crashed git is not the same as a run in progress, and it
 # blocks everything downstream with a message that reads like a permissions
@@ -208,6 +248,7 @@ log "main is at $(git rev-parse --short HEAD)"
 
 BRANCH="overnight/auto-$STAMP-$(date '+%H%M')"
 git checkout -b "$BRANCH" >/dev/null 2>&1 || fatal 78 "could not create $BRANCH"
+OWNS_BRANCH=1
 log "working on $BRANCH"
 
 # main's .gitignore is not this branch's. If the base is missing an entry for
@@ -267,6 +308,13 @@ tail -20 "$AGENT_OUT" | sed 's/^/    /'
 
 AFTER="$(git rev-parse HEAD)"
 if [ "$BEFORE" = "$AFTER" ]; then
+  # Nothing committed is not the same as nothing done. Deleting the branch here
+  # while files sit uncommitted on it throws the run away and leaves the mess.
+  if [ -n "$(git status --porcelain)" ]; then
+    log "no commits, but the run left files behind — keeping $BRANCH rather than deleting it"
+    log "=== nothing committed; the leftovers are on $BRANCH ==="
+    exit 0
+  fi
   log "no commits were made — treating this as an empty queue, not a failure"
   git checkout main >/dev/null 2>&1 || true
   git branch -D "$BRANCH" >/dev/null 2>&1 || true
