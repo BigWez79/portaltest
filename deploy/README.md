@@ -13,22 +13,45 @@ The reasoning lives in the plists themselves, next to the lines it explains, the
 way `i-love-isle-of-wight/deploy/` does it. This file is only how to install
 them and what is known to be unfinished.
 
-## The overnight job has no runner yet
+## The overnight runner
 
-`./overnight.sh` **does not exist in this repository.** The plist is written and
-correct, and until somebody writes or adapts that script the job will start,
-find nothing to run, and write
+`./overnight.sh` takes the first eligible task in `TASKS.md`, does it on a fresh
+`overnight/auto-<date>-<time>` branch, runs `npm run verify`, pushes, and opens a
+pull request. It never merges and never pushes `main`.
+
+It refuses to start rather than do something surprising. A dirty tree, a
+half-finished rebase, a stale `.git/index.lock` or another run still holding the
+lock each stop it with their own exit code, because the only person who reads
+these is reading a log the morning after:
+
+| Exit | Meaning |
+|---:|---|
+| 0 | a pull request was opened, or the queue was empty |
+| 64 | the working tree was dirty |
+| 65 | a rebase, merge or `index.lock` was in the way |
+| 66 | another run still held the lock |
+| 69 | the task was done but `npm run verify` failed - a **draft** pull request was opened |
+| 70 | the headless run failed or timed out |
+| 78 | a prerequisite is missing |
+
+A failing night still pushes its branch and opens a draft. A night's work
+sitting only on this Mac helps nobody, and a draft cannot be merged by accident.
+
+Overridable, mostly so it can be exercised by hand: `PORTAL_REPO`, `CLAUDE_BIN`,
+`CLAUDE_TIMEOUT` (4800s), `VERIFY_TIMEOUT` (1500s).
+
+It was written without `i-love-isle-of-wight/overnight.sh` to hand. If the first
+night fails at the headless step, compare the `claude` invocation near the top of
+the file with that one before changing anything else.
+
+### Run it once yourself first
 
 ```
-[2026-08-25 03:00:00] FATAL: ./overnight.sh is not present — the portal has no runner yet
+cd ~/portal && ./overnight.sh
 ```
 
-to `~/Library/Logs/PowerAnalytix/overnight.out.log` and exit 78. That is
-deliberate: the failure mode worth avoiding is the silent one. `i-love-isle-of-wight/overnight.sh` is the
-model — it needs `TASKS.md` and `CLAUDE.md` in the working directory, which this
-repo has.
-
-Installing the keep-alive on its own is fine and useful today.
+Same script, same guards, with somebody watching. Do that before bootstrapping
+the job - loading the job is what starts something that commits unattended.
 
 ## Install
 
