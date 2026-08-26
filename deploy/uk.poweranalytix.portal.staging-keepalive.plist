@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.poweranalytix.portal.staging-keepalive</string>
+
+    <!-- A SEPARATE JOB FROM THE OVERNIGHT RUN, deliberately.
+
+         Supabase pauses a free project after a stretch of inactivity, and
+         unpausing is a manual click — which would be found at 03:00 by an
+         unattended run, or worse, on the morning somebody needed staging.
+
+         The overnight job passes no Supabase variables at all, so it is never
+         going to be the thing that keeps staging warm. This is the one piece of
+         scheduled work that legitimately needs a credential. Keeping it here,
+         in its own job, is what lets the overnight job keep its guarantee: fold
+         the two together and the credential is back inside the run that is
+         supposed to have none.
+
+         It reads SUPABASE_URL and SUPABASE_ANON_KEY out of .env.local itself
+         rather than taking them from this file. Nothing sensitive is in the
+         plist, which matters because this one IS committed and both GitHub
+         repositories are public (BLOCKED.md). The anon key never appears on a
+         command line either — see the script.
+
+         The service-role key is not involved and must not be. A keep-alive
+         needs to prove the project answers, not to be able to change anything.
+         That constraint is what picked the endpoint: PostgREST's root refuses
+         anything but service_role on this project, so the script asks GoTrue
+         for its health instead. See the script for why /rest/v1/staff was no
+         good either. -->
+
+    <!-- Runs the INSTALLED copy, not the one in the working tree. A job that
+         reads its own script out of a git checkout stops working the moment
+         somebody leaves a branch checked out that does not contain it — which
+         is exactly what happened at 07:00 on 2026-08-26:
+
+           zsh:1: no such file or directory: …/portal/deploy/staging-keepalive.sh
+
+         deploy/install.sh puts the scripts under ~/.local/libexec/poweranalytix
+         and must be re-run after editing them.
+
+         PATH explicit for the same reason as the overnight job: launchd starts
+         from a near-empty environment. This one only needs curl, sed and date,
+         which are all in /usr/bin, but a login shell costs nothing and means
+         the two jobs fail the same way rather than differently. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"; exec $HOME/.local/libexec/poweranalytix/staging-keepalive.sh</string>
+    </array>
+
+    <!-- 07:00 daily. The pause threshold is measured in days, so daily is
+         generous; it is set daily anyway because a weekly job that misses its
+         slot to a closed lid has a whole week to notice, and this one costs a
+         single HTTP request. 07:00 keeps it clear of the 03:00 run, so a
+         failure in the log is unambiguously this job's. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>7</integer>
+        <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/wesleyhughes/portal</string>
+
+    <!-- Its own log, and outside the repo. A paused staging project and a
+         failed nightly run are different problems and should not share a file;
+         and a log written into the working tree leaves an untracked file on any
+         branch whose .gitignore does not cover it, which is what aborts an
+         unattended run. launchd does not expand variables in these, so they are
+         literal. -->
+    <key>StandardOutPath</key>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/staging-keepalive.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/staging-keepalive.log</string>
+
+    <!-- Safe at load, unlike the overnight job: this one sends a request and
+         writes a line. Running it on bootstrap is a free installation check. -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

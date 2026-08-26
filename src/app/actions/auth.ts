@@ -10,10 +10,21 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /**
  * Sends a magic link.
  *
- * shouldCreateUser is false and email signups are off in the Supabase project,
- * so an address that is not on the staff list gets no link. The response to the
- * person is the same either way — telling a stranger "you are not staff" is a
+ * `shouldCreateUser: false` means this form never creates an account, so an
+ * address that is not already a user gets no link. The response to the person
+ * is the same either way — telling a stranger "you are not staff" is a
  * directory of who is.
+ *
+ * That is the belt. The braces are email signups being disabled on the Supabase
+ * project itself, which is what stops somebody bypassing this form and asking
+ * GoTrue directly.
+ *
+ * This comment used to assert both were in place. On 2026-08-25 portal-staging
+ * was found with `disable_signup: false` — the comment had been wrong for as
+ * long as the project had existed, and nothing could have told us: the suite
+ * runs on fixtures and reaches no live project, so `npm run verify` was green
+ * throughout. `deploy/check-auth-config.sh` is what checks it now. Run it
+ * against a project before believing the second sentence.
  */
 export async function requestMagicLink(
   _previous: SignInState,
