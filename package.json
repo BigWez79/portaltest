@@ -2,7 +2,7 @@
   "name": "poweranalytix-portal",
   "version": "3.0.0",
   "private": true,
-  "description": "Power Analytix Suite Portal \u2014 one sign-in for the whole suite.",
+  "description": "Power Analytix Suite Portal — one sign-in for the whole suite.",
   "engines": {
     "node": ">=20.9.0"
   },
@@ -20,6 +20,8 @@
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.58.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "next": "^16.3.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

@@ -16,7 +16,7 @@ copies are stale.
 | App | Lines | Lists | Writes | State |
 |---|---:|---:|---:|---|
 | Portal | 209 | 1 | 0 | rebuilt |
-| Margin & Profit Split | 848 | 0 | 0 | route ready |
+| Margin & Profit Split | 848 | 0 | 0 | **ported** |
 | Tax Breakdown | 557 | 0 | 0 | route ready |
 | Monthly Overview | 383 | 4 | 0 | not routed yet |
 | My Profile | 375 | 5 | 2 | route ready |
@@ -91,6 +91,31 @@ and ~149 inline style.
   calculator behaves identically and the numbers stop being published.
 - **Google Fonts are linked from the page.** This repo self-hosts Sora and
   Albert Sans already — use those, do not add the link back.
+
+**Ported on `overnight/port-margin`.** How it came out, for whoever does Tax
+Breakdown next:
+
+- The sums live in `src/lib/margin-model.ts`, with no DOM anywhere near them.
+  That is what made them checkable: `tests/margin.spec.ts` holds three worked
+  examples read off the live page itself, running headless with every http(s)
+  request aborted. Do the same for the next one — the model first, then the
+  markup around it.
+- The markup is a client component. The calculator recalculates on every
+  keystroke and has no server state at all, so there is nothing for a server
+  component to do beyond the guard.
+- Saved values keep the live page's two localStorage keys **and its exact JSON
+  shape**, so a browser that has used both keeps its figures. The suite plants
+  that payload to drive its examples, which keeps the two honest.
+- jsPDF and jspdf-autotable are npm dependencies, imported dynamically inside
+  the download handler so they are not in the page's first load. jsPDF carries
+  a cdnjs URL in a code path we never call (`output("pdfobjectnewwindow")`);
+  nothing on the page fetches it, and a test asserts the page makes no off-site
+  request at all.
+- The live page is 1080px wide; the app shell is 940. `AppShell` grew a `wide`
+  option rather than the margin styles fighting the shell.
+- Seven staff columns do not fit a phone. The staff block scrolls inside
+  itself, so the page never scrolls sideways — asserted at 390, 768, 1024 and
+  1440, along with the columns all being on screen from 768 up.
 
 ## Open questions, to be answered when they bite
 

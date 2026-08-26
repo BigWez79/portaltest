@@ -16,18 +16,21 @@ export function AppShell({
   access,
   current,
   title,
+  wide = false,
   children,
 }: {
   access: Access;
   current: AppKey;
   title: string;
+  /** A ported app that needs the room its own page had. Margin is the first. */
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   const others = tilesFor(access).filter((t) => t.id !== current);
 
   return (
     <main className="shell app-shell">
-      <div className="app-wrap">
+      <div className={wide ? "app-wrap wide" : "app-wrap"}>
         <header>
           <Link href="/" className="logo-link" aria-label="Back to the portal">
             <Image className="logo" src="/logo.png" alt="" width={54} height={54} priority />

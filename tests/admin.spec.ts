@@ -46,7 +46,16 @@ test.describe("admin screen — who can reach it", () => {
   });
 });
 
-// These write to the fixture store, so they run one after another and reset first.
+/**
+ * These write to the fixture store, so they run one after another and reset
+ * first. They also flip flags only on `grantable@` and `revocable@`, who exist
+ * for this suite alone.
+ *
+ * That matters because the store is one file shared by every worker: a suite
+ * that toggles somebody another spec asserts on will, often enough to be
+ * maddening, hand that spec the wrong answer. Serial ordering inside this file
+ * does nothing about a spec running beside it.
+ */
 test.describe.serial("admin screen — changing access", () => {
   test.beforeEach(async ({ page }) => {
     await resetStaff(page);
@@ -61,12 +70,12 @@ test.describe.serial("admin screen — changing access", () => {
 
   test("granting an app shows up on that person's portal", async ({ page }) => {
     await page.goto("/admin");
-    await page.getByTestId("toggle-no.flags@example.test-hasExpenses").click();
+    await page.getByTestId("toggle-grantable@example.test-hasExpenses").click();
     await expect(
-      page.getByTestId("toggle-no.flags@example.test-hasExpenses"),
+      page.getByTestId("toggle-grantable@example.test-hasExpenses"),
     ).toHaveAttribute("aria-pressed", "true");
 
-    await signInAs(page, "no.flags@example.test");
+    await signInAs(page, "grantable@example.test");
     await page.goto("/");
     await expect(page.getByTestId("tile-expenses")).toBeVisible();
     await expect(page.getByTestId("tile-invoices")).toHaveCount(0);
@@ -74,12 +83,12 @@ test.describe.serial("admin screen — changing access", () => {
 
   test("removing an app takes the tile away again", async ({ page }) => {
     await page.goto("/admin");
-    await page.getByTestId("toggle-invoices.only@example.test-hasInvoices").click();
+    await page.getByTestId("toggle-revocable@example.test-hasInvoices").click();
     await expect(
-      page.getByTestId("toggle-invoices.only@example.test-hasInvoices"),
+      page.getByTestId("toggle-revocable@example.test-hasInvoices"),
     ).toHaveAttribute("aria-pressed", "false");
 
-    await signInAs(page, "invoices.only@example.test");
+    await signInAs(page, "revocable@example.test");
     await page.goto("/");
     await expect(page.getByTestId("tile-invoices")).toHaveCount(0);
     // Not "no access" — My Profile has no flag, so an active person always

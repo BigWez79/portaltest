@@ -15,29 +15,10 @@ guessing.
 The agreed plan: all nine apps move off SharePoint, one at a time.
 See docs/PORTING-APPS.md for the order and the decisions behind it.
 
-### P1. Port Margin & Profit Split
-848 lines, no Graph, no SharePoint, no sign-in. The first port, chosen because
-nothing is at stake: it is a calculator. The route `/margin` already exists,
-guarded by `requireApp("margin")`, with a placeholder inside.
-
-What it involves:
-
-- jsPDF and jspdf-autotable come from a CDN today. Install them from npm and
-  bundle them — an overnight build must not depend on cdnjs being up.
-- It keeps saved scenarios in `localStorage` under two keys. Leave that as it
-  is for now; it is per-browser scratch, not shared data, and moving it to
-  Postgres is a separate decision.
-- **Replace the default figures.** The live page ships pre-filled with a real
-  revenue figure and a real owner split, and that page has no sign-in and sits
-  in a public repository. The ported version must use obviously-placeholder
-  numbers. This is not optional.
-- The ported route is behind sign-in and the `has_margin` flag, which the live
-  page is not. That is an improvement, not a regression — do not "fix" it.
-
-**Done when** the calculator produces the same numbers as the live page for
-three worked examples, PDF export works from bundled dependencies with no
-network at build time, the defaults are placeholders, and `npm run verify`
-passes with the route's existing access tests still green.
+Nothing queued. Margin was P1 and is done; by the agreed order Tax Breakdown is
+next, but nobody has written that task yet and this file is not the place to
+invent one. The shape the Margin port came out in is written up under "Margin,
+specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
@@ -133,3 +114,8 @@ longer tells anybody to run it.
 - **Matched the live suite** — surveyed `BigWez79/portal` and found the portal
   had been rebuilt against a six-week-old copy: seven tiles, not four. Added
   Margin, Tax Breakdown and My Profile, two access flags, three routes. 64 checks.
+- **Ported Margin & Profit Split** — `overnight/port-margin`. The first app
+  folded in. Sums in `src/lib/margin-model.ts`, checked against three worked
+  examples read off the live page; jsPDF bundled instead of fetched from cdnjs;
+  placeholder defaults. Also fixed a latent race in the fixture store that the
+  extra tests brought out. 78 checks.
