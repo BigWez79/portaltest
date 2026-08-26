@@ -46,12 +46,24 @@ the file with that one before changing anything else.
 
 ### Run it once yourself first
 
+Install first, then run the installed copy:
+
 ```
-cd ~/portal && ./overnight.sh
+cd ~/portal
+./deploy/install.sh
+~/.local/libexec/poweranalytix/overnight.sh
 ```
 
-Same script, same guards, with somebody watching. Do that before bootstrapping
-the job - loading the job is what starts something that commits unattended.
+That order matters. The runner checks out `main`, and `main` does not have
+`overnight.sh` on it yet - so a run started from `$REPO/overnight.sh` would have
+git delete the file out from under the shell still reading it. The script now
+notices it is executing from inside the checkout and re-execs from a copy in
+`~/Library/Caches/`, so `./overnight.sh` is safe too; installing first is simply
+the honest way round, because the installed copy is the one launchd will use.
+
+Do this before bootstrapping. Loading the job is what starts something that
+commits unattended, and a supervised run is the cheapest way to find out that
+the `claude` invocation needs a flag adjusting.
 
 ## Install
 

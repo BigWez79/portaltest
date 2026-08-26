@@ -66,6 +66,33 @@ CLAUDE_ARGS=(-p --output-format text --dangerously-skip-permissions)
 CLAUDE_TIMEOUT="${CLAUDE_TIMEOUT:-4800}"
 VERIFY_TIMEOUT="${VERIFY_TIMEOUT:-1500}"
 
+# --------------------------------------------------------------------------
+# Never run out of the repo, even when invoked from it.
+#
+# This script checks out main. If it is executing from $REPO/overnight.sh, git
+# deletes and rewrites that path mid-run, and bash carries on reading whatever
+# now sits at the offset it had reached -- which is not a crash, it is a shell
+# executing arbitrary fragments of another branch's file. The installed copy at
+# ~/.local/libexec is immune, and is what launchd runs; this is for the person
+# who quite reasonably types ./overnight.sh to try it.
+#
+# The copy lives at a fixed path and is overwritten each time rather than being
+# a mktemp, so trying this daily leaves one file rather than a directory full.
+# --------------------------------------------------------------------------
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+if [ "${PORTAL_REEXEC:-0}" != "1" ]; then
+  case "$SELF" in
+    "$REPO"/*)
+      RUNNING_COPY="$HOME/Library/Caches/uk.poweranalytix.portal.overnight.running.sh"
+      mkdir -p "$(dirname "$RUNNING_COPY")"
+      cat "$SELF" >"$RUNNING_COPY" || { echo "could not copy $SELF aside" >&2; exit 78; }
+      chmod 0755 "$RUNNING_COPY"
+      echo "running from $RUNNING_COPY, because $SELF is inside the checkout this run will move"
+      PORTAL_REEXEC=1 exec "$RUNNING_COPY" "$@"
+      ;;
+  esac
+fi
+
 STAMP="$(date '+%Y-%m-%d')"
 RUN_LOG="$LOG_DIR/overnight-$STAMP.log"
 
