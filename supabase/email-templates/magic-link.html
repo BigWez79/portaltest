@@ -1,0 +1,27 @@
+<!--
+  Supabase Dashboard -> Authentication -> Emails -> Magic Link
+
+  Replaces the stock template, which is built on {{ .ConfirmationURL }} and
+  finishes the sign-in at Supabase, handing the session back in a URL fragment.
+  src/app/auth/callback/route.ts reads a token_hash on the server instead, so
+  nothing about the session is ever handled in the browser.
+
+  {{ .RedirectTo }} is what the app passed as emailRedirectTo — <site>/auth/callback
+  — so the same template works for localhost, staging and every Vercel preview
+  without hard-coding a host. The fallback covers a link sent from the dashboard,
+  where RedirectTo is empty.
+
+  type=magiclink is the type this project's own tokens report and the type
+  verifyOtp was proved against. Do not change it to match a different template.
+-->
+<h2>Sign in to Power Analytix</h2>
+
+<p>
+  <a href="{{ if .RedirectTo }}{{ .RedirectTo }}{{ else }}{{ .SiteURL }}/auth/callback{{ end }}?token_hash={{ .TokenHash }}&amp;type=magiclink">
+    Sign in to the portal
+  </a>
+</p>
+
+<p>This link is good for one hour and can only be used once.</p>
+
+<p>If you did not ask to sign in, ignore this email. Nothing has happened to your access.</p>
