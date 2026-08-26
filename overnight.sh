@@ -69,6 +69,15 @@ CLAUDE_ARGS=(-p --output-format text --dangerously-skip-permissions)
 # A run that has not finished in this long is not going to. 80 minutes for the
 # agent, 25 for verify — the suite alone is 64 tests across four widths, and a
 # cold `next build` before it.
+# --dry-run does everything a real night does except the work: preflight, the
+# fetch, the checkout, the branch, the ignore checks, and a two-second probe of
+# the claude CLI to prove the headless invocation actually answers. It writes no
+# code, pushes nothing, opens no pull request, and puts the checkout back on the
+# branch it found. It exists because the alternative way to find out whether
+# tonight will work is to let tonight happen.
+DRY_RUN=0
+[ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+
 CLAUDE_TIMEOUT="${CLAUDE_TIMEOUT:-4800}"
 VERIFY_TIMEOUT="${VERIFY_TIMEOUT:-1500}"
 
@@ -240,6 +249,7 @@ fi
 # main and origin/main have diverged, somebody has been committing locally to
 # main and this job is not the thing to sort that out.
 # --------------------------------------------------------------------------
+STARTED_ON="$(git rev-parse --abbrev-ref HEAD)"
 log "fetching origin"
 git fetch --prune origin >/dev/null 2>&1 || fatal 78 "git fetch failed — no network, or no credential for origin"
 git checkout main >/dev/null 2>&1 || fatal 78 "could not check out main"
@@ -259,6 +269,24 @@ for path in node_modules .tmp playwright-report test-results; do
   git check-ignore -q "$path" || fatal 78 "$BRANCH does not ignore $path -- npm or Playwright will dirty the tree. Merge the branch that adds it before scheduling nights."
 done
 
+if [ "$DRY_RUN" = "1" ]; then
+  log "dry run: probing $CLAUDE_BIN — this is the line most likely to be wrong"
+  PROBE="$LOG_DIR/probe-$STAMP.log"
+  if run_limited 180 "$CLAUDE_BIN" "${CLAUDE_ARGS[@]}" 'Reply with the single word OK and nothing else.' >"$PROBE" 2>&1 && [ -s "$PROBE" ]; then
+    log "  answered: $(head -c 120 "$PROBE" | tr '\n' ' ')"
+  else
+    log "  NO USABLE ANSWER — see $PROBE. Compare CLAUDE_ARGS with i-love-isle-of-wight/overnight.sh."
+    git checkout "$STARTED_ON" >/dev/null 2>&1 || true
+    git branch -D "$BRANCH" >/dev/null 2>&1 || true
+    OWNS_BRANCH=0
+    fatal 70 "dry run: the headless step would fail tonight"
+  fi
+  git checkout "$STARTED_ON" >/dev/null 2>&1 || true
+  git branch -D "$BRANCH" >/dev/null 2>&1 || true
+  OWNS_BRANCH=0
+  log "=== dry run passed. Nothing was written, nothing pushed, back on $STARTED_ON ==="
+  exit 0
+fi
 
 # npm ci only when the lockfile has actually moved, because it deletes
 # node_modules and re-installs, and doing that nightly for nothing turns a
