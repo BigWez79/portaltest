@@ -45,7 +45,12 @@ set -euo pipefail
 # --------------------------------------------------------------------------
 REPO="${PORTAL_REPO:-/Users/wesleyhughes/portal}"
 LOCK_DIR="${PORTAL_LOCK_DIR:-$HOME/Library/Caches/uk.poweranalytix.portal.overnight.lock}"
-LOG_DIR="$REPO/agent_logs"
+# NOT $REPO/agent_logs. That directory is only in .gitignore on branches
+# carrying PR #3, and this run checks out main, where it is not. Logs written
+# before the checkout become untracked files after it -- and the sweep below
+# would then commit a night of agent transcripts into a public repository.
+# Outside the tree there is no branch whose .gitignore has to be right.
+LOG_DIR="${PORTAL_LOG_DIR:-$HOME/Library/Logs/PowerAnalytix}"
 
 # The one line most likely to need adjusting on first run. i-love-isle-of-wight's
 # runner is the proven model and this was written without it in front of me, so
@@ -98,10 +103,8 @@ RUN_LOG="$LOG_DIR/overnight-$STAMP.log"
 
 # --------------------------------------------------------------------------
 # Logging. Everything goes to stdout, which launchd captures into
-# ~/Library/Logs/PowerAnalytix/overnight.out.log, AND to agent_logs/ in the
-# repo, which .gitignore covers. Two copies because they answer different
-# questions: launchd's tells you whether the job fired at all, the repo's sits
-# next to the branch it produced.
+# overnight.out.log, and to a dated file beside it. Both live outside the
+# checkout, for the reason given at LOG_DIR.
 # --------------------------------------------------------------------------
 log() {
   local line
@@ -207,6 +210,15 @@ BRANCH="overnight/auto-$STAMP-$(date '+%H%M')"
 git checkout -b "$BRANCH" >/dev/null 2>&1 || fatal 78 "could not create $BRANCH"
 log "working on $BRANCH"
 
+# main's .gitignore is not this branch's. If the base is missing an entry for
+# something the run generates, npm and Playwright quietly fill the tree with
+# untracked files and tomorrow night aborts on a dirty tree with no clue why.
+# Check it here, where the message can say which branch and which path.
+for path in node_modules .tmp playwright-report test-results; do
+  git check-ignore -q "$path" || fatal 78 "$BRANCH does not ignore $path -- npm or Playwright will dirty the tree. Merge the branch that adds it before scheduling nights."
+done
+
+
 # npm ci only when the lockfile has actually moved, because it deletes
 # node_modules and re-installs, and doing that nightly for nothing turns a
 # twelve-minute run into a twenty-minute one.
@@ -269,6 +281,16 @@ LEFTOVER="$(git status --porcelain)"
 if [ -n "$LEFTOVER" ]; then
   log "the run left the tree dirty:"
   printf '%s\n' "$LEFTOVER" | sed 's/^/    /'
+  # `git add -A` is the useful thing to do with a file the agent forgot to add
+  # and the wrong thing to do with a credential or a transcript. Both
+  # repositories are public (BLOCKED.md), so this is checked rather than
+  # assumed, and a match stops the run instead of committing.
+  # Matched against the whole status line rather than a parsed field: a
+  # filename with a space in it would defeat the parse, and the only cost of
+  # over-matching is a run that stops for a person to look at.
+  if printf '%s\n' "$LEFTOVER" | grep -Eq '\.env|\.log|agent_logs/'; then
+    fatal 64 "something that must not be committed was left untracked -- a person looks at this, the tree stays as it is"
+  fi
   log "committing it rather than leaving it, so tomorrow night can start"
   git add -A
   git commit -m "overnight: sweep up files left uncommitted by the run" >/dev/null

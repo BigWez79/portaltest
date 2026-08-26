@@ -110,8 +110,10 @@ The logs moved out for the same reason from the other direction. `agent_logs/` i
 only in `.gitignore` on the branch that introduced it, so a log written while
 another branch is checked out leaves an untracked file — and an untracked file
 aborts the next unattended run. launchd's own stdout and stderr now go to
-`~/Library/Logs/PowerAnalytix/`. The overnight runner's detailed transcripts
-still go to `agent_logs/`, which `.gitignore` does cover.
+`~/Library/Logs/PowerAnalytix/`, and so do the overnight runner's transcripts.
+`agent_logs/` is only ignored on branches carrying PR #3, and the runner checks
+out `main`, where it is not - a log written before that checkout is an untracked
+file after it.
 
 The overnight job is the same shape and gets the same treatment: it runs the
 installed `overnight.sh` while its working directory stays the repo, because the

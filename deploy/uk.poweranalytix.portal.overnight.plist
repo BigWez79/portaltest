@@ -92,8 +92,9 @@
     <!-- launchd's own view of the run, outside the repo: a log written into
          the working tree leaves an untracked file on any branch whose
          .gitignore does not cover it, and an untracked file aborts the next
-         night. The runner's own detailed transcripts still go under
-         agent_logs/, which .gitignore does cover. launchd does not expand
+         night. The runner's own transcripts go there too:
+         agent_logs/ is only ignored on branches carrying this one, and the
+         runner checks out main, where it is not. launchd does not expand
          variables in these, so they are literal. -->
     <key>StandardOutPath</key>
     <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/overnight.out.log</string>
