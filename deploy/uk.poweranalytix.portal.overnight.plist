@@ -55,15 +55,22 @@
          node, npm and git on PATH and a bare launchd environment has none of
          them.
 
-         The guard is there because THE PORTAL HAS NO ./overnight.sh YET. This
-         job is inert until one exists. It fails loudly into the log rather
-         than silently doing nothing, which is the failure mode that wasted a
-         night on the other repo. -->
+         The runner is the INSTALLED copy, for the same reason as the
+         keep-alive: a job that reads its own script out of a git checkout stops
+         working the moment a branch without it is left checked out. The working
+         directory is still the repo, because the runner operates on the repo —
+         it just does not live there any more. deploy/install.sh copies it, and
+         must be re-run after editing, or the scheduled run uses a stale one.
+
+         The guard is there because THE PORTAL HAS NO ./overnight.sh YET, so
+         install.sh has nothing to copy and this job is inert. It fails loudly
+         into the log rather than silently doing nothing, which is the failure
+         mode that wasted a night on the other repo. -->
     <key>ProgramArguments</key>
     <array>
         <string>/bin/zsh</string>
         <string>-lc</string>
-        <string>export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; cd /Users/wesleyhughes/portal || exit 1; [ -x ./overnight.sh ] || { printf '[%s] FATAL: ./overnight.sh is not present — the portal has no runner yet\n' "$(date '+%Y-%m-%d %H:%M:%S')"; exit 78; }; OVERNIGHT_APPLY_MIGRATIONS=0 exec ./overnight.sh</string>
+        <string>export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; cd /Users/wesleyhughes/portal || exit 1; RUNNER="$HOME/.local/libexec/poweranalytix/overnight.sh"; [ -x "$RUNNER" ] || { printf '[%s] FATAL: %s is not installed — the portal has no runner yet. Write ./overnight.sh, then run deploy/install.sh.\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$RUNNER"; exit 78; }; OVERNIGHT_APPLY_MIGRATIONS=0 exec "$RUNNER"</string>
     </array>
 
     <!-- 03:00, not 02:00. I Love Wight has 02:00 and this is the same Mac:
@@ -80,14 +87,16 @@
     <key>WorkingDirectory</key>
     <string>/Users/wesleyhughes/portal</string>
 
-    <!-- launchd's own view of the run. Detailed transcripts belong under
-         agent_logs/ exactly as they do for a manual run. agent_logs/ is in
-         .gitignore, added before anything wrote to it, because an untracked
-         file makes the tree dirty and aborts the next night. -->
+    <!-- launchd's own view of the run, outside the repo: a log written into
+         the working tree leaves an untracked file on any branch whose
+         .gitignore does not cover it, and an untracked file aborts the next
+         night. The runner's own detailed transcripts still go under
+         agent_logs/, which .gitignore does cover. launchd does not expand
+         variables in these, so they are literal. -->
     <key>StandardOutPath</key>
-    <string>/Users/wesleyhughes/portal/agent_logs/launchd.out.log</string>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/overnight.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/wesleyhughes/portal/agent_logs/launchd.err.log</string>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/overnight.err.log</string>
 
     <!-- Never at load: bootstrapping this job should not kick off a run that
          commits code. If the Mac is asleep at 03:00, launchd runs it on wake

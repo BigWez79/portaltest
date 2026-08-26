@@ -6,7 +6,7 @@ commits code unattended.
 
 | Job | When | What it does |
 |---|---|---|
-| `uk.poweranalytix.portal.overnight` | 03:00 daily | Works `TASKS.md` through `./overnight.sh` |
+| `uk.poweranalytix.portal.overnight` | 03:00 daily | Works `TASKS.md` through the installed `overnight.sh` |
 | `uk.poweranalytix.portal.staging-keepalive` | 07:00 daily | Pings `portal-staging`, then checks its auth settings |
 
 The reasoning lives in the plists themselves, next to the lines it explains, the
@@ -23,8 +23,8 @@ find nothing to run, and write
 [2026-08-25 03:00:00] FATAL: ./overnight.sh is not present — the portal has no runner yet
 ```
 
-to `agent_logs/launchd.out.log` and exit 78. That is deliberate: the failure mode
-worth avoiding is the silent one. `i-love-isle-of-wight/overnight.sh` is the
+to `~/Library/Logs/PowerAnalytix/overnight.out.log` and exit 78. That is
+deliberate: the failure mode worth avoiding is the silent one. `i-love-isle-of-wight/overnight.sh` is the
 model — it needs `TASKS.md` and `CLAUDE.md` in the working directory, which this
 repo has.
 
@@ -33,28 +33,59 @@ Installing the keep-alive on its own is fine and useful today.
 ## Install
 
 ```
-cp deploy/uk.poweranalytix.portal.overnight.plist         ~/Library/LaunchAgents/
-cp deploy/uk.poweranalytix.portal.staging-keepalive.plist ~/Library/LaunchAgents/
-
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/uk.poweranalytix.portal.staging-keepalive.plist
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/uk.poweranalytix.portal.overnight.plist
+./deploy/install.sh
 ```
 
+That copies the scripts to `~/.local/libexec/poweranalytix/`, the plists to
+`~/Library/LaunchAgents/`, and creates `~/Library/Logs/PowerAnalytix/`. It starts
+nothing — it prints the `bootstrap` lines instead, because loading the overnight
+job starts something that commits unattended.
+
 The keep-alive has `RunAtLoad`, so bootstrapping it is its own installation test —
-check `agent_logs/staging-keepalive.log` for `portal-staging awake (HTTP 200)`.
-The overnight job does not, on purpose.
+check `~/Library/Logs/PowerAnalytix/staging-keepalive.log` for
+`portal-staging awake (HTTP 200)`. The overnight job does not, on purpose.
 
 Check, run now, remove:
 
 ```
 launchctl list | grep poweranalytix
 launchctl kickstart -p gui/$(id -u)/uk.poweranalytix.portal.staging-keepalive
-launchctl bootout gui/$(id -u)/uk.poweranalytix.portal.overnight
+launchctl bootout  gui/$(id -u)/uk.poweranalytix.portal.overnight
 ```
 
-**Edit the copy in this repo, not the one in `~/Library/LaunchAgents`,** then
-copy across and re-bootstrap. The other repo has the two in sync today; it is an
-easy pair to let drift, and the installed copy is the one that runs.
+**Edit here, then re-run `install.sh`.** The installed copy is the one that runs.
+A plist change also needs a `bootout` + `bootstrap`; a script change does not,
+because the script is read at run time.
+
+## Why nothing runs out of the working tree
+
+The plists used to point straight at `deploy/*.sh`. That works until the tree is
+on a branch without `deploy/` in it — and then launchd fires on schedule and the
+shell says:
+
+```
+zsh:1: no such file or directory: /Users/wesleyhughes/portal/deploy/staging-keepalive.sh
+```
+
+which is what happened at 07:00 on 2026-08-26, exit 127. A scheduled job has no
+business caring which branch somebody left checked out at bedtime, so the scripts
+are installed exactly as the plists are: copied out, and the copy is what runs.
+
+The logs moved out for the same reason from the other direction. `agent_logs/` is
+only in `.gitignore` on the branch that introduced it, so a log written while
+another branch is checked out leaves an untracked file — and an untracked file
+aborts the next unattended run. launchd's own stdout and stderr now go to
+`~/Library/Logs/PowerAnalytix/`. The overnight runner's detailed transcripts
+still go to `agent_logs/`, which `.gitignore` does cover.
+
+The overnight job is the same shape and gets the same treatment: it runs the
+installed `overnight.sh` while its working directory stays the repo, because the
+runner operates on the repo without needing to live in it. The trade is that
+`install.sh` has to be re-run after editing, or a scheduled run uses a stale
+copy — the same discipline the plists already needed.
+
+Both paths are absolute and hard-coded to this machine. `StandardOutPath` and
+`StandardErrorPath` have to be: launchd does not expand `$HOME` in them.
 
 ## What the overnight job is not given
 
