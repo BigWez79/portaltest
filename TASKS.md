@@ -22,23 +22,6 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 0. Test the CSV parser — before anybody runs the import
-`scripts/import-staff.ts` parses CSV by hand and has no test. It runs **once**,
-against production, and sets the access flags for every member of staff. Its
-failure mode is the quiet one: a mis-parsed column does not crash, it just
-grants the wrong people the wrong apps — and `--dry-run` prints counts rather
-than rows, so nothing would look wrong.
-
-Pin the mapping: `Title` → email, `Yes` → true, quoted fields containing
-commas, duplicate addresses, a row with no address, and a file with no active
-admin in it.
-
-This blocks the import, which blocks cutover. It is first for that reason.
-
-**Done when** the parser is covered by tests that run with no Supabase
-connection, including the "no active admin" warning, and `npm run verify`
-passes.
-
 ### 1. Rate-limit the sign-in form
 `requestMagicLink` will send a link every time the button is pressed. Supabase
 has its own limits, but nothing here stops somebody pasting an address and
@@ -85,8 +68,10 @@ the admin screen is the way access is granted, the script is a loaded gun: it
 overwrites every access flag from a CSV. Remove it, and its `import:staff`
 script, in the pull request that cuts the domain over.
 
-Last, and only after the import has actually run. Do not pick it up before then
-— and note it deletes the thing task 0 tests, which is the right order round.
+Last, and only after the import has actually run. Do not pick it up before then.
+It takes `scripts/staff-csv.ts` and `tests/import-csv.spec.ts` with it — those
+cover the parser precisely so this import can be trusted the one time it runs,
+and they have no reason to outlive it.
 
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
@@ -119,3 +104,23 @@ longer tells anybody to run it.
   examples read off the live page; jsPDF bundled instead of fetched from cdnjs;
   placeholder defaults. Also fixed a latent race in the fixture store that the
   extra tests brought out. 78 checks.
+- **Tested the CSV parser** — `overnight/auto-2026-08-27-0300`. The parsing came
+  out of `scripts/import-staff.ts` into `scripts/staff-csv.ts`, which reads no
+  file, no environment and no Supabase project, and returns its warnings
+  instead of printing them. 41 cases pin the mapping. Two things the tests
+  turned up and fixed: a SharePoint BOM hid the `Title` column, and a warning's
+  line number drifted after a blank line or a field wrapped over two lines.
+  `HasMargin` and `HasTaxBreakdown` still have no mapping — see below. 119 checks.
+
+---
+
+## Noticed, not queued
+
+- **The import has no column for Margin or Tax Breakdown.** `staff` has
+  `has_margin` and `has_tax_breakdown`; `scripts/staff-csv.ts` maps neither,
+  because nobody has said what the SharePoint list calls them. As it stands the
+  import leaves both false and a person grants them on the admin screen, which
+  is safe but means the CSV is not the whole picture. Guessing a header name
+  here would grant apps to the wrong people quietly, so it is written down
+  rather than invented. `tests/import-csv.spec.ts` asserts the gap, so adding a
+  mapping fails a test that says why.
