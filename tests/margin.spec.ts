@@ -29,6 +29,29 @@ async function seed(page: Page, stored: Stored) {
   );
 }
 
+/**
+ * Open /margin and wait for the *seeded* figures to be on screen.
+ *
+ * The calculator renders from PRESET first and applies what is in localStorage
+ * in an effect, so there is a window where the page is up and showing January's
+ * quarter while the seed says June. Waiting for the calculator to be visible
+ * does not close it — that is true on the first paint.
+ *
+ * This cost a night. On 2026-08-27 the 03:00 run failed with the month columns
+ * reading Jun/Jul/Aug while quarterRange still read "1 Jan 2026 – 31 Mar 2026":
+ * readValues() makes one round trip per testid, and the effect landed in the
+ * middle of them. Twelve local runs and every CI run had won that race.
+ *
+ * toHaveValue retries, so gating on a figure only the seed produces is what
+ * makes the reads that follow safe.
+ */
+async function gotoSeeded(page: Page, stored: Stored) {
+  await seed(page, stored);
+  await page.goto("/margin");
+  await expect(page.getByTestId("margin-calculator")).toBeVisible();
+  await expect(page.getByTestId("revenue")).toHaveValue(String(stored.revenue));
+}
+
 const EXAMPLE_ONE: Stored = {
   startDate: "2026-06-01",
   revenue: 400000,
@@ -79,9 +102,7 @@ async function readValues(page: Page, ids: string[]) {
 test.describe("margin — the worked examples", () => {
   test("example 1: revenue, two staff lines, a 25/75 split", async ({ page }) => {
     await signInAs(page, "margin.only@example.test");
-    await seed(page, EXAMPLE_ONE);
-    await page.goto("/margin");
-    await expect(page.getByTestId("margin-calculator")).toBeVisible();
+    await gotoSeeded(page, EXAMPLE_ONE);
 
     // The quarter, and the working days in it.
     expect(
@@ -158,9 +179,7 @@ test.describe("margin — the worked examples", () => {
     page,
   }) => {
     await signInAs(page, "margin.only@example.test");
-    await seed(page, EXAMPLE_TWO);
-    await page.goto("/margin");
-    await expect(page.getByTestId("margin-calculator")).toBeVisible();
+    await gotoSeeded(page, EXAMPLE_TWO);
 
     expect(await page.getByTestId("s-days").allInnerTexts()).toEqual(["45", "20", "60"]);
     expect(await page.getByTestId("qc-cost").allInnerTexts()).toEqual([
@@ -251,8 +270,7 @@ test.describe("margin — the worked examples", () => {
 
   test("example 3: the same figures in the annual view", async ({ page }) => {
     await signInAs(page, "margin.only@example.test");
-    await seed(page, EXAMPLE_TWO);
-    await page.goto("/margin");
+    await gotoSeeded(page, EXAMPLE_TWO);
     await page.getByTestId("period-annual").click();
 
     expect(
@@ -355,8 +373,7 @@ test.describe("margin — the defaults", () => {
 
   test("reset puts the placeholders back", async ({ page }) => {
     await signInAs(page, "margin.only@example.test");
-    await seed(page, EXAMPLE_TWO);
-    await page.goto("/margin");
+    await gotoSeeded(page, EXAMPLE_TWO);
     await expect(page.getByTestId("revenue")).toHaveValue("250000");
 
     await page.getByTestId("margin-reset").click();
@@ -382,8 +399,7 @@ test.describe("margin — the defaults", () => {
 test.describe("margin — editing", () => {
   test("staff, items and the split all recalculate", async ({ page }) => {
     await signInAs(page, "margin.only@example.test");
-    await seed(page, EXAMPLE_ONE);
-    await page.goto("/margin");
+    await gotoSeeded(page, EXAMPLE_ONE);
 
     // Drop the second staff line: £10,000 of cost goes with it.
     await page.getByTestId("s-del").nth(1).click();
@@ -416,8 +432,7 @@ test.describe("margin — editing", () => {
     page,
   }) => {
     await signInAs(page, "margin.only@example.test");
-    await seed(page, EXAMPLE_ONE);
-    await page.goto("/margin");
+    await gotoSeeded(page, EXAMPLE_ONE);
     await expect(page.getByTestId("staffTotal")).toHaveText("£40,000");
 
     await page.getByTestId("s-owner").first().selectOption("A");
@@ -445,8 +460,7 @@ test.describe("margin — the PDF report", () => {
     });
 
     await signInAs(page, "margin.only@example.test");
-    await seed(page, EXAMPLE_TWO);
-    await page.goto("/margin");
+    await gotoSeeded(page, EXAMPLE_TWO);
     await page.getByTestId("sc-name").fill("Q1 2026");
 
     const download = await Promise.all([
@@ -503,10 +517,8 @@ test.describe("margin — layout at every width", () => {
   for (const w of WIDTHS) {
     test(`the calculator fits ${w.name}`, async ({ page }, testInfo) => {
       await signInAs(page, "margin.only@example.test");
-      await seed(page, EXAMPLE_TWO);
       await page.setViewportSize({ width: w.width, height: w.height });
-      await page.goto("/margin");
-      await expect(page.getByTestId("margin-calculator")).toBeVisible();
+      await gotoSeeded(page, EXAMPLE_TWO);
 
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

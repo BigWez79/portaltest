@@ -36,6 +36,47 @@ export const test = base.extend<{ page: Page; tolerate: string[] }>({
 
 export { expect };
 
+/**
+ * The seeder calls go through a retry, because a dropped connection to the test
+ * server is not a fact about the code.
+ *
+ * The 03:00 run on 2026-08-28 failed the whole suite on this:
+ *
+ *   Error: apiRequestContext.post: read ECONNRESET
+ *     → POST http://127.0.0.1:3100/api/test/session?reset=1
+ *     at resetStaff (tests/harness.ts:58)
+ *
+ * One reset, on one of 116 tests, on a machine that had just finished an npm ci.
+ * Nothing was wrong with the app and nothing was wrong with the test; the socket
+ * went away. Left alone that turns a green suite into a red one at random, and
+ * an overnight run into a draft pull request nobody asked for.
+ *
+ * Deliberately narrow: three attempts, only around the test-mode seeder, and
+ * only for transport failures — a seeder that answers with an error status still
+ * fails immediately, because that IS a fact about the code.
+ */
+const TRANSPORT_ERROR = /ECONNRESET|ECONNREFUSED|socket hang up|EPIPE|network|Timeout/i;
+
+async function seederRequest(
+  attempt: () => Promise<{ ok: () => boolean; status: () => number }>,
+  what: string,
+) {
+  let lastError: unknown;
+  for (let tries = 0; tries < 3; tries++) {
+    try {
+      const res = await attempt();
+      expect(res.ok(), `${what} should answer (got ${res.status()})`).toBeTruthy();
+      return res;
+    } catch (error) {
+      // An assertion failure is a real result — do not paper over it by retrying.
+      if (!(error instanceof Error) || !TRANSPORT_ERROR.test(error.message)) throw error;
+      lastError = error;
+      await new Promise((r) => setTimeout(r, 250 * (tries + 1)));
+    }
+  }
+  throw lastError;
+}
+
 /** Plants a session without sending an email or reaching Supabase. Test mode only. */
 export async function signInAs(
   page: Page,
@@ -45,8 +86,10 @@ export async function signInAs(
   const params = new URLSearchParams({ email });
   if (opts.name) params.set("name", opts.name);
 
-  const res = await page.request.get(`/api/test/session?${params.toString()}`);
-  expect(res.ok(), "the test session seeder should be available").toBeTruthy();
+  await seederRequest(
+    () => page.request.get(`/api/test/session?${params.toString()}`),
+    "the test session seeder",
+  );
 }
 
 export async function signOutCompletely(page: Page) {
@@ -55,8 +98,10 @@ export async function signOutCompletely(page: Page) {
 
 /** Restores the fixture staff list. Only for tests that write. */
 export async function resetStaff(page: Page) {
-  const res = await page.request.post("/api/test/session?reset=1");
-  expect(res.ok(), "the fixture store should be resettable").toBeTruthy();
+  await seederRequest(
+    () => page.request.post("/api/test/session?reset=1"),
+    "the fixture store reset",
+  );
 }
 
 export const ALL_TILES = [
