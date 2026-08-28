@@ -52,7 +52,23 @@ export async function proxy(request: NextRequest) {
 
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
+
+  // A failure to *ask* is not the same as an answer of "nobody", and treating
+  // the two alike is how a signed-in person gets bounced to the front door with
+  // no trace of why. On 2026-08-27 this redirected every guarded route on Vercel
+  // — /admin and /margin both 307 to /?next=… — while the identical commit and
+  // the identical cookie signed in fine against a local production build. The
+  // log said nothing, because there was nothing to say it with.
+  //
+  // So: log it, and let the request through. The page behind it calls getUser
+  // itself and requireApp still gates on the staff row, so nothing is opened up
+  // by declining to guess here — the guard is re-checked where it matters.
+  if (error && !/session|not authenticated|missing/i.test(error.message)) {
+    console.error(`[proxy] getUser failed on ${pathname} —`, error.message);
+    return response;
+  }
 
   if (!user && !isPublic) {
     const target = new URL("/", request.url);
