@@ -93,7 +93,16 @@ export async function signInAs(
 }
 
 export async function signOutCompletely(page: Page) {
-  await page.request.delete("/api/test/session");
+  // Retried like the other two. It was left bare in the first pass at this,
+  // and the 03:00 run on 2026-08-30 duly failed on it — same ECONNRESET, same
+  // seeder, different verb:
+  //   Error: apiRequestContext.delete: read ECONNRESET
+  //     → DELETE http://127.0.0.1:3100/api/test/session   at harness.ts:53
+  // Hardening two of the three calls was not hardening the seeder.
+  await seederRequest(
+    () => page.request.delete("/api/test/session"),
+    "the test session seeder (sign out)",
+  );
 }
 
 /** Restores the fixture staff list. Only for tests that write. */
