@@ -111,6 +111,7 @@ src/app/actions/                server actions — each re-checks the caller
 src/app/auth/callback/          where a magic link lands
 src/app/api/test/session/       test-mode seeder; 404 in production
 scripts/import-staff.ts         one-off CSV import; not part of running the app
+scripts/staff-csv.ts            the CSV reading, split out so it can be tested
 scripts/check-bundle-secrets.mjs post-build scan of what a browser receives
 supabase/migrations/            written by the machine, applied by a person
 docs/PORTING-APPS.md            how the other three apps are folded in

@@ -16,11 +16,16 @@
  *   Active, IsAdmin, HasInvoices, HasTimesheet, HasExpenses
  *                        Yes / No / true / false / 1 / 0
  *
+ * The reading is in `scripts/staff-csv.ts` and is covered by
+ * `tests/staff-csv.spec.ts`; this file is argv, the file, the network and the
+ * printing, none of which a test can pin at 3am.
+ *
  * It does not send invitations. Import first, check the list on the admin
  * screen, then invite people from there when you are ready for them to arrive.
  */
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { readStaffCsv, summarise } from "./staff-csv";
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");
@@ -37,128 +42,27 @@ function env(name: string): string {
   return v;
 }
 
-/** Minimal RFC-4180 reader: quoted fields, escaped quotes, embedded commas. */
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let quoted = false;
+async function main() {
+  const { rows, warnings, missingColumns } = readStaffCsv(readFileSync(file!, "utf8"));
 
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (quoted) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else quoted = false;
-      } else field += c;
-      continue;
-    }
-    if (c === '"') quoted = true;
-    else if (c === ",") {
-      row.push(field);
-      field = "";
-    } else if (c === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-    } else if (c !== "\r") field += c;
-  }
-  if (field !== "" || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows.filter((r) => r.some((cell) => cell.trim() !== ""));
-}
+  for (const warning of warnings) console.warn(`  ${warning}`);
 
-const truthy = (v: string) => /^(yes|true|1|y)$/i.test(v.trim());
+  const counts = summarise(rows);
+  console.log(`Read ${counts.people} people from ${file}`);
+  console.log(`  active:   ${counts.active}`);
+  console.log(`  admins:   ${counts.admins}`);
+  console.log(`  invoices: ${counts.invoices}`);
+  console.log(`  timesheet:${counts.timesheet}`);
+  console.log(`  expenses: ${counts.expenses}`);
 
-type Row = {
-  email: string;
-  full_name: string | null;
-  active: boolean;
-  is_admin: boolean;
-  has_invoices: boolean;
-  has_timesheet: boolean;
-  has_expenses: boolean;
-};
-
-function toRows(csv: string): Row[] {
-  const [header, ...body] = parseCsv(csv);
-  if (!header) throw new Error("The file is empty.");
-
-  const index = (...names: string[]) => {
-    for (const n of names) {
-      const i = header.findIndex((h) => h.trim().toLowerCase() === n.toLowerCase());
-      if (i !== -1) return i;
-    }
-    return -1;
-  };
-
-  const cols = {
-    email: index("Title", "Email", "Address"),
-    name: index("OfficialName", "Official Name", "Name", "Full Name"),
-    active: index("Active"),
-    isAdmin: index("IsAdmin", "Is Admin", "Admin"),
-    invoices: index("HasInvoices", "Invoices"),
-    timesheet: index("HasTimesheet", "Timesheets", "Timesheet"),
-    expenses: index("HasExpenses", "Expenses"),
-  };
-
-  if (cols.email === -1) {
-    throw new Error(
-      `No email column. Looked for Title, Email or Address; found: ${header.join(", ")}`,
+  if (missingColumns.length > 0) {
+    const plural = missingColumns.length === 1 ? "column" : "columns";
+    console.warn(
+      `\nThis file has no ${missingColumns.join(", ")} ${plural}. Those counts read 0 because the column was not found, not because nobody has the app. Check the export before writing anything.`,
     );
   }
 
-  const seen = new Set<string>();
-  const rows: Row[] = [];
-
-  for (const [n, line] of body.entries()) {
-    const cell = (i: number) => (i === -1 ? "" : (line[i] ?? "").trim());
-    const email = cell(cols.email).toLowerCase();
-
-    if (!email) {
-      console.warn(`  line ${n + 2}: no address, skipped`);
-      continue;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      console.warn(`  line ${n + 2}: "${email}" is not an address, skipped`);
-      continue;
-    }
-    if (seen.has(email)) {
-      console.warn(`  line ${n + 2}: ${email} appears twice, later one skipped`);
-      continue;
-    }
-    seen.add(email);
-
-    rows.push({
-      email,
-      full_name: cell(cols.name) || null,
-      active: truthy(cell(cols.active)),
-      is_admin: truthy(cell(cols.isAdmin)),
-      has_invoices: truthy(cell(cols.invoices)),
-      has_timesheet: truthy(cell(cols.timesheet)),
-      has_expenses: truthy(cell(cols.expenses)),
-    });
-  }
-
-  return rows;
-}
-
-async function main() {
-  const rows = toRows(readFileSync(file!, "utf8"));
-
-  console.log(`Read ${rows.length} people from ${file}`);
-  console.log(`  active:   ${rows.filter((r) => r.active).length}`);
-  console.log(`  admins:   ${rows.filter((r) => r.active && r.is_admin).length}`);
-  console.log(`  invoices: ${rows.filter((r) => r.has_invoices).length}`);
-  console.log(`  timesheet:${rows.filter((r) => r.has_timesheet).length}`);
-  console.log(`  expenses: ${rows.filter((r) => r.has_expenses).length}`);
-
-  if (rows.filter((r) => r.active && r.is_admin).length === 0) {
+  if (counts.noActiveAdmin) {
     console.warn(
       "\nNo active admin in this file. BOOTSTRAP_ADMINS is the way back in — check it is set before you rely on this.",
     );

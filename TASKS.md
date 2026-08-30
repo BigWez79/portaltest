@@ -22,23 +22,6 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 0. Test the CSV parser — before anybody runs the import
-`scripts/import-staff.ts` parses CSV by hand and has no test. It runs **once**,
-against production, and sets the access flags for every member of staff. Its
-failure mode is the quiet one: a mis-parsed column does not crash, it just
-grants the wrong people the wrong apps — and `--dry-run` prints counts rather
-than rows, so nothing would look wrong.
-
-Pin the mapping: `Title` → email, `Yes` → true, quoted fields containing
-commas, duplicate addresses, a row with no address, and a file with no active
-admin in it.
-
-This blocks the import, which blocks cutover. It is first for that reason.
-
-**Done when** the parser is covered by tests that run with no Supabase
-connection, including the "no active admin" warning, and `npm run verify`
-passes.
-
 ### 1. Rate-limit the sign-in form
 `requestMagicLink` will send a link every time the button is pressed. Supabase
 has its own limits, but nothing here stops somebody pasting an address and
@@ -82,11 +65,12 @@ violations at 390 and 1440, and the screenshots are attached.
 ### 5. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
-overwrites every access flag from a CSV. Remove it, and its `import:staff`
-script, in the pull request that cuts the domain over.
+overwrites every access flag from a CSV. Remove it, its `import:staff` script,
+`scripts/staff-csv.ts` and `tests/staff-csv.spec.ts`, in the pull request that
+cuts the domain over.
 
 Last, and only after the import has actually run. Do not pick it up before then
-— and note it deletes the thing task 0 tests, which is the right order round.
+— it deletes the parser those tests cover, which is the right order round.
 
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
@@ -114,6 +98,14 @@ longer tells anybody to run it.
 - **Matched the live suite** — surveyed `BigWez79/portal` and found the portal
   had been rebuilt against a six-week-old copy: seven tiles, not four. Added
   Margin, Tax Breakdown and My Profile, two access flags, three routes. 64 checks.
+- **Tested the CSV import parser** — `overnight/auto-2026-08-30-0300`. The
+  reading half of `scripts/import-staff.ts` moved to `scripts/staff-csv.ts` —
+  text in, rows out, no Supabase and no filesystem — and is pinned by 23 tests
+  in `tests/staff-csv.spec.ts`: `Title` → email, `Yes` → true, quoted fields
+  with commas, duplicate addresses, a row with no address, and the no-active-
+  admin warning. Two things the tests brought out: a flag column the header does
+  not name is now reported rather than silently counted as a zero, and a byte
+  order mark no longer hides the `Title` column.
 - **Ported Margin & Profit Split** — `overnight/port-margin`. The first app
   folded in. Sums in `src/lib/margin-model.ts`, checked against three worked
   examples read off the live page; jsPDF bundled instead of fetched from cdnjs;
