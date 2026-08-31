@@ -36,6 +36,24 @@ export const test = base.extend<{ page: Page; tolerate: string[] }>({
 
 export { expect };
 
+/**
+ * One retry on a dropped connection.
+ *
+ * `next start` closes idle keep-alive sockets, and a request that goes out as
+ * one is closing comes back ECONNRESET — the server never saw it, so nothing
+ * about the app is being excused here. A 5xx still comes back as a response and
+ * still fails the caller's `res.ok()`, and a second reset is not swallowed.
+ */
+async function onceMore<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!/ECONNRESET|socket hang up/.test(message)) throw err;
+    return await run();
+  }
+}
+
 /** Plants a session without sending an email or reaching Supabase. Test mode only. */
 export async function signInAs(
   page: Page,
@@ -45,17 +63,19 @@ export async function signInAs(
   const params = new URLSearchParams({ email });
   if (opts.name) params.set("name", opts.name);
 
-  const res = await page.request.get(`/api/test/session?${params.toString()}`);
+  const res = await onceMore(() =>
+    page.request.get(`/api/test/session?${params.toString()}`),
+  );
   expect(res.ok(), "the test session seeder should be available").toBeTruthy();
 }
 
 export async function signOutCompletely(page: Page) {
-  await page.request.delete("/api/test/session");
+  await onceMore(() => page.request.delete("/api/test/session"));
 }
 
 /** Restores the fixture staff list. Only for tests that write. */
 export async function resetStaff(page: Page) {
-  const res = await page.request.post("/api/test/session?reset=1");
+  const res = await onceMore(() => page.request.post("/api/test/session?reset=1"));
   expect(res.ok(), "the fixture store should be resettable").toBeTruthy();
 }
 
