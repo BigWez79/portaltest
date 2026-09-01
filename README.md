@@ -84,6 +84,12 @@ npm run import:staff -- staff.csv --dry-run   # read it back, change nothing
 npm run import:staff -- staff.csv
 ```
 
+The dry run prints the counts and, under "Check these", every line it could not
+read: a row with no address, a duplicate, a column it could not find. Read that
+list before the second command — the mapping itself is pinned by
+`tests/staff-csv.spec.ts`, but only the counts can tell you the export is the one
+you meant.
+
 It sends no invitations. Check the list on the admin screen first, then invite
 people from there when you are ready for them to arrive. Make sure
 `BOOTSTRAP_ADMINS` is set before you rely on this — it is the way back in if the

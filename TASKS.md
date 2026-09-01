@@ -22,24 +22,7 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 0. Test the CSV parser — before anybody runs the import
-`scripts/import-staff.ts` parses CSV by hand and has no test. It runs **once**,
-against production, and sets the access flags for every member of staff. Its
-failure mode is the quiet one: a mis-parsed column does not crash, it just
-grants the wrong people the wrong apps — and `--dry-run` prints counts rather
-than rows, so nothing would look wrong.
-
-Pin the mapping: `Title` → email, `Yes` → true, quoted fields containing
-commas, duplicate addresses, a row with no address, and a file with no active
-admin in it.
-
-This blocks the import, which blocks cutover. It is first for that reason.
-
-**Done when** the parser is covered by tests that run with no Supabase
-connection, including the "no active admin" warning, and `npm run verify`
-passes.
-
-### 1. Rate-limit the sign-in form
+### 0. Rate-limit the sign-in form
 `requestMagicLink` will send a link every time the button is pressed. Supabase
 has its own limits, but nothing here stops somebody pasting an address and
 holding down enter. Add a per-address and per-IP limit, backed by a table so it
@@ -49,14 +32,14 @@ survives a redeploy.
 sixth is refused with the same neutral message as an unknown address, and the
 first five still arrive.
 
-### 2. Show the audit trail on the admin screen
+### 1. Show the audit trail on the admin screen
 `staff_audit` records every change and nothing reads it. Add a panel per person —
 who changed what, and when — reading through the admin RLS policy.
 
 **Done when** an admin flips a flag and sees that change listed against that
 person with their own name on it, and a non-admin still gets a 404 for `/admin`.
 
-### 3. Deactivate on the admin screen should end the session too
+### 2. Deactivate on the admin screen should end the session too
 Worth being precise about what this is and is not. Deactivating somebody already
 takes effect on their **next page load**: every route reads the staff row fresh,
 so the tiles vanish and `requireApp` 404s. They are not still using the apps.
@@ -71,7 +54,7 @@ This is a tidiness fix, not a hole. Do not let it jump the queue.
 **Done when** a test signs somebody in, deactivates them, and their next request
 lands on the sign-in card rather than a signed-in portal with a warning.
 
-### 4. Accessibility pass on the admin table
+### 3. Accessibility pass on the admin table
 The toggles are buttons with `aria-pressed` and a visually hidden label. Check
 the table's header association, focus order along a row, and that a screen
 reader announces which person a toggle belongs to.
@@ -79,14 +62,16 @@ reader announces which person a toggle belongs to.
 **Done when** an automated axe pass runs against `/` and `/admin` with no
 violations at 390 and 1440, and the screenshots are attached.
 
-### 5. Delete the import script at cutover
+### 4. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
-overwrites every access flag from a CSV. Remove it, and its `import:staff`
-script, in the pull request that cuts the domain over.
+overwrites every access flag from a CSV. Remove it — with `scripts/staff-csv.ts`
+and `tests/staff-csv.spec.ts`, which exist only to serve it — and its
+`import:staff` script, in the pull request that cuts the domain over.
 
 Last, and only after the import has actually run. Do not pick it up before then
-— and note it deletes the thing task 0 tests, which is the right order round.
+— and note it deletes the parser those tests cover, which is the right order
+round.
 
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
@@ -119,3 +104,14 @@ longer tells anybody to run it.
   examples read off the live page; jsPDF bundled instead of fetched from cdnjs;
   placeholder defaults. Also fixed a latent race in the fixture store that the
   extra tests brought out. 78 checks.
+- **Tested the CSV parser** — `overnight/auto-2026-08-31-0300`. The reading of
+  the staff CSV moved to `scripts/staff-csv.ts`, away from the half that talks
+  to Supabase, and 41 checks pin the mapping: `Title` → email, what counts as
+  Yes, commas inside quotes, duplicates, a row with no address, and the no
+  active admin warning. Two quiet failure modes found and closed on the way: the
+  BOM Excel writes made the email column go missing, and a flag column absent
+  from the export imported everybody with it off without saying so — now a
+  warning the dry run prints. Nothing here reaches Supabase or the filesystem.
+  Two flakes the longer run brought out were fixed with it: the margin worked
+  examples read the calculator before it had restored the seeded state, and the
+  test-session helpers now survive one dropped keep-alive socket. 119 checks.

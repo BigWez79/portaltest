@@ -262,7 +262,13 @@ export function MarginCalculator() {
   );
 
   return (
-    <div className="margin-app" data-testid="margin-calculator">
+    <div
+      className="margin-app"
+      data-testid="margin-calculator"
+      /* The suite waits on this: the first paint shows the preset, and what
+         this browser had saved arrives an effect later. */
+      data-hydrated={hydrated ? "1" : "0"}
+    >
       <p className="lede">
         Set quarterly revenue, deduct staff costs (day rate × days billed across the three months)
         to get your operating margin, then take out investments and debts. What&rsquo;s left is
