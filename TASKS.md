@@ -22,23 +22,6 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 0. Test the CSV parser — before anybody runs the import
-`scripts/import-staff.ts` parses CSV by hand and has no test. It runs **once**,
-against production, and sets the access flags for every member of staff. Its
-failure mode is the quiet one: a mis-parsed column does not crash, it just
-grants the wrong people the wrong apps — and `--dry-run` prints counts rather
-than rows, so nothing would look wrong.
-
-Pin the mapping: `Title` → email, `Yes` → true, quoted fields containing
-commas, duplicate addresses, a row with no address, and a file with no active
-admin in it.
-
-This blocks the import, which blocks cutover. It is first for that reason.
-
-**Done when** the parser is covered by tests that run with no Supabase
-connection, including the "no active admin" warning, and `npm run verify`
-passes.
-
 ### 1. Rate-limit the sign-in form
 `requestMagicLink` will send a link every time the button is pressed. Supabase
 has its own limits, but nothing here stops somebody pasting an address and
@@ -86,7 +69,8 @@ overwrites every access flag from a CSV. Remove it, and its `import:staff`
 script, in the pull request that cuts the domain over.
 
 Last, and only after the import has actually run. Do not pick it up before then
-— and note it deletes the thing task 0 tests, which is the right order round.
+— and note it deletes what `tests/staff-csv.spec.ts` covers, along with
+`scripts/staff-csv.ts` and that spec. Which is the right order round.
 
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
@@ -119,3 +103,11 @@ longer tells anybody to run it.
   examples read off the live page; jsPDF bundled instead of fetched from cdnjs;
   placeholder defaults. Also fixed a latent race in the fixture store that the
   extra tests brought out. 78 checks.
+- **Tested the CSV parser** — `overnight/auto-2026-09-01-0300`. The parsing in
+  `scripts/import-staff.ts` moved to `scripts/staff-csv.ts` and is pinned by
+  `tests/staff-csv.spec.ts`: the column mapping, what counts as Yes, quoted
+  commas, duplicate addresses, a row with no address and the no-active-admin
+  warning. No Supabase, no browser, no file on disk. Warnings are returned
+  rather than printed so a test can read them, and a leading byte-order mark —
+  which SharePoint's Export to CSV writes, and which used to make the file look
+  like it had no Title column — is now dropped. 116 checks.
