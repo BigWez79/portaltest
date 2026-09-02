@@ -42,13 +42,17 @@ E2E_CHROMIUM_PATH=/path/to/chrome E2E_NO_SANDBOX=1 npx playwright test
 ## How sign-in works
 
 1. Somebody types their work email and asks for a link.
-2. Supabase sends it, through whatever SMTP the project is configured with
+2. The request is counted first: five links per address per minute, twenty per
+   IP per fifteen minutes, in `signin_attempts` rather than in memory, so a
+   redeploy does not hand anybody a fresh allowance. Over the limit, no link is
+   sent and the answer is the one everybody else gets.
+3. Supabase sends it, through whatever SMTP the project is configured with
    (Resend). `shouldCreateUser` is false and email signups are off, so an address
    that is not on the staff list gets nothing — and is told the same thing as one
    that is, because different answers make the form a staff directory.
-3. The link lands on `/auth/callback`, which exchanges the token for a session
+4. The link lands on `/auth/callback`, which exchanges the token for a session
    **on the server**. No Supabase key of any kind is ever sent to a browser.
-4. The session cookie is host-only. There is one deployment, so one sign-in
+5. The session cookie is host-only. There is one deployment, so one sign-in
    covers every route and there is no cross-origin session to get wrong.
 
 Supabase accepts wildcard redirect URLs, so every Vercel preview can complete a
@@ -108,6 +112,11 @@ there is finally a JWT to write policies against:
 | anyone signed in | read their own row |
 | an active admin | read every row, add a person, change flags |
 | anyone | delete — **nobody**, there is no delete policy |
+
+`signin_attempts` is tighter still: RLS on with no policy at all, and table
+privileges revoked from `anon` and `authenticated`. The only way in is
+`consume_signin_attempt`, a security definer function the sign-in form calls —
+so rate limiting needs neither an anonymous write policy nor the service role.
 
 The application reads staff with the caller's own session, so Postgres decides
 what comes back rather than this codebase remembering to filter. The service role
