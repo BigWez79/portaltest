@@ -13,7 +13,10 @@ import { createServerClient } from "@supabase/ssr";
  * signed-out traffic to the front door, so a route added later is behind a
  * sign-in before anyone remembers to put it there.
  */
-const PUBLIC_PATHS = ["/", "/auth/callback", "/api/test/session"];
+// `/api/test` covers the session seeder and the sign-in ledger the suite reads.
+// Both are signed-out concerns, and both 404 outside test mode, so nothing is
+// exposed by naming the prefix rather than each route.
+const PUBLIC_PATHS = ["/", "/auth/callback", "/api/test"];
 
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });

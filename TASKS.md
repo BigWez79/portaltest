@@ -22,16 +22,6 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 0. Rate-limit the sign-in form
-`requestMagicLink` will send a link every time the button is pressed. Supabase
-has its own limits, but nothing here stops somebody pasting an address and
-holding down enter. Add a per-address and per-IP limit, backed by a table so it
-survives a redeploy.
-
-**Done when** a test asks for six links for one address inside a minute and the
-sixth is refused with the same neutral message as an unknown address, and the
-first five still arrive.
-
 ### 1. Show the audit trail on the admin screen
 `staff_audit` records every change and nothing reads it. Add a panel per person —
 who changed what, and when — reading through the admin RLS policy.
@@ -80,7 +70,8 @@ longer tells anybody to run it.
 
 ## Held — needs a person
 
-- Creating the Supabase projects and applying `0001_staff.sql` (BLOCKED.md)
+- Creating the Supabase projects and applying `0001_staff.sql` and
+  `0002_signin_rate_limit.sql` (BLOCKED.md)
 - Turning off email signups and pointing Supabase Auth's SMTP at Resend
 - Exporting the SharePoint Staff list to CSV and running the one-off import
 - Pointing `portal.poweranalytix.co.uk` at Vercel
@@ -92,6 +83,14 @@ longer tells anybody to run it.
 
 ## Done
 
+- **Rate-limited the sign-in form** — `overnight/auto-2026-09-02-0300`. Five
+  links per address per minute, twenty per IP per fifteen minutes, counted in
+  `signin_attempts` rather than in memory so a redeploy hands nobody a fresh
+  allowance. Refusal is silent: over the limit, under it and unknown are all
+  told the same thing, so the form still cannot be used to find out who works
+  here. Written as a security definer function called with the anon role —
+  neither an anonymous write policy nor the service role. `0002` is committed
+  and waiting on a person. 122 checks.
 - **Portal v3.0 scaffold** — sign-in, tiles, admin screen. First commit.
 - **Off Microsoft** — Supabase Auth, RLS, staff admin screen, CSV import.
 - **One app** — the apps became guarded routes; shared-cookie machinery

@@ -103,6 +103,8 @@ src/lib/staff.ts                the caller's own row, and access resolution
 src/lib/staff-admin.ts          list, set a flag, invite
 src/lib/apps.ts                 the seven tiles
 src/lib/notify.ts               access-change email; a no-op with no Resend key
+src/lib/rate-limit.ts           how often one address, or one IP, may ask for a link
+src/lib/rate-limit-store.ts     the same limit, file-backed, for the suite only
 src/app/page.tsx                the portal — the tiles
 src/app/{invoices,timesheets,expenses,margin,tax-breakdown,profile}/
                                 guarded routes, placeholder inside
@@ -110,6 +112,7 @@ src/app/admin/page.tsx          staff access
 src/app/actions/                server actions — each re-checks the caller
 src/app/auth/callback/          where a magic link lands
 src/app/api/test/session/       test-mode seeder; 404 in production
+src/app/api/test/rate-limit/    reads the sign-in ledger; 404 in production
 scripts/import-staff.ts         one-off CSV import; not part of running the app
 scripts/check-bundle-secrets.mjs post-build scan of what a browser receives
 supabase/migrations/            written by the machine, applied by a person

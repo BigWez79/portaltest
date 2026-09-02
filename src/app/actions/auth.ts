@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { isTestMode, siteUrl } from "@/lib/env";
+import { consumeSignInAttempt } from "@/lib/rate-limit";
 
 export type SignInState = { status: "idle" | "sent" | "error"; message?: string };
 
@@ -25,6 +26,10 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * runs on fixtures and reaches no live project, so `npm run verify` was green
  * throughout. `deploy/check-auth-config.sh` is what checks it now. Run it
  * against a project before believing the second sentence.
+ *
+ * Rate limited per address and per IP before any of that happens: pressing the
+ * button again is free, and the cost lands in somebody else's inbox. A refused
+ * request is answered exactly as a sent one is — see `src/lib/rate-limit.ts`.
  */
 export async function requestMagicLink(
   _previous: SignInState,
@@ -38,8 +43,18 @@ export async function requestMagicLink(
     return { status: "error", message: "That does not look like an email address." };
   }
 
+  // Neutral either way. "You have asked too often" tells somebody holding a
+  // list of addresses which ones are worth holding on to, which is the same
+  // leak as answering an unknown address differently.
+  const sent = { status: "sent" } as const;
+
+  if (!(await consumeSignInAttempt(email))) {
+    console.warn(JSON.stringify({ event: "auth.magiclink.rate_limited", email }));
+    return sent;
+  }
+
   if (isTestMode()) {
-    return { status: "sent" };
+    return sent;
   }
 
   const { supabaseServer } = await import("@/lib/supabase/server");
@@ -61,7 +76,7 @@ export async function requestMagicLink(
     };
   }
 
-  return { status: "sent" };
+  return sent;
 }
 
 export async function signOut() {

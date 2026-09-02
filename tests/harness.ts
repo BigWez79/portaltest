@@ -73,6 +73,41 @@ export async function signOutCompletely(page: Page) {
   await onceMore(() => page.request.delete("/api/test/session"));
 }
 
+/**
+ * Fills in the sign-in form and returns what the person is told.
+ *
+ * Deliberately returns the message rather than asserting on it: whether a link
+ * went out or was refused, this is the same string, and a test that could tell
+ * them apart from here would be a test of a leak.
+ */
+export async function askForLink(page: Page, email: string): Promise<string> {
+  await page.goto("/");
+  await page.getByTestId("email").fill(email);
+  await page.getByTestId("signin").click();
+  const sent = page.getByTestId("link-sent");
+  await expect(sent).toBeVisible();
+  return ((await sent.textContent()) ?? "").trim();
+}
+
+/**
+ * What the sign-in ledger recorded for one address or one IP — the only way to
+ * tell a link that went out from one that was refused. Test mode only.
+ */
+export async function linkLedger(
+  page: Page,
+  key: { email?: string; ip?: string },
+): Promise<{ allowed: number; refused: number }> {
+  const params = new URLSearchParams(
+    key.email ? { email: key.email } : { ip: key.ip ?? "" },
+  );
+  const res = await onceMore(() =>
+    page.request.get(`/api/test/rate-limit?${params.toString()}`),
+  );
+  expect(res.ok(), "the sign-in ledger should be readable").toBeTruthy();
+  const body = (await res.json()) as { allowed: number; refused: number };
+  return { allowed: body.allowed, refused: body.refused };
+}
+
 /** Restores the fixture staff list. Only for tests that write. */
 export async function resetStaff(page: Page) {
   const res = await onceMore(() => page.request.post("/api/test/session?reset=1"));
