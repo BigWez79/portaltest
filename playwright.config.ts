@@ -39,7 +39,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run build && npx next start --port ${PORT}`,
+    // --keepAliveTimeout: Node closes an idle keep-alive socket after 5s, and
+    // Playwright reuses its sockets between requests. A test that pauses longer
+    // than that — a screenshot, a width change — then reuses the socket as the
+    // server is closing it, and the request dies with ECONNRESET. It landed on
+    // a different test each run, which is what an infrastructure flake looks
+    // like. 70s is Next's own recommendation for sitting behind a proxy.
+    command: `npm run build && npx next start --port ${PORT} --keepAliveTimeout 70000`,
     url: baseURL,
     timeout: 180_000,
     reuseExistingServer: !process.env.CI,
