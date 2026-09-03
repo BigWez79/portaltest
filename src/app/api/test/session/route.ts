@@ -12,7 +12,7 @@ import { isTestMode, staffSource } from "@/lib/env";
  *
  *   GET    /api/test/session?email=a@b.test&name=A%20B
  *   DELETE /api/test/session          sign out
- *   POST   /api/test/session?reset=1  restore the fixture staff list
+ *   POST   /api/test/session?reset=1  restore the fixture staff list and audit trail
  */
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,9 @@ export async function POST() {
     return NextResponse.json({ error: "not using the fixture store" }, { status: 400 });
   }
   const { fixtureStore } = await import("@/lib/fixture-store");
-  await fixtureStore.reset();
+  const { auditStore } = await import("@/lib/audit-store");
+  // Both, or a suite inherits the audit entries the last one wrote.
+  await Promise.all([fixtureStore.reset(), auditStore.reset()]);
   return NextResponse.json({ ok: true });
 }
 

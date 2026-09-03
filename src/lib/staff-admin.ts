@@ -1,6 +1,7 @@
 import "server-only";
 import { siteUrl, staffSource } from "./env";
 import { STAFF_COLUMNS, toStaffRow, type StaffRow } from "./staff";
+import type { FlagSnapshot } from "./staff-audit";
 
 export const FLAGS = [
   "active",
@@ -13,7 +14,8 @@ export const FLAGS = [
 ] as const;
 export type Flag = (typeof FLAGS)[number];
 
-const COLUMN: Record<Flag, string> = {
+/** flag -> the column it lives in, and the key it has in an audit row's jsonb. */
+export const FLAG_COLUMN: Record<Flag, string> = {
   active: "active",
   isAdmin: "is_admin",
   hasInvoices: "has_invoices",
@@ -22,6 +24,35 @@ const COLUMN: Record<Flag, string> = {
   hasMargin: "has_margin",
   hasTaxBreakdown: "has_tax_breakdown",
 };
+
+const snapshotOf = (row: StaffRow): FlagSnapshot =>
+  Object.fromEntries(FLAGS.map((flag) => [flag, row[flag] === true])) as FlagSnapshot;
+
+/**
+ * The audit row Postgres writes for itself.
+ *
+ * In a real environment the trigger on `staff` does this, stamped with
+ * `auth.uid()`. The fixture store has no triggers, so the same record is written
+ * here — and who is calling is read from the session rather than passed in, for
+ * the same reason Postgres reads it from the JWT: an argument can be wrong.
+ */
+async function recordFixtureChange(
+  email: string,
+  before: FlagSnapshot | null,
+  after: FlagSnapshot,
+): Promise<void> {
+  const [{ auditStore }, { getCurrentUser }] = await Promise.all([
+    import("./audit-store"),
+    import("./current-user"),
+  ]);
+  const caller = await getCurrentUser();
+  await auditStore.record({
+    email: email.toLowerCase(),
+    byEmail: caller?.email ?? null,
+    before,
+    after,
+  });
+}
 
 /**
  * Every staff row.
@@ -53,7 +84,11 @@ export async function listStaff(): Promise<StaffRow[]> {
 export async function setFlag(email: string, flag: Flag, value: boolean): Promise<void> {
   if (staffSource() === "fixture") {
     const { fixtureStore } = await import("./fixture-store");
-    await fixtureStore.update(email, { [flag]: value } as Partial<StaffRow>);
+    const before = await fixtureStore.find([email.toLowerCase()]);
+    const after = await fixtureStore.update(email, { [flag]: value } as Partial<StaffRow>);
+    if (before && after) {
+      await recordFixtureChange(after.email, snapshotOf(before), snapshotOf(after));
+    }
     return;
   }
 
@@ -62,7 +97,7 @@ export async function setFlag(email: string, flag: Flag, value: boolean): Promis
 
   const { error } = await client
     .from("staff")
-    .update({ [COLUMN[flag]]: value })
+    .update({ [FLAG_COLUMN[flag]]: value })
     .eq("email", email);
 
   if (error) throw new Error(`Could not update ${email}: ${error.message}`);
@@ -85,7 +120,7 @@ export async function inviteStaff(
   if (staffSource() === "fixture") {
     const { fixtureStore } = await import("./fixture-store");
     try {
-      await fixtureStore.insert({
+      const row = await fixtureStore.insert({
         email: address,
         fullName: fullName || null,
         active: true,
@@ -98,6 +133,7 @@ export async function inviteStaff(
         invitedAt: "2026-08-25T00:00:00.000Z",
         lastSeenAt: null,
       });
+      await recordFixtureChange(row.email, null, snapshotOf(row));
       return { ok: true };
     } catch (error) {
       return { ok: false, message: error instanceof Error ? error.message : "Failed" };

@@ -113,6 +113,10 @@ there is finally a JWT to write policies against:
 | an active admin | read every row, add a person, change flags |
 | anyone | delete — **nobody**, there is no delete policy |
 
+`staff_audit` is written by a trigger on `staff`, stamped with `auth.uid()`, and
+readable only by an active admin — which is what the trail on the admin screen
+reads. Nothing grants an insert, so the only way a row appears is a real change.
+
 `signin_attempts` is tighter still: RLS on with no policy at all, and table
 privileges revoked from `anon` and `authenticated`. The only way in is
 `consume_signin_attempt`, a security definer function the sign-in form calls —
