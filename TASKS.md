@@ -37,7 +37,29 @@ This is a tidiness fix, not a hole. Do not let it jump the queue.
 **Done when** a test signs somebody in, deactivates them, and their next request
 lands on the sign-in card rather than a signed-in portal with a warning.
 
-### 2. Accessibility pass on the admin table
+### 2. Rename the product to Power Suite
+The suite is called Power Suite. The company is still Power Analytix. Do it in
+one change rather than letting it drift -- half-renamed is worse than either
+state, and it is the sort of thing that gets finished in six separate pull
+requests over a month otherwise.
+
+Rename in `src/`: the app shell, page metadata and titles, headings, and any
+user-visible string that calls the product "the portal". In `tests/`: the
+assertions and harness helpers that reference those strings. And in the docs --
+`CLAUDE.md`, `README.md`, `docs/PORTING-APPS.md`, `deploy/README.md`.
+
+**Rename no identifier.** The launchd labels `uk.poweranalytix.portal.*`, the
+plist filenames, the repository, the Supabase project, the `overnight/*` branch
+prefix, the `PORTAL_*` environment variables and `~/portal` on disk all stay
+exactly as they are. Renaming any of them breaks jobs that are already
+installed, and none of it is anything a person reads.
+
+**Done when** no user-visible string calls the product "the portal"; the page
+title and the shell heading read Power Suite; a test asserts the product name in
+both at 390 and 1440; `grep -ri "the portal" src tests` returns nothing
+user-facing; and `npm run verify` passes.
+
+### 3. Accessibility pass on the admin table
 The toggles are buttons with `aria-pressed` and a visually hidden label. Check
 the table's header association, focus order along a row, and that a screen
 reader announces which person a toggle belongs to.
@@ -45,7 +67,7 @@ reader announces which person a toggle belongs to.
 **Done when** an automated axe pass runs against `/` and `/admin` with no
 violations at 390 and 1440, and the screenshots are attached.
 
-### 3. Delete the import script at cutover
+### 4. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
 overwrites every access flag from a CSV. Remove it — with `scripts/staff-csv.ts`
