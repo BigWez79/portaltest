@@ -12,24 +12,34 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Sends a magic link.
  *
  * `shouldCreateUser: false` means this form never creates an account, so an
- * address that is not already a user gets no link. The response to the person
- * is the same either way — telling a stranger "you are not staff" is a
- * directory of who is.
- *
- * That is the belt. The braces are email signups being disabled on the Supabase
- * project itself, which is what stops somebody bypassing this form and asking
- * GoTrue directly.
- *
- * This comment used to assert both were in place. On 2026-08-25 portal-staging
- * was found with `disable_signup: false` — the comment had been wrong for as
- * long as the project had existed, and nothing could have told us: the suite
- * runs on fixtures and reaches no live project, so `npm run verify` was green
- * throughout. `deploy/check-auth-config.sh` is what checks it now. Run it
- * against a project before believing the second sentence.
- *
- * Rate limited per address and per IP before any of that happens: pressing the
- * button again is free, and the cost lands in somebody else's inbox. A refused
- * request is answered exactly as a sent one is — see `src/lib/rate-limit.ts`.
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${siteUrl()}/auth/callback`,
+    },
+  });
+
+  // Logged, never returned. The operator finds out; the browser does not.
+  //
+  // This used to swallow two specific messages, "user not found" and "signups
+  // not allowed", and surface everything else as "we could not send the link".
+  // On 2026-08-25 that was demonstrated against staging to be a staff
+  // directory, needing two requests per address:
+  //
+  //   unknown address, twice  ->  "Check your email", "Check your email"
+  //   known address, twice    ->  "Check your email", "We could not send the link"
+  //
+  // An unknown address short-circuits on user-not-found and never reaches the
+  // send path. A known one does, and hits GoTrue's own per-address limit, which
+  // did not match the filter and so came back to the browser. The rate limiter
+  // above is neutral for exactly this reason; leaving this branch in place
+  // would have reintroduced the leak one line below the comment explaining it.
+  if (error) {
+    console.error("[auth] magic link not sent", error.message);
+  }
+
+  return sent;
  */
 export async function requestMagicLink(
   _previous: SignInState,
@@ -68,12 +78,9 @@ export async function requestMagicLink(
     },
   });
 
-  if (error && !/user not found|signups not allowed/i.test(error.message)) {
-    console.error("[auth] magic link failed", error.message);
-    return {
-      status: "error",
-      message: "We could not send the link just now. Try again in a moment.",
-    };
+  // Logged, never returned. The operator finds out; the browser does not.
+  if (error) {
+    console.error("[auth] magic link not sent", error.message);
   }
 
   return sent;

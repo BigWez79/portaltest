@@ -18,6 +18,18 @@ export async function supabaseServer() {
 
   return createServerClient(env.url, env.anonKey, {
     cookieOptions: {
+      // The session cookie is never read in the browser, so it should not be
+      // readable there. Nothing in this project uses a browser Supabase client
+      // — every call is server-side, which is what makes httpOnly free.
+      //
+      // It was absent until 2026-08-25, when a real sign-in against staging
+      // showed the cookie coming back as
+      //   sb-<ref>-auth-token [Path=/, Expires=…, Max-Age=…, SameSite=lax]
+      // with no HttpOnly, so any XSS could read the session. The callback
+      // route's comment claimed "nothing about the session is ever handled in
+      // the browser"; this is the line that makes that true rather than
+      // aspirational.
+      httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
