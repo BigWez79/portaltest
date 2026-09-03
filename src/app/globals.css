@@ -718,6 +718,68 @@ tr.inactive .person-email {
   margin: 0;
 }
 
+/* The audit trail: one panel per person, on the admin screen. */
+.audit-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.audit-person {
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 13px 15px;
+  background: #fbfcff;
+  min-width: 0;
+}
+
+.audit-who {
+  margin: 0 0 9px;
+  overflow-wrap: anywhere;
+}
+
+.audit-entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audit-entries li {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.audit-what {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-dk);
+  overflow-wrap: anywhere;
+}
+
+.audit-what.removed {
+  color: #8a5b5b;
+}
+
+.audit-when {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.audit-more {
+  margin: 9px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
 .back {
   text-align: center;
   font-size: 13px;

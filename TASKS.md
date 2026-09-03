@@ -22,14 +22,7 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 1. Show the audit trail on the admin screen
-`staff_audit` records every change and nothing reads it. Add a panel per person —
-who changed what, and when — reading through the admin RLS policy.
-
-**Done when** an admin flips a flag and sees that change listed against that
-person with their own name on it, and a non-admin still gets a 404 for `/admin`.
-
-### 2. Deactivate on the admin screen should end the session too
+### 1. Deactivate on the admin screen should end the session too
 Worth being precise about what this is and is not. Deactivating somebody already
 takes effect on their **next page load**: every route reads the staff row fresh,
 so the tiles vanish and `requireApp` 404s. They are not still using the apps.
@@ -44,7 +37,7 @@ This is a tidiness fix, not a hole. Do not let it jump the queue.
 **Done when** a test signs somebody in, deactivates them, and their next request
 lands on the sign-in card rather than a signed-in portal with a warning.
 
-### 3. Accessibility pass on the admin table
+### 2. Accessibility pass on the admin table
 The toggles are buttons with `aria-pressed` and a visually hidden label. Check
 the table's header association, focus order along a row, and that a screen
 reader announces which person a toggle belongs to.
@@ -52,7 +45,7 @@ reader announces which person a toggle belongs to.
 **Done when** an automated axe pass runs against `/` and `/admin` with no
 violations at 390 and 1440, and the screenshots are attached.
 
-### 4. Delete the import script at cutover
+### 3. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
 overwrites every access flag from a CSV. Remove it — with `scripts/staff-csv.ts`
@@ -83,6 +76,18 @@ longer tells anybody to run it.
 
 ## Done
 
+- **Showed the audit trail on the admin screen** — `overnight/auto-2026-09-03-0300`.
+  `staff_audit` has recorded every change since 0001 and nothing read it; there
+  is now a panel per person under the staff table, newest first, saying what
+  moved and who moved it. Read through the caller's own session, so the "admins
+  read the audit" policy is what returns anything — and `changed_by` is resolved
+  to a name from `staff`, read the same way, rather than by adding a foreign key
+  and a migration for a join a second small query does. An entry where no flag
+  moved is dropped: the sign-in trigger writes `last_seen_at` and that is not a
+  decision anybody made. The fixture store grew a matching trail so the suite can
+  exercise the panel with no Supabase — one file per person, like the sign-in
+  ledger, and cleared by the same reset. No migration; nothing waiting on a
+  person. 128 checks.
 - **Rate-limited the sign-in form** — `overnight/auto-2026-09-02-0300`. Five
   links per address per minute, twenty per IP per fifteen minutes, counted in
   `signin_attempts` rather than in memory so a redeploy hands nobody a fresh

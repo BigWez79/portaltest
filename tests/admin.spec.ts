@@ -19,6 +19,8 @@ test.describe("admin screen — who can reach it", () => {
     const res = await page.goto("/admin");
     expect(res?.status()).toBe(404);
     await expect(page.getByTestId("staff-table")).toHaveCount(0);
+    // Who changed whose access is admin-only too, and a 404 renders none of it.
+    await expect(page.getByTestId("audit-trail")).toHaveCount(0);
   });
 
   test("an inactive admin gets nothing", async ({ page }) => {
@@ -125,6 +127,100 @@ test.describe.serial("admin screen — changing access", () => {
     await expectExactlyTiles(page, ["profile"]);
     await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
+
+  test("a change is listed against that person, with the admin's name on it", async ({
+    page,
+  }) => {
+    await page.goto("/admin");
+    // Nothing has been changed since the reset, so the panel says so.
+    await expect(page.getByTestId("audit")).toContainText("No access has been changed yet.");
+
+    await page.getByTestId("toggle-grantable@example.test-hasExpenses").click();
+    await expect(
+      page.getByTestId("toggle-grantable@example.test-hasExpenses"),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    const panel = page.getByTestId("audit-grantable@example.test");
+    await expect(panel).toContainText("Granted Expenses");
+    // The admin who made it, not the person it was made against.
+    await expect(panel).toContainText("Ada Everything");
+    await expect(panel).toContainText("Grace Grantable");
+    await expect(panel.getByTestId("audit-entry")).toHaveCount(1);
+  });
+
+  test("the trail survives a reload and reads the same way", async ({ page }) => {
+    await page.goto("/admin");
+    await page.getByTestId("toggle-revocable@example.test-hasInvoices").click();
+    await expect(
+      page.getByTestId("toggle-revocable@example.test-hasInvoices"),
+    ).toHaveAttribute("aria-pressed", "false");
+
+    await page.reload();
+    const panel = page.getByTestId("audit-revocable@example.test");
+    await expect(panel).toContainText("Removed Invoices");
+    await expect(panel).toContainText("Ada Everything");
+  });
+
+  test("deactivating reads as deactivating, and adding as being added", async ({ page }) => {
+    await page.goto("/admin");
+    await page.getByTestId("toggle-grantable@example.test-active").click();
+    await expect(page.getByTestId("audit-grantable@example.test")).toContainText(
+      "Deactivated",
+    );
+
+    await page.getByTestId("invite-name").fill("Nadia Newcomer");
+    await page.getByTestId("invite-email").fill("nadia@example.test");
+    await page.getByTestId("invite-submit").click();
+    await expect(page.getByTestId("invite-ok")).toBeVisible();
+
+    await expect(page.getByTestId("audit-nadia@example.test")).toContainText(
+      "Added to the staff list",
+    );
+  });
+
+  test("signing in is not a change and does not appear in the trail", async ({ page }) => {
+    // Only decisions belong here. `left.the.company@` is touched by nothing this
+    // suite does, so nothing should be listed against them.
+    await page.goto("/admin");
+    await page.getByTestId("toggle-grantable@example.test-hasMargin").click();
+    await expect(page.getByTestId("audit-trail")).toBeVisible();
+    await expect(page.getByTestId("audit-left.the.company@example.test")).toHaveCount(0);
+  });
+
+  // The named widths, with something actually in the panel — an empty trail
+  // would not tell us whether a long entry pushes the page sideways.
+  //
+  // The assertion is on the panel rather than the document: at 390 the staff
+  // table already makes the whole page scroll sideways, which predates this and
+  // is a change to how the admin screen looks. What is checkable here is that
+  // the trail itself stays inside the viewport, and the screenshots are attached
+  // for a person to look at.
+  for (const w of [
+    { name: "390-phone", width: 390, height: 844 },
+    { name: "1440-desktop", width: 1440, height: 900 },
+  ]) {
+    test(`the trail fits at ${w.name}`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width: w.width, height: w.height });
+      await page.goto("/admin");
+      await page.getByTestId("toggle-grantable@example.test-hasTaxBreakdown").click();
+      await expect(page.getByTestId("audit-grantable@example.test")).toContainText(
+        "Granted Tax Breakdown",
+      );
+
+      const spill = await page
+        .getByTestId("audit-trail")
+        .evaluate(
+          (el) =>
+            el.getBoundingClientRect().right - document.documentElement.clientWidth,
+        );
+      expect(spill, "the audit trail must stay inside the viewport").toBeLessThanOrEqual(0);
+
+      await testInfo.attach(`admin-audit-${w.name}.png`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
+    });
+  }
 
   test("inviting the same address twice is refused", async ({ page }) => {
     await page.goto("/admin");

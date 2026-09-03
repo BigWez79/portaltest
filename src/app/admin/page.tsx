@@ -1,7 +1,9 @@
 import { AppShell } from "@/components/AppShell";
+import { AuditTrail } from "@/components/admin/AuditTrail";
 import { InviteForm } from "@/components/admin/InviteForm";
 import { StaffTable } from "@/components/admin/StaffTable";
 import { requireApp } from "@/lib/guard";
+import { listAuditTrail } from "@/lib/staff-audit";
 import { listStaff } from "@/lib/staff-admin";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +13,7 @@ export const metadata = { title: "Staff access — Power Analytix" };
 export default async function AdminPage() {
   const access = await requireApp("admin");
   const staff = await listStaff();
+  const audit = await listAuditTrail(staff);
 
   const counts = {
     active: staff.filter((s) => s.active).length,
@@ -42,6 +45,16 @@ export default async function AdminPage() {
           deleted — deactivate instead, so the record of what they had survives.
         </p>
         <StaffTable staff={staff} currentEmail={access.email} />
+      </section>
+
+      <section className="card" data-testid="audit">
+        <h2 className="card-title">What has been changed</h2>
+        <p className="card-note">
+          Every change to access since this screen went in, and who made it. Read
+          through the same policy as the table above, so it exists for admins and for
+          nobody else.
+        </p>
+        <AuditTrail groups={audit} />
       </section>
 
       <section className="card">
