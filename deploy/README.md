@@ -135,10 +135,16 @@ flag: there is no variable to set wrongly and nothing to fall through to.
 Two gaps that absence does not close, both stated in the plist rather than
 papered over:
 
-- **`supabase db push` authenticates with the CLI token in `~/.supabase`**, not
-  with any environment variable. Withholding `SUPABASE_*` does nothing to it, so
-  the plist also passes `OVERNIGHT_APPLY_MIGRATIONS=0` — which is a flag, and
-  weaker for it. `BLOCKED.md` is the real rule.
+- **Nothing here stops a migration being applied.** `supabase db push`
+  authenticates with the CLI's token in the login keychain, not with any
+  environment variable, so withholding `SUPABASE_*` does nothing to it.
+  `OVERNIGHT_APPLY_MIGRATIONS=0` and the absent `db push` call constrain the
+  *script*; they do not constrain the agent running inside it, which has a shell
+  and `--dangerously-skip-permissions`. What actually stands in the way is the
+  prompt telling it not to, `BLOCKED.md`, and macOS asking a person for a
+  keychain password — none of it structural. On **3 September a keychain prompt
+  for "Supabase CLI" appeared on this Mac**, which is what that risk looks like
+  when it surfaces.
 - **`.env.local` is loaded by `next build` on its own** and holds live staging
   keys. A plist cannot unset a file. It is `0600` and gitignored and the nightly
   run only compiles and tests, but do not read "no Supabase variables" as "the

@@ -17,9 +17,16 @@
 #
 #   - It never pushes to main and never merges. It pushes an overnight/* branch
 #     and opens a pull request. BLOCKED.md, "Release".
-#   - It never applies a migration. OVERNIGHT_APPLY_MIGRATIONS=0 comes from the
-#     plist, and this script refuses to run `supabase db push` regardless of its
-#     value — the variable is a courtesy, the absence of the call is the rule.
+#   - This SCRIPT never applies a migration: it contains no `supabase db push`
+#     call, and OVERNIGHT_APPLY_MIGRATIONS=0 arrives from the plist besides.
+#     That constrains the script. It does NOT constrain the agent running
+#     inside it, which has a shell, --dangerously-skip-permissions, and can
+#     reach the CLI — whose token is in the login keychain, not in any
+#     environment variable this file withholds. What actually stands in the way
+#     is the prompt telling it not to, BLOCKED.md, and macOS asking a person for
+#     a keychain password. None of those is structural. On 2026-09-03 a keychain
+#     prompt for "Supabase CLI" appeared on this Mac, which is what that risk
+#     looks like when it surfaces.
 #   - It refuses to start on a dirty tree, mid-rebase, or behind a stale lock,
 #     rather than committing somebody's half-finished work into a branch nobody
 #     is expecting.
@@ -176,6 +183,51 @@ release_lock() { rm -rf "$LOCK_DIR" 2>/dev/null || true; }
 # opposite of the guard it was defending.
 OWNS_BRANCH=0
 
+# --------------------------------------------------------------------------
+# One guard, used by both places that decide whether `git add -A` is safe.
+#
+# Both used to grep the porcelain status for `\.env|\.log|agent_logs/`, which
+# catches the shapes somebody happened to think of. A credential in
+# credentials.json, service-account.pem or keys.ts went straight through into a
+# public repository (BLOCKED.md: both are public). A guard that only recognises
+# the leaks you already imagined is the check rule 12 warns about — it passes
+# while the thing it checks is broken.
+#
+# Contents are scanned for UNTRACKED files only, and that is deliberate:
+#
+#   - a tracked file's contents are already committed, so scanning them decides
+#     nothing that has not already been decided;
+#   - src/lib/supabase/server.ts and playwright.config.ts both legitimately
+#     contain credential-shaped words, so content-scanning modified files would
+#     halt the run every time either changed. A guard that stops every night
+#     gets disabled, and a disabled guard is worse than none.
+#
+# Over-matching a filename costs a run that stops for a person to look at.
+# Under-matching costs a key in a public repository. The asymmetry is the design.
+# --------------------------------------------------------------------------
+looks_like_a_secret() {
+  local status_lines="$1" path
+  # Matched against the whole status line rather than a parsed field: a filename
+  # with a space in it would defeat the parse, and stopping too often is the
+  # cheap direction to be wrong in.
+  if printf '%s\n' "$status_lines" | grep -Eqi '\.env|\.log|agent_logs/|\.pem|\.p12|\.key|id_rsa|credential|secret|token'; then
+    return 0
+  fi
+  # Untracked files only; `git status --porcelain` marks them '??'.
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    [ -f "$path" ] || continue
+    [ "$(wc -c <"$path" 2>/dev/null || echo 0)" -lt 1048576 ] || continue
+    grep -Iq . "$path" 2>/dev/null || continue   # skip binaries
+    if grep -Eq 'BEGIN [A-Z ]*PRIVATE KEY|eyJ[A-Za-z0-9_-]{20,}\.|sk_live_|re_[A-Za-z0-9]{16,}' "$path" 2>/dev/null; then
+      return 0
+    fi
+  done <<EOF
+$(printf '%s\n' "$status_lines" | sed -n 's/^?? //p')
+EOF
+  return 1
+}
+
 tidy_tree() {
   [ "$OWNS_BRANCH" = "1" ] || return 0
   cd "$REPO" 2>/dev/null || return 0
@@ -185,7 +237,7 @@ tidy_tree() {
     here="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
     case "$here" in
       "$BRANCH")
-        if printf '%s\n' "$left" | grep -Eq '\.env|\.log|agent_logs/'; then
+        if looks_like_a_secret "$left"; then
           log "leaving the tree dirty deliberately: something in it must not be committed"
           printf '%s\n' "$left" | sed 's/^/    /'
           return 0
@@ -270,12 +322,28 @@ for path in node_modules .tmp playwright-report test-results; do
 done
 
 if [ "$DRY_RUN" = "1" ]; then
-  log "dry run: probing $CLAUDE_BIN — this is the line most likely to be wrong"
+  # A probe that asks for the word OK proves the CLI is reachable and nothing
+  # else. It does not prove the agent can edit a file, that git works from in
+  # there, or — the one that would hang a real night until the next fire — that
+  # --dangerously-skip-permissions actually suppresses prompts under launchd,
+  # where there is no TTY to answer one. An answering CLI and a working night
+  # are different things, and only the second is worth a dry run (CLAUDE.md 12).
+  #
+  # So the probe does the smallest thing a real night does: write a file, and
+  # commit it. The commit dies with the scratch branch, which is deleted on the
+  # way out either way, so nothing is pushed and the file does not survive the
+  # checkout back.
+  log "dry run: probing $CLAUDE_BIN — can it edit and commit, not just answer"
   PROBE="$LOG_DIR/probe-$STAMP.log"
-  if run_limited 180 "$CLAUDE_BIN" "${CLAUDE_ARGS[@]}" 'Reply with the single word OK and nothing else.' >"$PROBE" 2>&1 && [ -s "$PROBE" ]; then
-    log "  answered: $(head -c 120 "$PROBE" | tr '\n' ' ')"
+  PROBE_BEFORE="$(git rev-parse HEAD)"
+  run_limited 420 "$CLAUDE_BIN" "${CLAUDE_ARGS[@]}" \
+    'Create a file called .dry-run-probe containing the single word ok. git add it and commit it with the message "dry run probe". Do nothing else: change no other file, create no branch, push nothing.' \
+    >"$PROBE" 2>&1 || true
+  PROBE_AFTER="$(git rev-parse HEAD)"
+  if [ "$PROBE_BEFORE" != "$PROBE_AFTER" ] && git show --stat --format= HEAD | grep -q '\.dry-run-probe'; then
+    log "  wrote and committed .dry-run-probe — the agent can edit, and git works unattended"
   else
-    log "  NO USABLE ANSWER — see $PROBE. Compare CLAUDE_ARGS with i-love-isle-of-wight/overnight.sh."
+    log "  NO COMMIT — see $PROBE. The CLI can answer and still be unable to work: check the invocation, and whether a permission prompt is waiting with no TTY to answer it."
     git checkout "$STARTED_ON" >/dev/null 2>&1 || true
     git branch -D "$BRANCH" >/dev/null 2>&1 || true
     OWNS_BRANCH=0
@@ -364,7 +432,7 @@ if [ -n "$LEFTOVER" ]; then
   # Matched against the whole status line rather than a parsed field: a
   # filename with a space in it would defeat the parse, and the only cost of
   # over-matching is a run that stops for a person to look at.
-  if printf '%s\n' "$LEFTOVER" | grep -Eq '\.env|\.log|agent_logs/'; then
+  if looks_like_a_secret "$LEFTOVER"; then
     fatal 64 "something that must not be committed was left untracked -- a person looks at this, the tree stays as it is"
   fi
   log "committing it rather than leaving it, so tomorrow night can start"
