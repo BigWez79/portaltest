@@ -379,9 +379,25 @@ test.describe("margin — the defaults", () => {
     await signInAs(page, "margin.only@example.test");
     await gotoMargin(page);
 
+    // "Saved ✓" shows for 1200ms and then clears itself, so it cannot be
+    // asserted after the fact: on a busy machine the class has already gone by
+    // the time the assertion starts, and toHaveClass then retries for five
+    // seconds against something that is never coming back. That is how the
+    // 03:00 run on 2026-08-30 failed — 13 polls, every one "saved", never
+    // "saved show".
+    //
+    // Watching has to begin before the thing being watched happens.
+    const sawSavedFlag = page.waitForFunction(
+      () =>
+        document
+          .querySelector('[data-testid="saved-flag"]')
+          ?.classList.contains("show") === true,
+      undefined,
+      { timeout: 5000 },
+    );
     await page.getByTestId("revenue").fill("123000");
+    await sawSavedFlag;
     await expect(page.getByTestId("kRev")).toHaveText("£123,000");
-    await expect(page.getByTestId("saved-flag")).toHaveClass(/show/);
 
     await page.reload();
     await expect(page.getByTestId("revenue")).toHaveValue("123000");
