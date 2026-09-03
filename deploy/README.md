@@ -13,22 +13,57 @@ The reasoning lives in the plists themselves, next to the lines it explains, the
 way `i-love-isle-of-wight/deploy/` does it. This file is only how to install
 them and what is known to be unfinished.
 
-## The overnight job has no runner yet
+## The overnight runner
 
-`./overnight.sh` **does not exist in this repository.** The plist is written and
-correct, and until somebody writes or adapts that script the job will start,
-find nothing to run, and write
+`./overnight.sh` takes the first eligible task in `TASKS.md`, does it on a fresh
+`overnight/auto-<date>-<time>` branch, runs `npm run verify`, pushes, and opens a
+pull request. It never merges and never pushes `main`.
+
+It refuses to start rather than do something surprising. A dirty tree, a
+half-finished rebase, a stale `.git/index.lock` or another run still holding the
+lock each stop it with their own exit code, because the only person who reads
+these is reading a log the morning after:
+
+| Exit | Meaning |
+|---:|---|
+| 0 | a pull request was opened, or the queue was empty |
+| 64 | the working tree was dirty |
+| 65 | a rebase, merge or `index.lock` was in the way |
+| 66 | another run still held the lock |
+| 69 | the task was done but `npm run verify` failed - a **draft** pull request was opened |
+| 70 | the headless run failed or timed out |
+| 78 | a prerequisite is missing |
+
+A failing night still pushes its branch and opens a draft. A night's work
+sitting only on this Mac helps nobody, and a draft cannot be merged by accident.
+
+Overridable, mostly so it can be exercised by hand: `PORTAL_REPO`, `CLAUDE_BIN`,
+`CLAUDE_TIMEOUT` (4800s), `VERIFY_TIMEOUT` (1500s).
+
+It was written without `i-love-isle-of-wight/overnight.sh` to hand. If the first
+night fails at the headless step, compare the `claude` invocation near the top of
+the file with that one before changing anything else.
+
+### Run it once yourself first
+
+Install first, then run the installed copy:
 
 ```
-[2026-08-25 03:00:00] FATAL: ./overnight.sh is not present — the portal has no runner yet
+cd ~/portal
+./deploy/install.sh
+~/.local/libexec/poweranalytix/overnight.sh
 ```
 
-to `~/Library/Logs/PowerAnalytix/overnight.out.log` and exit 78. That is
-deliberate: the failure mode worth avoiding is the silent one. `i-love-isle-of-wight/overnight.sh` is the
-model — it needs `TASKS.md` and `CLAUDE.md` in the working directory, which this
-repo has.
+That order matters. The runner checks out `main`, and `main` does not have
+`overnight.sh` on it yet - so a run started from `$REPO/overnight.sh` would have
+git delete the file out from under the shell still reading it. The script now
+notices it is executing from inside the checkout and re-execs from a copy in
+`~/Library/Caches/`, so `./overnight.sh` is safe too; installing first is simply
+the honest way round, because the installed copy is the one launchd will use.
 
-Installing the keep-alive on its own is fine and useful today.
+Do this before bootstrapping. Loading the job is what starts something that
+commits unattended, and a supervised run is the cheapest way to find out that
+the `claude` invocation needs a flag adjusting.
 
 ## Install
 
@@ -75,8 +110,10 @@ The logs moved out for the same reason from the other direction. `agent_logs/` i
 only in `.gitignore` on the branch that introduced it, so a log written while
 another branch is checked out leaves an untracked file — and an untracked file
 aborts the next unattended run. launchd's own stdout and stderr now go to
-`~/Library/Logs/PowerAnalytix/`. The overnight runner's detailed transcripts
-still go to `agent_logs/`, which `.gitignore` does cover.
+`~/Library/Logs/PowerAnalytix/`, and so do the overnight runner's transcripts.
+`agent_logs/` is only ignored on branches carrying PR #3, and the runner checks
+out `main`, where it is not - a log written before that checkout is an untracked
+file after it.
 
 The overnight job is the same shape and gets the same treatment: it runs the
 installed `overnight.sh` while its working directory stays the repo, because the
