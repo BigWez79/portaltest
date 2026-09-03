@@ -58,6 +58,13 @@ left anywhere in this project. Do not add one back.
 11. **A person reads their own records; an active admin reads everybody's.**
    That is the agreed policy for every table that lands here. Do not widen it
    without a decision.
+12. **A check that can pass while the thing it checks is broken is not a check.**
+   Three have been found here: `check-auth-config.sh` exists because the suite
+   was green while portal-staging had signups enabled; `httpOnly` was missing
+   while every test passed; and the keep-alive answered 200 daily for a week
+   while the project drifted toward being paused. When you add a check, say what
+   would have to be true for it to pass wrongly — and if you can't answer, it
+   isn't checking what you think.
 
 ## Definition of done
 
