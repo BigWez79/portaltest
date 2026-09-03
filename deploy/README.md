@@ -181,7 +181,24 @@ It is the one piece of scheduled work that legitimately needs a Supabase
 credential. Folding it into the overnight run would hand that credential back to
 the job whose whole guarantee is that it has none.
 
-It uses the anon key and asks GoTrue for its health. Not PostgREST's root, which
-answers `Only the service_role API key can be used for this endpoint`; and not
-`/rest/v1/staff`, which `404`s with `PGRST205` until `0001_staff.sql` is applied
-and would report a paused project when the project is fine.
+## It has to read a row, not just get an answer
+
+It used to ask GoTrue for its health. That answered `200` every morning and
+counted for nothing: on **1 September Supabase warned that portal-staging had
+seen no sufficient activity for seven days** — while this job was loaded, firing
+daily at 07:00, and exiting 0 every time. A green log and a project sliding
+toward a pause, for a week, with nothing to tell them apart.
+
+The health endpoint answers without touching the database, so it is not activity.
+A PostgREST select is. It now reads `staff?select=id&limit=1`, which returns an
+empty array under RLS with the anon key — the smallest real query there is. It
+reads no data and proves the database served a request.
+
+`/rest/v1/staff` was rejected the first time because it `404`s with `PGRST205`
+until `0001_staff.sql` is applied. That reason expired when the migration was
+applied on 3 September, and a `404` is now a real failure worth reporting rather
+than the expected state. PostgREST's root is still no good — it answers
+`Only the service_role API key can be used for this endpoint`, and a keep-alive
+has no business holding a key that can change anything.
+
+It still writes nothing and still never touches the service-role key.
