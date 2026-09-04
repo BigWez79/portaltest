@@ -1,11 +1,18 @@
-import { expect, expectExactlyTiles, signInAs, signOutCompletely, test } from "./harness";
+import {
+  expect,
+  expectExactlyTiles,
+  sessionCookie,
+  signInAs,
+  signOutCompletely,
+  test,
+} from "./harness";
 
 /**
  * Mirrors what the live portal (v2.1) actually does.
  *
  * Note "profile": My Profile has no flag on the live portal — every active
- * staff member gets it. So an active person with no app flags sees one tile,
- * not the no-access notice.
+ * staff member gets it. So an active person with no app flags sees one tile
+ * rather than an empty portal.
  */
 test.describe("access matrix", () => {
   test("signed out: the sign-in card, and no tile in the DOM", async ({ page }) => {
@@ -71,7 +78,6 @@ test.describe("access matrix", () => {
 
       await expect(page.getByTestId("user-name")).toHaveText(c.name);
       await expectExactlyTiles(page, c.tiles);
-      await expect(page.getByTestId("no-access")).toHaveCount(0);
     });
   }
 
@@ -80,23 +86,30 @@ test.describe("access matrix", () => {
     await page.goto("/");
 
     await expectExactlyTiles(page, ["profile"]);
-    await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
-  test("an inactive row grants nothing, even with every flag set", async ({ page }) => {
+  // Neither of these gets a portal at all. A session with no active staff row
+  // behind it is ended on the next request rather than rendered as a signed-in
+  // page with a warning in it, so the cookie has to be gone as well as the
+  // tiles — an assertion on the card alone would pass with the session intact.
+  test("an inactive row is signed out, even with every flag set", async ({ page }) => {
     await signInAs(page, "left.the.company@example.test");
     await page.goto("/");
 
-    await expect(page.getByTestId("no-access")).toBeVisible();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("access-ended")).toBeVisible();
     await expectExactlyTiles(page, []);
+    await expect(await sessionCookie(page)).toBeUndefined();
   });
 
-  test("a person with no row at all grants nothing", async ({ page }) => {
+  test("a person with no row at all is signed out", async ({ page }) => {
     await signInAs(page, "never.heard.of.them@example.test", { name: "Stranger" });
     await page.goto("/");
 
-    await expect(page.getByTestId("no-access")).toBeVisible();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("access-ended")).toBeVisible();
     await expectExactlyTiles(page, []);
+    await expect(await sessionCookie(page)).toBeUndefined();
   });
 
   test("the name on the staff row wins over the name on the session", async ({ page }) => {

@@ -1,4 +1,12 @@
-import { expect, expectExactlyTiles, resetStaff, signInAs, signOutCompletely, test } from "./harness";
+import {
+  expect,
+  expectExactlyTiles,
+  resetStaff,
+  sessionCookie,
+  signInAs,
+  signOutCompletely,
+  test,
+} from "./harness";
 
 // Two of these ask for a page that must 404; the browser logs that itself.
 test.describe("admin screen — who can reach it", () => {
@@ -92,11 +100,40 @@ test.describe.serial("admin screen — changing access", () => {
 
     await signInAs(page, "revocable@example.test");
     await page.goto("/");
-    await expect(page.getByTestId("tile-invoices")).toHaveCount(0);
-    // Not "no access" — My Profile has no flag, so an active person always
-    // keeps that one. Removing their last *app* leaves exactly Profile.
+    // My Profile has no flag, so an active person always keeps that one.
+    // Removing their last *app* leaves exactly Profile — they are still staff.
+    await expectExactlyTiles(page, ["profile"]);
+  });
+
+  test("deactivating somebody ends their session", async ({ page }) => {
+    // They are signed in, with a live session and a portal in front of them.
+    await signInAs(page, "revocable@example.test");
+    await page.goto("/");
     await expect(page.getByTestId("tile-profile")).toBeVisible();
-    await expect(page.getByTestId("no-access")).toHaveCount(0);
+
+    // An admin turns them off.
+    await signInAs(page, "everything@example.test");
+    await page.goto("/admin");
+    await page.getByTestId("toggle-revocable@example.test-active").click();
+    await expect(
+      page.getByTestId("toggle-revocable@example.test-active"),
+    ).toHaveAttribute("aria-pressed", "false");
+
+    // Back to the cookie they were already holding. The seeder plants the same
+    // value it planted the first time, so this is the session they had, not a
+    // fresh sign-in — nothing about it has expired.
+    await signInAs(page, "revocable@example.test");
+    await page.goto("/");
+
+    // The sign-in card, not a signed-in portal with a warning on it.
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("access-ended")).toBeVisible();
+    await expectExactlyTiles(page, []);
+
+    // And the session is gone, rather than merely being declined this once.
+    // Without this the test would pass on a page that renders the card while
+    // the browser is still signed in.
+    await expect(await sessionCookie(page)).toBeUndefined();
   });
 
   test("an admin cannot remove their own admin access", async ({ page }) => {
@@ -125,7 +162,6 @@ test.describe.serial("admin screen — changing access", () => {
     await signInAs(page, "newton@example.test");
     await page.goto("/");
     await expectExactlyTiles(page, ["profile"]);
-    await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
   test("a change is listed against that person, with the admin's name on it", async ({

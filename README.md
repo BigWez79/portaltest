@@ -54,6 +54,11 @@ E2E_CHROMIUM_PATH=/path/to/chrome E2E_NO_SANDBOX=1 npx playwright test
    **on the server**. No Supabase key of any kind is ever sent to a browser.
 5. The session cookie is host-only. There is one deployment, so one sign-in
    covers every route and there is no cross-origin session to get wrong.
+6. It ends when they sign out — or on their first request after their staff row
+   stops being active. Deactivating somebody already took their tiles away on
+   the next page load, because every route reads the staff row fresh; ending the
+   session is what stops them seeing a signed-in page at all. The sign-out is
+   global, so a session left open on another device dies with it.
 
 Supabase accepts wildcard redirect URLs, so every Vercel preview can complete a
 real sign-in — which the Entra version could not.

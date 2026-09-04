@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useActionState } from "react";
 import { requestMagicLink, type SignInState } from "@/app/actions/auth";
+import { SIGNED_OUT_REASON } from "@/lib/signed-out";
 
 const initial: SignInState = { status: "idle" };
 
@@ -25,6 +26,13 @@ export function SignInCard({ error }: { error?: string }) {
           {error === "link" ? (
             <div className="msg" role="alert" data-testid="signin-error">
               That link has expired or has already been used. Ask for a new one.
+            </div>
+          ) : null}
+
+          {error === SIGNED_OUT_REASON ? (
+            <div className="msg" role="alert" data-testid="access-ended">
+              You have been signed out. Your access has ended — speak to your
+              administrator if that is unexpected.
             </div>
           ) : null}
 

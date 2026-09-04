@@ -22,22 +22,7 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 1. Deactivate on the admin screen should end the session too
-Worth being precise about what this is and is not. Deactivating somebody already
-takes effect on their **next page load**: every route reads the staff row fresh,
-so the tiles vanish and `requireApp` 404s. They are not still using the apps.
-
-What is left is that their session cookie stays valid, so they see a signed-in
-portal with a no-access notice rather than being signed out. That is untidy, and
-on the day somebody leaves badly it is the wrong signal to send. Revoke the
-session with `auth.admin.signOut(userId, "global")` when `active` goes false.
-
-This is a tidiness fix, not a hole. Do not let it jump the queue.
-
-**Done when** a test signs somebody in, deactivates them, and their next request
-lands on the sign-in card rather than a signed-in portal with a warning.
-
-### 2. Rename the product to Power Suite
+### 1. Rename the product to Power Suite
 The suite is called Power Suite. The company is still Power Analytix. Do it in
 one change rather than letting it drift -- half-renamed is worse than either
 state, and it is the sort of thing that gets finished in six separate pull
@@ -59,7 +44,7 @@ title and the shell heading read Power Suite; a test asserts the product name in
 both at 390 and 1440; `grep -ri "the portal" src tests` returns nothing
 user-facing; and `npm run verify` passes.
 
-### 3. Accessibility pass on the admin table
+### 2. Accessibility pass on the admin table
 The toggles are buttons with `aria-pressed` and a visually hidden label. Check
 the table's header association, focus order along a row, and that a screen
 reader announces which person a toggle belongs to.
@@ -67,7 +52,7 @@ reader announces which person a toggle belongs to.
 **Done when** an automated axe pass runs against `/` and `/admin` with no
 violations at 390 and 1440, and the screenshots are attached.
 
-### 4. Delete the import script at cutover
+### 3. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
 overwrites every access flag from a CSV. Remove it — with `scripts/staff-csv.ts`
@@ -98,6 +83,21 @@ longer tells anybody to run it.
 
 ## Done
 
+- **Deactivating somebody ends their session** — `overnight/auto-2026-09-04-0300`.
+  The tiles already went on the next page load; the session cookie did not, so
+  somebody taken off the staff list saw a signed-in portal with a notice in it.
+  Now a signed-in request with no active staff row behind it is sent to
+  `/auth/signed-out`, which ends the session and returns them to the sign-in
+  card. The task asked for `auth.admin.signOut(userId, "global")`; that method
+  takes the *target's* JWT, which an admin does not have, so the same revocation
+  is done on the request that carries it — `signOut({ scope: "global" })` on the
+  caller's own session, which kills every refresh token they hold. No third use
+  of the service role, and no migration. Two things fell out of it: the sign-out
+  button did nothing under the suite (it redirected and left the planted cookie
+  in place), and the no-access notice became unreachable — an active person
+  always has My Profile — so it is gone rather than left as scenery. The three
+  new checks assert the cookie as well as the card, and were watched to fail
+  with the cookie left in place. 129 checks.
 - **Showed the audit trail on the admin screen** — `overnight/auto-2026-09-03-0300`.
   `staff_audit` has recorded every change since 0001 and nothing read it; there
   is now a panel per person under the staff table, newest first, saying what

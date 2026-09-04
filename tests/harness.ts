@@ -74,6 +74,18 @@ export async function signOutCompletely(page: Page) {
 }
 
 /**
+ * The planted session cookie, or undefined if there is none.
+ *
+ * What tells a session that was *ended* from one the page merely declined to
+ * render: a portal that shows the sign-in card while the cookie is still in the
+ * jar is still a signed-in browser, and the next request proves it.
+ */
+export async function sessionCookie(page: Page) {
+  const cookies = await page.context().cookies();
+  return cookies.find((c) => c.name === "e2e-session");
+}
+
+/**
  * Fills in the sign-in form and returns what the person is told.
  *
  * Deliberately returns the message rather than asserting on it: whether a link

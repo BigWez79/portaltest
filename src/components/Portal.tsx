@@ -22,28 +22,28 @@ export function Portal({ access }: { access: Access }) {
           Welcome back, <b data-testid="user-name">{access.displayName}</b>
         </div>
 
-        {tiles.length > 0 ? (
-          <div className="tiles" data-testid="tiles">
-            {tiles.map((tile) => (
-              <a
-                key={tile.id}
-                className={tile.tone === "admin" ? "tile admin" : "tile"}
-                href={tile.href}
-                data-testid={`tile-${tile.id}`}
-              >
-                <span className="tile-ico">
-                  <TileIcon id={tile.id} />
-                </span>
-                <span className="tile-name">{tile.name}</span>
-                <span className="tile-sub">{tile.blurb}</span>
-              </a>
-            ))}
-          </div>
-        ) : (
-          <div className="msg warn" data-testid="no-access">
-            You don&rsquo;t currently have access to any apps. Contact your administrator.
-          </div>
-        )}
+        {/*
+          Always at least one tile. My Profile has no flag, so every active staff
+          member has it — and somebody with no active row never reaches this
+          component: the portal page ends their session instead of showing them
+          a portal with nothing in it.
+        */}
+        <div className="tiles" data-testid="tiles">
+          {tiles.map((tile) => (
+            <a
+              key={tile.id}
+              className={tile.tone === "admin" ? "tile admin" : "tile"}
+              href={tile.href}
+              data-testid={`tile-${tile.id}`}
+            >
+              <span className="tile-ico">
+                <TileIcon id={tile.id} />
+              </span>
+              <span className="tile-name">{tile.name}</span>
+              <span className="tile-sub">{tile.blurb}</span>
+            </a>
+          ))}
+        </div>
 
         <form action={signOut}>
           <button className="btn-ghost" type="submit" data-testid="signout">

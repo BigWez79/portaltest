@@ -86,11 +86,14 @@ export async function requestMagicLink(
   return sent;
 }
 
+/**
+ * The Sign out button. Shares endSession with the portal's "your access has
+ * ended" path, so both take the cookie away rather than only one of them —
+ * under the suite this used to redirect and leave the planted session in place,
+ * which made the button look like it worked while it did nothing.
+ */
 export async function signOut() {
-  if (!isTestMode()) {
-    const { supabaseServer } = await import("@/lib/supabase/server");
-    const client = await supabaseServer();
-    await client.auth.signOut();
-  }
+  const { endSession } = await import("@/lib/session");
+  await endSession();
   redirect("/");
 }
