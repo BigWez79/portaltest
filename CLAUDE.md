@@ -112,12 +112,14 @@ src/lib/apps.ts                 the seven tiles
 src/lib/notify.ts               access-change email; a no-op with no Resend key
 src/lib/rate-limit.ts           how often one address, or one IP, may ask for a link
 src/lib/rate-limit-store.ts     the same limit, file-backed, for the suite only
+src/lib/session.ts              endSession — the one way a session is taken away
 src/app/page.tsx                the portal — the tiles
 src/app/{invoices,timesheets,expenses,margin,tax-breakdown,profile}/
                                 guarded routes, placeholder inside
 src/app/admin/page.tsx          staff access
 src/app/actions/                server actions — each re-checks the caller
 src/app/auth/callback/          where a magic link lands
+src/app/auth/sign-out/          ends the session; where a deactivated person lands
 src/app/api/test/session/       test-mode seeder; 404 in production
 src/app/api/test/rate-limit/    reads the sign-in ledger; 404 in production
 scripts/import-staff.ts         one-off CSV import; not part of running the app

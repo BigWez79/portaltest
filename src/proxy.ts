@@ -16,7 +16,12 @@ import { createServerClient } from "@supabase/ssr";
 // `/api/test` covers the session seeder and the sign-in ledger the suite reads.
 // Both are signed-out concerns, and both 404 outside test mode, so nothing is
 // exposed by naming the prefix rather than each route.
-const PUBLIC_PATHS = ["/", "/auth/callback", "/api/test"];
+//
+// `/auth/sign-out` is public for the same reason `/auth/callback` is: it is
+// about not having a session. Bouncing a request for it to the front door
+// because the session it was going to clear has already gone would be a loop
+// with extra steps.
+const PUBLIC_PATHS = ["/", "/auth/callback", "/auth/sign-out", "/api/test"];
 
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
