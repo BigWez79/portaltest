@@ -24,6 +24,14 @@ export type Access = {
   isStaff: boolean;
   /** signed in, but no active staff row was found */
   unknownToStaffList: boolean;
+  /**
+   * A staff row exists and says this person is not active — as opposed to no
+   * row at all, which is also "no access" but is not the same fact. Only this
+   * one is a positive statement that somebody has been deactivated, and only
+   * this one ends their session: a lookup that failed returns no row, and
+   * signing people out because a query fell over is not a fix for anything.
+   */
+  deactivated: boolean;
   apps: {
     invoices: boolean;
     timesheet: boolean;
@@ -95,6 +103,9 @@ export async function lookupStaff(email: string): Promise<StaffRow | null> {
  *   active row + flag      -> that app
  *   active row + is_admin  -> admin
  *   inactive row / no row  -> nothing
+ *
+ * An inactive row also reports `deactivated`, which the portal acts on by
+ * ending the session rather than showing a signed-in page with a warning on it.
  */
 export async function resolveAccess(identity: Identity): Promise<Access> {
   const email = (identity.email ?? "").toLowerCase();
@@ -122,6 +133,7 @@ export async function resolveAccess(identity: Identity): Promise<Access> {
     isBootstrapAdmin,
     isStaff: isBootstrapAdmin || active,
     unknownToStaffList: !row && !isBootstrapAdmin,
+    deactivated: !isBootstrapAdmin && row !== null && !active,
     apps: {
       invoices: grant(row?.hasInvoices),
       timesheet: grant(row?.hasTimesheet),

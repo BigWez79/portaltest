@@ -64,6 +64,10 @@ export async function toggleFlag(
     };
   }
 
+  // Deactivating somebody also ends their session, but not from here: an admin
+  // holds no token of theirs to revoke, and the service role has no call that
+  // takes a user id. It happens on their next request instead, in the portal,
+  // which reads the staff row anyway — see src/app/page.tsx.
   if (flag !== "active") {
     await notifyAccessChange(email, value ? [flag] : [], value ? [] : [flag]);
   }
