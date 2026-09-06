@@ -22,22 +22,7 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 1. Deactivate on the admin screen should end the session too
-Worth being precise about what this is and is not. Deactivating somebody already
-takes effect on their **next page load**: every route reads the staff row fresh,
-so the tiles vanish and `requireApp` 404s. They are not still using the apps.
-
-What is left is that their session cookie stays valid, so they see a signed-in
-portal with a no-access notice rather than being signed out. That is untidy, and
-on the day somebody leaves badly it is the wrong signal to send. Revoke the
-session with `auth.admin.signOut(userId, "global")` when `active` goes false.
-
-This is a tidiness fix, not a hole. Do not let it jump the queue.
-
-**Done when** a test signs somebody in, deactivates them, and their next request
-lands on the sign-in card rather than a signed-in portal with a warning.
-
-### 2. Rename the product to Power Suite
+### 1. Rename the product to Power Suite
 The suite is called Power Suite. The company is still Power Analytix. Do it in
 one change rather than letting it drift -- half-renamed is worse than either
 state, and it is the sort of thing that gets finished in six separate pull
@@ -59,7 +44,7 @@ title and the shell heading read Power Suite; a test asserts the product name in
 both at 390 and 1440; `grep -ri "the portal" src tests` returns nothing
 user-facing; and `npm run verify` passes.
 
-### 3. Accessibility pass on the admin table
+### 2. Accessibility pass on the admin table
 The toggles are buttons with `aria-pressed` and a visually hidden label. Check
 the table's header association, focus order along a row, and that a screen
 reader announces which person a toggle belongs to.
@@ -67,7 +52,7 @@ reader announces which person a toggle belongs to.
 **Done when** an automated axe pass runs against `/` and `/admin` with no
 violations at 390 and 1440, and the screenshots are attached.
 
-### 4. Delete the import script at cutover
+### 3. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
 overwrites every access flag from a CSV. Remove it — with `scripts/staff-csv.ts`
@@ -85,8 +70,8 @@ longer tells anybody to run it.
 
 ## Held — needs a person
 
-- Creating the Supabase projects and applying `0001_staff.sql` and
-  `0002_signin_rate_limit.sql` (BLOCKED.md)
+- Creating the Supabase projects and applying `0001_staff.sql`,
+  `0002_signin_rate_limit.sql` and `0003_revoke_sessions.sql` (BLOCKED.md)
 - Turning off email signups and pointing Supabase Auth's SMTP at Resend
 - Exporting the SharePoint Staff list to CSV and running the one-off import
 - Pointing `portal.poweranalytix.co.uk` at Vercel
@@ -98,6 +83,22 @@ longer tells anybody to run it.
 
 ## Done
 
+- **Deactivating ends the session too** — `overnight/auto-2026-09-06-0300`.
+  Losing access already took effect on the next page load; what was left was a
+  cookie that stayed valid, so somebody who had just been deactivated sat on a
+  signed-in suite with a no-access notice instead of the sign-in card. Not
+  `auth.admin.signOut` in the end: supabase-js takes the person's *own* JWT
+  there, which the admin doing the deactivating does not have, and no admin call
+  ends another user's sessions by id. So `0003_revoke_sessions.sql` — a security
+  definer function that deletes the person's rows from `auth.sessions`, re-checks
+  `is_admin()` in Postgres rather than trusting its caller, and is called with
+  the admin's own session, which keeps the service role to the two uses
+  CLAUDE.md allows it. The suite exercises the fixture equivalent: a generation
+  per address, stamped into the cookie when it is planted, so a session issued
+  before the revocation is dead and one issued after it is fine. Three checks —
+  the sign-in card appears, signing in again still works, and nobody else is
+  signed out — and the first was confirmed to fail with the revoke removed.
+  `0003` is committed and waiting on a person. 131 checks.
 - **Showed the audit trail on the admin screen** — `overnight/auto-2026-09-03-0300`.
   `staff_audit` has recorded every change since 0001 and nothing read it; there
   is now a panel per person under the staff table, newest first, saying what

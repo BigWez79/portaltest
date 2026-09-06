@@ -13,6 +13,10 @@ import { isTestMode, staffSource } from "@/lib/env";
  *   GET    /api/test/session?email=a@b.test&name=A%20B
  *   DELETE /api/test/session          sign out
  *   POST   /api/test/session?reset=1  restore the fixture staff list and audit trail
+ *
+ * The session ledger is not reset: a generation only goes up, and putting one
+ * back would revive a cookie another worker has already been signed out of.
+ * tests/global-setup.ts deletes .tmp before every run, which is the reset.
  */
 export const dynamic = "force-dynamic";
 
@@ -29,10 +33,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "email is required" }, { status: 400 });
   }
 
+  const address = email.toLowerCase();
+
+  // Stamped with the generation current at the moment it is planted, so a
+  // deactivation ends the sessions that already exist and not the next one —
+  // the same way a Supabase session issued after a revocation is a good one.
+  const { sessionStore } = await import("@/lib/session-store");
+
   const payload = {
-    id: `e2e-${email.toLowerCase()}`,
-    email: email.toLowerCase(),
+    id: `e2e-${address}`,
+    email: address,
     name: url.searchParams.get("name"),
+    generation: await sessionStore.generation(address),
   };
 
   const response = NextResponse.json({ ok: true, session: payload });

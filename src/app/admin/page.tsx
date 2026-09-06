@@ -41,8 +41,10 @@ export default async function AdminPage() {
       <section className="card">
         <h2 className="card-title">Who can reach what</h2>
         <p className="card-note">
-          A change takes effect the next time that person loads a page. Nobody is ever
-          deleted — deactivate instead, so the record of what they had survives.
+          A change takes effect the next time that person loads a page. Deactivating
+          also ends that person&rsquo;s session, so they are signed out rather than left
+          on a suite with nothing in it. Nobody is ever deleted — deactivate instead,
+          so the record of what they had survives.
         </p>
         <StaffTable staff={staff} currentEmail={access.email} />
       </section>

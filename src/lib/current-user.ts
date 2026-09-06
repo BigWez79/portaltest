@@ -10,6 +10,9 @@ export type CurrentUser = {
 
 export const E2E_COOKIE = "e2e-session";
 
+/** What /api/test/session plants. `generation` is how it gets revoked. */
+export type E2ESession = Partial<CurrentUser> & { generation?: number };
+
 /**
  * The one place the app asks "who is this".
  *
@@ -23,17 +26,30 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     const jar = await cookies();
     const raw = jar.get(E2E_COOKIE)?.value;
     if (!raw) return null;
+
+    let parsed: E2ESession;
     try {
-      const parsed = JSON.parse(decodeURIComponent(raw)) as Partial<CurrentUser>;
-      if (!parsed.email) return null;
-      return {
-        id: parsed.id ?? `e2e-${parsed.email}`,
-        email: parsed.email.toLowerCase(),
-        name: parsed.name ?? null,
-      };
+      parsed = JSON.parse(decodeURIComponent(raw)) as E2ESession;
     } catch {
       return null;
     }
+    if (!parsed.email) return null;
+    const email = parsed.email.toLowerCase();
+
+    // A cookie from before the person was deactivated is not a session. In a
+    // deployed suite Supabase decides this — the row behind the token's
+    // session_id is gone and getUser() below comes back empty; here the
+    // generation in the cookie no longer matches the one on file.
+    const { sessionStore } = await import("./session-store");
+    if ((parsed.generation ?? 0) !== (await sessionStore.generation(email))) {
+      return null;
+    }
+
+    return {
+      id: parsed.id ?? `e2e-${email}`,
+      email,
+      name: parsed.name ?? null,
+    };
   }
 
   const { supabaseServer } = await import("./supabase/server");

@@ -89,18 +89,68 @@ export async function setFlag(email: string, flag: Flag, value: boolean): Promis
     if (before && after) {
       await recordFixtureChange(after.email, snapshotOf(before), snapshotOf(after));
     }
+  } else {
+    const { supabaseServer } = await import("./supabase/server");
+    const client = await supabaseServer();
+
+    const { error } = await client
+      .from("staff")
+      .update({ [FLAG_COLUMN[flag]]: value })
+      .eq("email", email);
+
+    if (error) throw new Error(`Could not update ${email}: ${error.message}`);
+  }
+
+  // After the row, never instead of it: losing access is what matters and it is
+  // already done by the time this runs. Ending the session is the tidy-up.
+  if (flag === "active" && !value) {
+    await revokeSessions(email);
+  }
+}
+
+/**
+ * Ends every session the person holds.
+ *
+ * Deactivating somebody already takes effect on their next page load — every
+ * route reads the staff row fresh. This is the rest of it: without it their
+ * cookie stays valid and they sit on a signed-in suite with a no-access notice
+ * rather than being put back to the sign-in card.
+ *
+ * Not the service role. `auth.admin.signOut` in supabase-js takes the person's
+ * own JWT, which an admin deactivating them does not have, and there is no
+ * admin call that ends another user's sessions by id. So it is a security
+ * definer function — `revoke_staff_sessions` in 0003 — called with the admin's
+ * own session and re-checking `is_admin()` in Postgres, which keeps the service
+ * role to the two uses CLAUDE.md allows it.
+ *
+ * A failure is logged and swallowed. The flag has already moved, so the person
+ * has no access either way; throwing here would tell the admin their change
+ * failed when it did not.
+ */
+export async function revokeSessions(email: string): Promise<void> {
+  const address = email.trim().toLowerCase();
+  if (!address) return;
+
+  if (staffSource() === "fixture") {
+    const { sessionStore } = await import("./session-store");
+    await sessionStore.revoke(address);
     return;
   }
 
   const { supabaseServer } = await import("./supabase/server");
   const client = await supabaseServer();
 
-  const { error } = await client
-    .from("staff")
-    .update({ [FLAG_COLUMN[flag]]: value })
-    .eq("email", email);
+  const { error } = await client.rpc("revoke_staff_sessions", { p_email: address });
 
-  if (error) throw new Error(`Could not update ${email}: ${error.message}`);
+  if (error) {
+    console.error(
+      JSON.stringify({
+        event: "staff.sessions.revoke_failed",
+        email: address,
+        message: error.message,
+      }),
+    );
+  }
 }
 
 /**

@@ -229,4 +229,115 @@ test.describe.serial("admin screen — changing access", () => {
 
     await expect(page.getByTestId("invite-error")).toBeVisible();
   });
+
+  /**
+   * Deactivating somebody ends their session, rather than leaving them looking
+   * at a signed-in suite with a no-access notice.
+   *
+   * These live inside this block rather than a serial block of their own: with
+   * fullyParallel, two describe.serial groups in one file are scheduled as two
+   * units and can run in different workers at once, so the beforeEach reset
+   * above would land in the middle of a toggle down here and put `active` back.
+   * That is not hypothetical — it is what these did on the first run.
+   *
+   * They move `active` only on `session.holder@`, who exists for them and
+   * nothing else.
+   *
+   * What would have to be true for this to pass while the thing it checks is
+   * broken (CLAUDE.md 12): the sign-in card would have to be showing for some
+   * reason other than the revocation. Two guards against that — the portal is
+   * asserted to be signed in *before* the toggle, so the cookie was working —
+   * and `no-access` and `user-name` are asserted absent afterwards, which is
+   * exactly what the old behaviour rendered. A test that only looked for
+   * `login-view` would also pass if the seeder had quietly stopped planting
+   * anything.
+   */
+  test("the deactivated person's next page is the sign-in card", async ({ page, browser }) => {
+    // Two contexts on purpose. The session being ended has to be somebody
+    // else's — an admin cannot deactivate themselves, and a test that signed
+    // the same browser in twice would be testing the seeder, not the revoke.
+    const admin = await browser.newPage();
+    try {
+      await signInAs(admin, "everything@example.test", { name: "Ada Everything" });
+
+      await signInAs(page, "session.holder@example.test", { name: "Sasha Session" });
+      await page.goto("/");
+      await expect(page.getByTestId("user-name")).toHaveText("Sasha Session");
+      await expect(page.getByTestId("tile-invoices")).toBeVisible();
+
+      await admin.goto("/admin");
+      const toggle = admin.getByTestId("toggle-session.holder@example.test-active");
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+      await page.goto("/");
+      await expect(page.getByTestId("login-view")).toBeVisible();
+      await expect(page.getByTestId("no-access")).toHaveCount(0);
+      await expect(page.getByTestId("user-name")).toHaveCount(0);
+      await expectExactlyTiles(page, []);
+    } finally {
+      await admin.close();
+    }
+  });
+
+  test("signing in again afterwards works", async ({ page, browser }) => {
+    // The revocation ends the sessions that exist, not the address. Somebody
+    // reactivated has to be able to sign in again, and a revoke that killed
+    // every future session too would look identical in the test above.
+    const admin = await browser.newPage();
+    try {
+      await signInAs(admin, "everything@example.test");
+      await signInAs(page, "session.holder@example.test");
+
+      await admin.goto("/admin");
+      await admin.getByTestId("toggle-session.holder@example.test-active").click();
+      await expect(
+        admin.getByTestId("toggle-session.holder@example.test-active"),
+      ).toHaveAttribute("aria-pressed", "false");
+
+      await page.goto("/");
+      await expect(page.getByTestId("login-view")).toBeVisible();
+
+      await admin.getByTestId("toggle-session.holder@example.test-active").click();
+      await expect(
+        admin.getByTestId("toggle-session.holder@example.test-active"),
+      ).toHaveAttribute("aria-pressed", "true");
+
+      await signInAs(page, "session.holder@example.test", { name: "Sasha Session" });
+      await page.goto("/");
+      await expect(page.getByTestId("user-name")).toHaveText("Sasha Session");
+      await expect(page.getByTestId("tile-invoices")).toBeVisible();
+    } finally {
+      await admin.close();
+    }
+  });
+
+  test("nobody else is signed out by it", async ({ page, browser }) => {
+    // The revoke is per address. A store keyed wrongly — or one file for the
+    // lot — would take out whoever else happened to be signed in, and the
+    // suite runs several workers who are.
+    const admin = await browser.newPage();
+    const bystander = await browser.newPage();
+    try {
+      await signInAs(admin, "everything@example.test");
+      await signInAs(page, "session.holder@example.test");
+      await signInAs(bystander, "invoices.only@example.test", { name: "Ivor Invoices" });
+      await bystander.goto("/");
+
+      await admin.goto("/admin");
+      await admin.getByTestId("toggle-session.holder@example.test-active").click();
+      await expect(
+        admin.getByTestId("toggle-session.holder@example.test-active"),
+      ).toHaveAttribute("aria-pressed", "false");
+
+      await page.goto("/");
+      await expect(page.getByTestId("login-view")).toBeVisible();
+
+      await bystander.goto("/");
+      await expect(bystander.getByTestId("user-name")).toHaveText("Ivor Invoices");
+    } finally {
+      await bystander.close();
+      await admin.close();
+    }
+  });
 });
