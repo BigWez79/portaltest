@@ -178,6 +178,57 @@ test.describe.serial("admin screen — changing access", () => {
     );
   });
 
+  /**
+   * The one the whole change is for.
+   *
+   * The victim's cookie is saved and put back rather than a second browser being
+   * opened: `signInAs` plants a fresh cookie, so signing back in as them would
+   * hand them the very session this is meant to prove was destroyed. Restoring
+   * the same bytes is the same session — and naming the value makes the check
+   * sharper than "the page looks signed out", which would also pass if the
+   * portal had merely stopped rendering the tiles, exactly as v2.0 did.
+   *
+   * One context, because an extra one costs a whole Chromium on a machine
+   * already running five workers against one `next start`.
+   */
+  test("deactivating somebody ends the session they are already using", async ({ page }) => {
+    await signInAs(page, "revocable@example.test");
+    await page.goto("/");
+    await expect(page.getByTestId("tile-invoices")).toBeVisible();
+
+    const theirs = (await page.context().cookies()).filter((c) => c.name === "e2e-session");
+    expect(theirs, "the victim should have a session to lose").toHaveLength(1);
+
+    // The admin, who is somebody else and somewhere else, turns them off.
+    await signInAs(page, "everything@example.test");
+    await page.goto("/admin");
+    await page.getByTestId("toggle-revocable@example.test-active").click();
+    await expect(page.getByTestId("toggle-revocable@example.test-active")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    // Back in the victim's browser, still holding the session they had.
+    await page.context().clearCookies();
+    await page.context().addCookies(theirs);
+    // Without this the rest would pass on an empty jar: no cookie renders the
+    // sign-in card too, and "no e2e-session" is trivially true of nothing.
+    expect(
+      (await page.context().cookies()).map((c) => c.name),
+      "the session under test should be in place before it is checked",
+    ).toContain("e2e-session");
+
+    await page.goto("/");
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
+    await expectExactlyTiles(page, []);
+
+    const left = (await page.context().cookies()).map((c) => c.name);
+    expect(left, "the session cookie should be gone, not just disregarded").not.toContain(
+      "e2e-session",
+    );
+  });
+
   test("signing in is not a change and does not appear in the trail", async ({ page }) => {
     // Only decisions belong here. `left.the.company@` is touched by nothing this
     // suite does, so nothing should be listed against them.

@@ -22,22 +22,7 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 1. Deactivate on the admin screen should end the session too
-Worth being precise about what this is and is not. Deactivating somebody already
-takes effect on their **next page load**: every route reads the staff row fresh,
-so the tiles vanish and `requireApp` 404s. They are not still using the apps.
-
-What is left is that their session cookie stays valid, so they see a signed-in
-portal with a no-access notice rather than being signed out. That is untidy, and
-on the day somebody leaves badly it is the wrong signal to send. Revoke the
-session with `auth.admin.signOut(userId, "global")` when `active` goes false.
-
-This is a tidiness fix, not a hole. Do not let it jump the queue.
-
-**Done when** a test signs somebody in, deactivates them, and their next request
-lands on the sign-in card rather than a signed-in portal with a warning.
-
-### 2. Rename the product to Power Suite
+### 1. Rename the product to Power Suite
 The suite is called Power Suite. The company is still Power Analytix. Do it in
 one change rather than letting it drift -- half-renamed is worse than either
 state, and it is the sort of thing that gets finished in six separate pull
@@ -59,7 +44,7 @@ title and the shell heading read Power Suite; a test asserts the product name in
 both at 390 and 1440; `grep -ri "the portal" src tests` returns nothing
 user-facing; and `npm run verify` passes.
 
-### 3. Accessibility pass on the admin table
+### 2. Accessibility pass on the admin table
 The toggles are buttons with `aria-pressed` and a visually hidden label. Check
 the table's header association, focus order along a row, and that a screen
 reader announces which person a toggle belongs to.
@@ -67,7 +52,7 @@ reader announces which person a toggle belongs to.
 **Done when** an automated axe pass runs against `/` and `/admin` with no
 violations at 390 and 1440, and the screenshots are attached.
 
-### 4. Delete the import script at cutover
+### 3. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
 overwrites every access flag from a CSV. Remove it — with `scripts/staff-csv.ts`
@@ -98,6 +83,34 @@ longer tells anybody to run it.
 
 ## Done
 
+- **Deactivating ends the session** — `overnight/auto-2026-09-07-0300`.
+  A deactivated person already lost their tiles and 404'd on every route; what
+  was left was the signed-in page with a notice on it. Now the portal ends their
+  session instead, and the sign-in card is what they get.
+
+  Not the way the task described. `auth.admin.signOut` is the service role, which
+  CLAUDE.md allows twice and this is not one of them — and in @supabase/auth-js
+  it takes the target's *access token*, not their user id, which an admin
+  deactivating somebody else does not have. GoTrue exposes no revoke-by-user-id.
+  So the revocation happens on the deactivated person's own next request, with
+  their own session, `scope: "global"` — one visit from one device ends it on all
+  of them. Between the flag moving and that visit their refresh token still
+  works against Supabase; it buys nothing, because RLS reads them their own
+  inactive row, but it is not an instant kill and the code says so.
+
+  A server component cannot write a cookie, so `/` redirects to
+  `/auth/end-session`, which re-reads the staff row before ending anything — a
+  GET that signs you out is otherwise something any page on the internet can fire
+  with an `<img>` tag. Somebody with no staff row at all keeps the notice: that
+  is an absence rather than a decision, it is every one of them during the CSV
+  import, and signing them out would loop them through the form with no
+  explanation.
+
+  Found on the way: the Sign out button did nothing under `E2E_TEST_MODE` — it
+  redirected home and left the cookie in place — and no test would have said so.
+  Both now go through one `endSession`, and both are tested on the cookie rather
+  than on how the page looks. 130 checks. No migration; nothing waiting on a
+  person.
 - **Showed the audit trail on the admin screen** — `overnight/auto-2026-09-03-0300`.
   `staff_audit` has recorded every change since 0001 and nothing read it; there
   is now a panel per person under the staff table, newest first, saying what

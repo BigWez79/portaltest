@@ -83,12 +83,18 @@ test.describe("access matrix", () => {
     await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
-  test("an inactive row grants nothing, even with every flag set", async ({ page }) => {
+  test("an inactive row is signed out rather than shown a notice", async ({ page }) => {
     await signInAs(page, "left.the.company@example.test");
     await page.goto("/");
 
-    await expect(page.getByTestId("no-access")).toBeVisible();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
     await expectExactlyTiles(page, []);
+
+    const names = (await page.context().cookies()).map((c) => c.name);
+    expect(names, "the session should be ended, not merely ignored").not.toContain(
+      "e2e-session",
+    );
   });
 
   test("a person with no row at all grants nothing", async ({ page }) => {
@@ -97,6 +103,22 @@ test.describe("access matrix", () => {
 
     await expect(page.getByTestId("no-access")).toBeVisible();
     await expectExactlyTiles(page, []);
+  });
+
+  // The button did nothing under E2E_TEST_MODE until 2026-09-07 — it redirected
+  // home and left the cookie in place — and no test would have said so.
+  test("the Sign out button ends the session", async ({ page }) => {
+    await signInAs(page, "invoices.only@example.test");
+    await page.goto("/");
+    await expect(page.getByTestId("tiles")).toBeVisible();
+
+    await page.getByTestId("signout").click();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+
+    const names = (await page.context().cookies()).map((c) => c.name);
+    expect(names, "signing out should remove the session cookie").not.toContain(
+      "e2e-session",
+    );
   });
 
   test("the name on the staff row wins over the name on the session", async ({ page }) => {

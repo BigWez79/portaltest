@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { isTestMode, siteUrl } from "@/lib/env";
 import { consumeSignInAttempt } from "@/lib/rate-limit";
+import { endSession } from "@/lib/session";
 
 export type SignInState = { status: "idle" | "sent" | "error"; message?: string };
 
@@ -87,10 +88,9 @@ export async function requestMagicLink(
 }
 
 export async function signOut() {
-  if (!isTestMode()) {
-    const { supabaseServer } = await import("@/lib/supabase/server");
-    const client = await supabaseServer();
-    await client.auth.signOut();
-  }
+  // endSession, not a Supabase call inline: the test-mode branch was missing
+  // here, so under E2E_TEST_MODE the Sign out button redirected home and left
+  // the session cookie exactly where it was.
+  await endSession();
   redirect("/");
 }

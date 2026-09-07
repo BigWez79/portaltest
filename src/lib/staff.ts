@@ -24,6 +24,13 @@ export type Access = {
   isStaff: boolean;
   /** signed in, but no active staff row was found */
   unknownToStaffList: boolean;
+  /**
+   * A staff row exists and is not active: somebody decided this person is no
+   * longer here. Distinct from unknownToStaffList, which is an absence rather
+   * than a decision — the portal ends a deactivated person's session and leaves
+   * an unknown one alone.
+   */
+  deactivated: boolean;
   apps: {
     invoices: boolean;
     timesheet: boolean;
@@ -122,6 +129,7 @@ export async function resolveAccess(identity: Identity): Promise<Access> {
     isBootstrapAdmin,
     isStaff: isBootstrapAdmin || active,
     unknownToStaffList: !row && !isBootstrapAdmin,
+    deactivated: !!row && !active && !isBootstrapAdmin,
     apps: {
       invoices: grant(row?.hasInvoices),
       timesheet: grant(row?.hasTimesheet),
