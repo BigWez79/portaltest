@@ -178,6 +178,45 @@ test.describe.serial("admin screen — changing access", () => {
     );
   });
 
+  /**
+   * Deactivating already took effect on the next page load — the tiles go and
+   * requireApp 404s. What is asserted here is the session itself: the cookie is
+   * gone, not merely ignored.
+   *
+   * On the cookie rather than on the page, because a portal that rendered the
+   * sign-in card while the session was still valid would look identical from
+   * the outside and leave them one reload from being signed in again.
+   *
+   * What this cannot check: the revoke at Supabase. The suite plants its own
+   * cookie and reaches no Supabase project, so signOut({ scope: "global" }) in
+   * /auth/signed-out is covered by reading it and by nothing else. This would
+   * pass with that call deleted — the cookie would still go.
+   */
+  test("deactivating somebody ends their session", async ({ page }) => {
+    await page.goto("/admin");
+    await page.getByTestId("toggle-grantable@example.test-active").click();
+    await expect(page.getByTestId("toggle-grantable@example.test-active")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    await signInAs(page, "grantable@example.test");
+    await page.goto("/");
+
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("signed-out-notice")).toBeVisible();
+    await expectExactlyTiles(page, []);
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
+
+    const session = (await page.context().cookies()).find((c) => c.name === "e2e-session");
+    expect(session, "the session cookie should be gone, not merely ignored").toBeUndefined();
+
+    // And it stays gone. This request carries no parameter from the redirect,
+    // so nothing but an absent session can put the sign-in card here.
+    await page.goto("/");
+    await expect(page.getByTestId("login-view")).toBeVisible();
+  });
+
   test("signing in is not a change and does not appear in the trail", async ({ page }) => {
     // Only decisions belong here. `left.the.company@` is touched by nothing this
     // suite does, so nothing should be listed against them.

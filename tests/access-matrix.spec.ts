@@ -83,19 +83,27 @@ test.describe("access matrix", () => {
     await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
-  test("an inactive row grants nothing, even with every flag set", async ({ page }) => {
+  // No active staff row is no longer a signed-in portal with a warning in it:
+  // the session ends and they land on the sign-in card. See "deactivating
+  // somebody ends their session" in admin.spec.ts for the cookie itself.
+  test("an inactive row grants nothing, and does not stay signed in", async ({ page }) => {
     await signInAs(page, "left.the.company@example.test");
     await page.goto("/");
 
-    await expect(page.getByTestId("no-access")).toBeVisible();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("signed-out-notice")).toBeVisible();
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
     await expectExactlyTiles(page, []);
   });
 
-  test("a person with no row at all grants nothing", async ({ page }) => {
+  test("a person with no row at all grants nothing, and does not stay signed in", async ({
+    page,
+  }) => {
     await signInAs(page, "never.heard.of.them@example.test", { name: "Stranger" });
     await page.goto("/");
 
-    await expect(page.getByTestId("no-access")).toBeVisible();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
     await expectExactlyTiles(page, []);
   });
 

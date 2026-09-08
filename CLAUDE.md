@@ -118,6 +118,7 @@ src/app/{invoices,timesheets,expenses,margin,tax-breakdown,profile}/
 src/app/admin/page.tsx          staff access
 src/app/actions/                server actions — each re-checks the caller
 src/app/auth/callback/          where a magic link lands
+src/app/auth/signed-out/        ends the session of somebody deactivated mid-session
 src/app/api/test/session/       test-mode seeder; 404 in production
 src/app/api/test/rate-limit/    reads the sign-in ledger; 404 in production
 scripts/import-staff.ts         one-off CSV import; not part of running the app

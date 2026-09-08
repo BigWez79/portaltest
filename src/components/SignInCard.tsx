@@ -6,7 +6,15 @@ import { requestMagicLink, type SignInState } from "@/app/actions/auth";
 
 const initial: SignInState = { status: "idle" };
 
-export function SignInCard({ error }: { error?: string }) {
+/**
+ * `signedOut` is set when somebody arrives here from /auth/signed-out — their
+ * staff row was deactivated while they were signed in. It says so plainly
+ * rather than dropping them on a bare sign-in form with no explanation.
+ *
+ * It tells nobody anything: only a person who held a session gets sent here,
+ * and the message is the same whatever address that session belonged to.
+ */
+export function SignInCard({ error, signedOut }: { error?: string; signedOut?: boolean }) {
   const [state, formAction, pending] = useActionState(requestMagicLink, initial);
 
   return (
@@ -21,6 +29,13 @@ export function SignInCard({ error }: { error?: string }) {
             </div>
           </div>
           <div className="login-title">Suite Portal</div>
+
+          {signedOut ? (
+            <div className="msg warn" role="status" data-testid="signed-out-notice">
+              You have been signed out. If you should still have access, contact your
+              administrator.
+            </div>
+          ) : null}
 
           {error === "link" ? (
             <div className="msg" role="alert" data-testid="signin-error">

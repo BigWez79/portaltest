@@ -40,6 +40,11 @@ export function Portal({ access }: { access: Access }) {
             ))}
           </div>
         ) : (
+          // Reached only when signing somebody out did not take. Anybody with
+          // no active staff row is sent to /auth/signed-out by page.tsx before
+          // this renders, and an active one always has My Profile — so an empty
+          // portal now means the redirect ran, came back, and the session is
+          // still here. The notice is what they see instead of a loop.
           <div className="msg warn" data-testid="no-access">
             You don&rsquo;t currently have access to any apps. Contact your administrator.
           </div>

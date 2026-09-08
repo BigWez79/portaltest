@@ -38,6 +38,27 @@ test.describe("layout at every width", () => {
       });
     });
 
+    // The sign-in card with the notice on it, which is what somebody whose
+    // access has been withdrawn actually sees. `left.the.company@` is inactive
+    // in the seed, so this needs no write and cannot poison a suite beside it.
+    test(`signed out after losing access at ${w.name}`, async ({ page }, testInfo) => {
+      await signInAs(page, "left.the.company@example.test");
+      await page.setViewportSize({ width: w.width, height: w.height });
+      await page.goto("/");
+      await expect(page.getByTestId("login-view")).toBeVisible();
+      await expect(page.getByTestId("signed-out-notice")).toBeVisible();
+
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, "the page must not scroll horizontally").toBeLessThanOrEqual(0);
+
+      await testInfo.attach(`signed-out-notice-${w.name}.png`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
+    });
+
     test(`signed out at ${w.name}`, async ({ page }, testInfo) => {
       await signOutCompletely(page);
       await page.setViewportSize({ width: w.width, height: w.height });

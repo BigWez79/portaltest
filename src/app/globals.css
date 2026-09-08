@@ -249,6 +249,12 @@ button {
   margin-bottom: 0;
 }
 
+/* On the portal the warning is the last thing in the card, so it has no gap
+   under it. On the sign-in card it sits above the form and needs one. */
+.login-view .msg.warn {
+  margin-bottom: 16px;
+}
+
 /* tiles */
 .tiles {
   display: grid;
