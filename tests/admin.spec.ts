@@ -99,6 +99,54 @@ test.describe.serial("admin screen — changing access", () => {
     await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
+  /**
+   * Two browser contexts, because the point of this one is that the session
+   * being ended is somebody else's. One page cannot hold both.
+   *
+   * What would have to be true for it to pass wrongly: the second context would
+   * have to arrive at the sign-in card without having been signed in first, or
+   * with its session still intact. So it asserts the portal *before* the
+   * deactivation, and the absence of the cookie after — a page that merely
+   * looks signed out while the cookie survives fails here.
+   */
+  test("deactivating somebody ends the session they are already holding", async ({
+    page,
+    browser,
+  }) => {
+    const theirs = await browser.newContext();
+    const them = await theirs.newPage();
+
+    try {
+      await signInAs(them, "grantable@example.test", { name: "Grace Grantable" });
+      await them.goto("/");
+      await expect(them.getByTestId("user-name")).toHaveText("Grace Grantable");
+
+      // An admin, in another browser entirely, deactivates them.
+      await page.goto("/admin");
+      await page.getByTestId("toggle-grantable@example.test-active").click();
+      await expect(
+        page.getByTestId("toggle-grantable@example.test-active"),
+      ).toHaveAttribute("aria-pressed", "false");
+
+      // Their next request: the sign-in card, not a signed-in portal carrying a
+      // notice that they may not use it.
+      await them.goto("/");
+      await expect(them.getByTestId("login-view")).toBeVisible();
+      await expect(them.getByTestId("no-access")).toHaveCount(0);
+      await expect(them.getByTestId("user-name")).toHaveCount(0);
+
+      const session = (await theirs.cookies()).find((c) => c.name === "e2e-session");
+      expect(session, "their session cookie should be gone").toBeUndefined();
+
+      // And it stays gone. A sign-out that has to happen on every load is a
+      // redirect loop wearing a disguise.
+      await them.goto("/");
+      await expect(them.getByTestId("login-view")).toBeVisible();
+    } finally {
+      await theirs.close();
+    }
+  });
+
   test("an admin cannot remove their own admin access", async ({ page }) => {
     await page.goto("/admin");
     const own = page.getByTestId("toggle-everything@example.test-isAdmin");

@@ -83,20 +83,49 @@ test.describe("access matrix", () => {
     await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
-  test("an inactive row grants nothing, even with every flag set", async ({ page }) => {
+  test("an inactive row is signed out, not shown a portal with a warning", async ({
+    page,
+  }) => {
     await signInAs(page, "left.the.company@example.test");
     await page.goto("/");
 
-    await expect(page.getByTestId("no-access")).toBeVisible();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
     await expectExactlyTiles(page, []);
+
+    // Signed out, not merely shown the card: the cookie is gone.
+    const session = (await page.context().cookies()).find((c) => c.name === "e2e-session");
+    expect(session, "the session cookie should have been cleared").toBeUndefined();
   });
 
-  test("a person with no row at all grants nothing", async ({ page }) => {
+  // Not signed out, unlike the inactive row above. No row is not a statement
+  // that somebody was deactivated — a lookup that failed looks exactly the same
+  // from here, and ending sessions on a failed query is its own outage.
+  test("a person with no row at all grants nothing, and keeps their session", async ({
+    page,
+  }) => {
     await signInAs(page, "never.heard.of.them@example.test", { name: "Stranger" });
     await page.goto("/");
 
     await expect(page.getByTestId("no-access")).toBeVisible();
     await expectExactlyTiles(page, []);
+
+    const session = (await page.context().cookies()).find((c) => c.name === "e2e-session");
+    expect(session, "no row is not grounds for ending a session").toBeDefined();
+  });
+
+  // The button was never clicked by anything until now, and under the suite it
+  // left the session cookie exactly where it was.
+  test("the Sign out button ends the session", async ({ page }) => {
+    await signInAs(page, "no.flags@example.test");
+    await page.goto("/");
+    await expect(page.getByTestId("tile-profile")).toBeVisible();
+
+    await page.getByTestId("signout").click();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+
+    const session = (await page.context().cookies()).find((c) => c.name === "e2e-session");
+    expect(session, "the session cookie should have been cleared").toBeUndefined();
   });
 
   test("the name on the staff row wins over the name on the session", async ({ page }) => {

@@ -22,22 +22,7 @@ specifically" in docs/PORTING-APPS.md and is worth following.
 
 ## Next up — portal hygiene
 
-### 1. Deactivate on the admin screen should end the session too
-Worth being precise about what this is and is not. Deactivating somebody already
-takes effect on their **next page load**: every route reads the staff row fresh,
-so the tiles vanish and `requireApp` 404s. They are not still using the apps.
-
-What is left is that their session cookie stays valid, so they see a signed-in
-portal with a no-access notice rather than being signed out. That is untidy, and
-on the day somebody leaves badly it is the wrong signal to send. Revoke the
-session with `auth.admin.signOut(userId, "global")` when `active` goes false.
-
-This is a tidiness fix, not a hole. Do not let it jump the queue.
-
-**Done when** a test signs somebody in, deactivates them, and their next request
-lands on the sign-in card rather than a signed-in portal with a warning.
-
-### 2. Rename the product to Power Suite
+### 1. Rename the product to Power Suite
 The suite is called Power Suite. The company is still Power Analytix. Do it in
 one change rather than letting it drift -- half-renamed is worse than either
 state, and it is the sort of thing that gets finished in six separate pull
@@ -59,7 +44,7 @@ title and the shell heading read Power Suite; a test asserts the product name in
 both at 390 and 1440; `grep -ri "the portal" src tests` returns nothing
 user-facing; and `npm run verify` passes.
 
-### 3. Accessibility pass on the admin table
+### 2. Accessibility pass on the admin table
 The toggles are buttons with `aria-pressed` and a visually hidden label. Check
 the table's header association, focus order along a row, and that a screen
 reader announces which person a toggle belongs to.
@@ -67,7 +52,7 @@ reader announces which person a toggle belongs to.
 **Done when** an automated axe pass runs against `/` and `/admin` with no
 violations at 390 and 1440, and the screenshots are attached.
 
-### 4. Delete the import script at cutover
+### 3. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
 overwrites every access flag from a CSV. Remove it — with `scripts/staff-csv.ts`
@@ -98,6 +83,26 @@ longer tells anybody to run it.
 
 ## Done
 
+- **Deactivating somebody ends their session too** — `overnight/auto-2026-09-05-0300`.
+  Deactivation already took their access away on the next page load; what was
+  left was the cookie, so they saw a signed-in portal carrying a notice rather
+  than the sign-in card. A signed-in request whose staff row says inactive now
+  goes to `/auth/sign-out`, which ends the session and returns them to the card.
+  A route handler and not the page, because a server component's cookie jar is
+  read-only — the page can tell the session should not continue, only a handler
+  can clear what makes it continue. Not `auth.admin.signOut(userId, "global")`
+  as the task asked: that method takes the *target's* JWT, which an admin does
+  not hold, and it would have been a third use of the service role. The same
+  revocation happens on the request that carries the session instead —
+  `signOut({ scope: "global" })` against the caller's own — which also catches a
+  row deactivated by SQL or by the import rather than only by the toggle.
+  Guarded routes still 404 rather than redirecting: a redirect would tell a
+  deactivated person which routes exist, which is what rule 4 removes. No row at
+  all is left alone on purpose — a lookup that failed looks identical from here,
+  and signing people out over a failed query is its own outage. The Sign out
+  button shares the same `endSession`, which fixed it doing nothing under the
+  suite. All three new checks were watched to fail with the redirect taken out.
+  No migration; nothing waiting on a person. 130 checks.
 - **Showed the audit trail on the admin screen** — `overnight/auto-2026-09-03-0300`.
   `staff_audit` has recorded every change since 0001 and nothing read it; there
   is now a panel per person under the staff table, newest first, saying what

@@ -55,6 +55,30 @@ E2E_CHROMIUM_PATH=/path/to/chrome E2E_NO_SANDBOX=1 npx playwright test
 5. The session cookie is host-only. There is one deployment, so one sign-in
    covers every route and there is no cross-origin session to get wrong.
 
+## How sign-out works
+
+Two ways in, one way out — `endSession` in `src/lib/session.ts`, which signs the
+caller out of every session they hold and clears the cookies that carried it.
+
+- The **Sign out button** is a server action and calls it directly.
+- **Being deactivated** ends the session too, on the deactivated person's next
+  request. Their access had already gone — every route reads the staff row
+  fresh — but the cookie stayed valid, so they saw a signed-in portal with a
+  notice in it rather than the sign-in card. The portal now sends them to
+  `/auth/sign-out`, because a server component can work out that a session
+  should not continue but only a route handler can clear the cookie that makes
+  it continue.
+
+Not from the admin screen, and not with the service role: `auth.admin.signOut`
+takes the *target's* JWT, which an admin does not have. Doing it on the request
+that carries the session gets the same revocation from the caller's own
+session — and catches a row deactivated by SQL or by the CSV import, not only
+one deactivated with the toggle.
+
+A guarded route still 404s for a deactivated person rather than redirecting
+them. Redirecting would tell them that route exists while a made-up path does
+not, which is the distinction the 404 rule is there to remove.
+
 Supabase accepts wildcard redirect URLs, so every Vercel preview can complete a
 real sign-in — which the Entra version could not.
 
