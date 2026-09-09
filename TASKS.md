@@ -19,42 +19,62 @@ The agreed plan: all nine apps move off SharePoint, one at a time.
 See docs/PORTING-APPS.md for the order and the decisions behind it.
 
 ### 1. Port Tax Breakdown
-`tax-breakdown.html` in `BigWez79/portal`, 557 lines. The second of the two
-calculators and the last thing in the queue that touches no data: no MSAL, no
-Graph, no lists, no migration, no policy. That is why it and Margin were put
-first.
+`taxbreakdown.html` in `BigWez79/portal` — note the filename has no hyphen,
+unlike the route here. 557 lines. The second of the two calculators and the last
+thing in the queue that touches no data.
 
-Follow how Margin came out. It is written up under "Margin, specifically" in
-docs/PORTING-APPS.md; the short version is **the sums first, the markup
-second**. Put the calculation in `src/lib/tax-model.ts` with no DOM anywhere
-near it, and pin it with worked examples read off the live page itself, running
+Read before writing this, so the shape is not guesswork:
+
+- **MSAL is there; Graph is not.** 10 references to MSAL, `msal-browser@3` from
+  jsdelivr, a hard-coded `clientId` and `tenantId` in the page — and
+  `SCOPES = ["User.Read"]`, zero calls to `graph.microsoft.com`, no lists. It is
+  a sign-in gate in front of a calculator, nothing more. This is the one place
+  Margin differed: `margin.html` had no authentication at all.
+- So step 1 of "What each port involves" is most of the work here: **delete the
+  sign-in.** No MSAL, no client id, no tenant id, no redirect handling, no
+  Sign out button of its own — `AppShell` has one. The person is signed in or
+  they never reached the route. It also takes an Entra app registration id off a
+  public page, which is worth having.
+- **Nothing to bundle.** The only off-site script is MSAL itself, and it is being
+  deleted. Unlike Margin there is no jsPDF equivalent to move to npm.
+- **One `localStorage` key**, `paTaxBreakdownInputs_v1`. Keep it, and keep its
+  JSON shape, so a browser that has used the live page keeps its figures. Moving
+  that to Postgres is a separate decision.
+- **Google Fonts are linked.** Sora and Albert Sans are self-hosted here already.
+
+Then follow how Margin came out — written up under "Margin, specifically" in
+docs/PORTING-APPS.md. The short version is **the sums first, the markup
+second**. The sums are already separable: `corpTax`, `taxSlice`,
+`personalAllowance`, `personalTax`, `employerNI`, `mileageClaim` and
+`takeHomePct` are pure functions of their arguments and touch no DOM. They move
+to `src/lib/tax-model.ts` as they are. `render` and `directorCard` are the
+markup and become a client component.
+
+Pin the model with worked examples read off the live page itself, running
 headless with every http(s) request aborted — so an example cannot quietly come
 from anywhere except the code under test.
 
-The three rules the Margin port settled apply unchanged:
-
-- **Any real figure in the defaults becomes an obvious placeholder.** The
-  calculator behaves identically and the numbers stop being published.
-- **Anything the live page fetches from a CDN becomes an npm dependency**,
-  imported dynamically if it is only wanted on a click. A build that reaches the
-  network is a build that fails on a bad night.
-- **Google Fonts stay unlinked.** Sora and Albert Sans are self-hosted here.
-
-Keep `localStorage` exactly as the live page uses it — the keys and the JSON
-shape both — so a browser that has used the live page keeps its figures. Moving
-that to Postgres is a separate decision and is not part of this.
+**On the figures, this one is not like Margin.** Margin's defaults were real
+revenue and a real split, and were replaced with placeholders. What is hard-coded
+here is UK statutory rates — corporation tax at 19% and 25%, marginal relief of
+3/200, a personal allowance of £12,570 tapering above £100,000. Those are public,
+they are the entire point of the calculator, and they must come across **exactly
+as they are**. The placeholder rule applies to any default *input* — a salary, a
+profit figure, a director's name — and to nothing else. If you cannot tell which
+a number is, say so in the pull request rather than changing it.
 
 The route already exists: `src/app/tax-breakdown/page.tsx`, behind
 `requireApp("taxBreakdown")`, with a placeholder in it. Porting is replacing the
-placeholder. No new entry in `src/lib/apps.ts`, no new flag, no new column,
-nothing waiting on a person.
+placeholder. No new entry in `src/lib/apps.ts`, no new flag, no new column, no
+migration, nothing waiting on a person.
 
 **Done when** the calculator works at `/tax-breakdown` for somebody with
 `has_tax_breakdown` and the route 404s for somebody without it; at least three
-worked examples taken from the live page pass against `src/lib/tax-model.ts`; a
-test asserts the page makes no off-site request; the page does not scroll
-sideways at 390, 768, 1024 or 1440 and those screenshots are attached; and
-`npm run verify` passes.
+worked examples taken from the live page pass against `src/lib/tax-model.ts`;
+a test asserts the page makes no off-site request and that the string `msal`
+appears nowhere in what is served; the page does not scroll sideways at 390,
+768, 1024 or 1440 and those screenshots are attached; and `npm run verify`
+passes.
 
 ## Next up — portal hygiene
 
