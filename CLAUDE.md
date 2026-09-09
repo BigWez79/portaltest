@@ -106,6 +106,7 @@ src/lib/guard.ts                requireApp — the gate every app route goes thr
 src/lib/env.ts                  every environment variable, read lazily
 src/lib/supabase/server.ts      request-scoped client (RLS) + the service-role client
 src/lib/current-user.ts         "who is this" — the one place that answers it
+src/lib/session.ts              endSession — the one place that ends one
 src/lib/staff.ts                the caller's own row, and access resolution
 src/lib/staff-admin.ts          list, set a flag, invite
 src/lib/apps.ts                 the seven tiles
@@ -118,6 +119,7 @@ src/app/{invoices,timesheets,expenses,margin,tax-breakdown,profile}/
 src/app/admin/page.tsx          staff access
 src/app/actions/                server actions — each re-checks the caller
 src/app/auth/callback/          where a magic link lands
+src/app/auth/signed-out/        ends the session; where / sends a deactivated person
 src/app/api/test/session/       test-mode seeder; 404 in production
 src/app/api/test/rate-limit/    reads the sign-in ledger; 404 in production
 scripts/import-staff.ts         one-off CSV import; not part of running the app

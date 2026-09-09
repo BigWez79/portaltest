@@ -86,11 +86,14 @@ export async function requestMagicLink(
   return sent;
 }
 
+/**
+ * The Sign out button. The same ending a deactivated person gets at /, so there
+ * is one answer to "end this session" rather than two that can drift apart —
+ * this one used to leave the e2e cookie in place, which meant the suite could
+ * not tell a sign-out that worked from one that did nothing.
+ */
 export async function signOut() {
-  if (!isTestMode()) {
-    const { supabaseServer } = await import("@/lib/supabase/server");
-    const client = await supabaseServer();
-    await client.auth.signOut();
-  }
+  const { endSession } = await import("@/lib/session");
+  await endSession();
   redirect("/");
 }

@@ -83,14 +83,20 @@ test.describe("access matrix", () => {
     await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
-  test("an inactive row grants nothing, even with every flag set", async ({ page }) => {
+  test("an inactive row is signed out, not shown a portal with a warning", async ({
+    page,
+  }) => {
     await signInAs(page, "left.the.company@example.test");
     await page.goto("/");
 
-    await expect(page.getByTestId("no-access")).toBeVisible();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
     await expectExactlyTiles(page, []);
   });
 
+  // Not signed out, unlike the inactive row above: nobody has decided anything
+  // about this person, so an import that has not run looks like a broken
+  // sign-in rather than saying who to ask.
   test("a person with no row at all grants nothing", async ({ page }) => {
     await signInAs(page, "never.heard.of.them@example.test", { name: "Stranger" });
     await page.goto("/");

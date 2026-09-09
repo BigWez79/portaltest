@@ -222,6 +222,51 @@ test.describe.serial("admin screen — changing access", () => {
     });
   }
 
+  /**
+   * The point of the change: a person already signed in, deactivated by
+   * somebody else, in their own browser.
+   *
+   * The leaver is on `page` — the instrumented one — because their browsing is
+   * what is under test; the admin's context is setup. Two contexts, because
+   * one browser holds one session and swapping the cookie halfway would be
+   * testing the seeder rather than the product.
+   */
+  test("deactivating somebody ends the session they are already using", async ({
+    page,
+    browser,
+  }) => {
+    await signInAs(page, "revocable@example.test");
+    await page.goto("/");
+    await expect(page.getByTestId("tile-invoices")).toBeVisible();
+
+    const adminContext = await browser.newContext();
+    const adminPage = await adminContext.newPage();
+    await signInAs(adminPage, "everything@example.test");
+    await adminPage.goto("/admin");
+    await adminPage.getByTestId("toggle-revocable@example.test-active").click();
+    await expect(
+      adminPage.getByTestId("toggle-revocable@example.test-active"),
+    ).toHaveAttribute("aria-pressed", "false");
+    await adminContext.close();
+
+    // Their next request: the sign-in card, not a signed-in portal with a
+    // warning on it.
+    await page.goto("/");
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    await expect(page.getByTestId("no-access")).toHaveCount(0);
+    await expectExactlyTiles(page, []);
+
+    // The session is gone rather than merely unrendered — a cookie that
+    // survived would come back here on the next request, and this would be a
+    // redirect loop rather than a sign-in card.
+    await page.reload();
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    const left = (await page.context().cookies()).map((c) => c.name);
+    expect(left, "no session cookie should survive being deactivated").not.toContain(
+      "e2e-session",
+    );
+  });
+
   test("inviting the same address twice is refused", async ({ page }) => {
     await page.goto("/admin");
     await page.getByTestId("invite-email").fill("invoices.only@example.test");

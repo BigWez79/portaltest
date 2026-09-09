@@ -89,6 +89,46 @@ test.describe("hardening", () => {
     expect(page.url()).not.toContain("example.com");
   });
 
+  test("the Sign out button really does end the session", async ({ page }) => {
+    await signInAs(page, "everything@example.test");
+    await page.goto("/");
+    await page.getByTestId("signout").click();
+
+    await expect(page.getByTestId("login-view")).toBeVisible();
+    // Not merely a redirect to the front door: the cookie has to be gone, or
+    // the next request signs them straight back in.
+    await page.goto("/");
+    await expect(page.getByTestId("login-view")).toBeVisible();
+  });
+
+  /**
+   * The one part of ending a session the suite can check against Supabase's own
+   * cookie names. Everything else on that path — auth.signOut({ scope: "global" })
+   * revoking the refresh tokens — needs a live project and is not exercised
+   * here; see TASKS.md.
+   *
+   * @supabase/ssr names the session cookie from the project ref and splits it
+   * into .0/.1 chunks when the token is long, so both shapes are planted.
+   */
+  test("signing out clears a Supabase session cookie, chunks and all", async ({ page }) => {
+    await signInAs(page, "everything@example.test");
+    await page.goto("/");
+
+    const url = new URL(page.url()).origin;
+    await page.context().addCookies([
+      { name: "sb-abcdefgh-auth-token", value: "planted", url },
+      { name: "sb-abcdefgh-auth-token.0", value: "planted", url },
+      { name: "sb-abcdefgh-auth-token.1", value: "planted", url },
+    ]);
+
+    await page.goto("/auth/signed-out");
+    await expect(page.getByTestId("login-view")).toBeVisible();
+
+    const left = (await page.context().cookies()).map((c) => c.name);
+    expect(left.filter((n) => n.startsWith("sb-"))).toEqual([]);
+    expect(left).not.toContain("e2e-session");
+  });
+
   test("the test seeder rejects a request with no address", async ({ page }) => {
     const res = await page.request.get("/api/test/session");
     expect(res.status()).toBe(400);
