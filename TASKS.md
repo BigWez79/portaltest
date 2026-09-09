@@ -122,7 +122,7 @@ round.
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
 
-### 5. A 404 and a crash that look like the product
+### 4. A 404 and a crash that look like the product
 There is no `not-found.tsx` and no `error.tsx` anywhere in `src/`. Both cases
 render Next's own page today.
 
@@ -149,11 +149,11 @@ the suite's own 404 rather than Next's; a test asserts the body names no route,
 no flag and no framework; the 404 renders at 390 and 1440 with screenshots
 attached; and `npm run verify` passes.
 
-### 6. Content-Security-Policy, and HSTS
+### 5. Content-Security-Policy
 `next.config.ts` sets `X-Frame-Options`, `X-Content-Type-Options`,
 `Referrer-Policy` and `Permissions-Policy`, and `tests/hardening.spec.ts`
-asserts the first three. There is no `Content-Security-Policy` and no
-`Strict-Transport-Security`.
+asserts the first three. Vercel adds `Strict-Transport-Security` on top of
+those. The one header nothing sets is `Content-Security-Policy`.
 
 CSP is the one that would have mattered. What this project spent its first month
 removing was a `Sites.ReadWrite.All` token sitting in a browser, and the
@@ -173,17 +173,26 @@ what you tried**, rather than shipping `'unsafe-inline'` on `script-src`
 quietly. A CSP with `'unsafe-inline'` on scripts is the rule 12 shape: a header
 that is present, asserted, and not stopping the thing it names.
 
-`Strict-Transport-Security` is a one-liner and only means anything over https,
-so it is Vercel's copy that counts and not localhost's. Set it anyway; assert
-its presence, not its effect.
+**HSTS is already there** and this task should not re-add it. Checked against
+the deployment on 9 September: Vercel serves
+`strict-transport-security: max-age=63072000; includeSubDomains; preload` on its
+own, and `content-security-policy` is the only one of the six that is absent.
+Setting HSTS in `next.config.ts` as well would be a second source of truth for a
+header that is already correct — and a weaker `max-age` there would quietly
+override the good one. Leave it to Vercel and say so in the pull request.
+
+If a test asserts HSTS, it has to allow for localhost not sending it, because
+localhost is not https. Assert it where it is served or not at all; an assertion
+that passes because the header is absent everywhere it is checked is the rule 12
+shape again.
 
 **Done when** every response carries a `Content-Security-Policy`;
-`tests/hardening.spec.ts` asserts it alongside the other four headers; no page
+`tests/hardening.spec.ts` asserts it alongside the four it already checks; no page
 in the suite logs a CSP violation — the harness already fails a test whose page
 logged a console error, so the suite passing at all is the check; and
 `npm run verify` passes.
 
-### 7. Monthly Overview has no tile and no route
+### 6. Monthly Overview has no tile and no route
 docs/PORTING-APPS.md lists nine apps and the portal carries seven. The one
 missing is Monthly Overview — 383 lines, four lists, no writes. Every other app
 in that table is either ported or "route ready"; this one is "not routed yet",
