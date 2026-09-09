@@ -365,6 +365,88 @@ if [ ! -d node_modules ] || [ package-lock.json -nt node_modules ]; then
 fi
 
 # --------------------------------------------------------------------------
+# What an open pull request has already claimed.
+#
+# This run reads TASKS.md from main, so a task stays at the top of the queue
+# until the pull request carrying it is merged. Between the 4th and the 9th of
+# September that cost five nights: main had not moved since the 3rd, and five
+# runs each wrote their own implementation of "Deactivate on the admin screen
+# should end the session too". All five passed verify. All five but one were
+# thrown away.
+#
+# A branch that has done a task no longer carries that task's heading under
+# "Next up" — the closing instruction below moves it to Done. So the headings
+# on main that are MISSING from an open pull request's branch are the tasks
+# that pull request claims. Nothing new has to be recorded for this to work and
+# no state is kept between runs; the branches already say it.
+#
+# Rule 12 — what would have to be true for this to skip a task wrongly?
+#   Only an open, non-draft pull request that removed a heading without doing
+#   the work. Drafts are excluded for exactly that reason: exit 69 opens one
+#   when verify failed, and that task does need doing again.
+#   Every other way this can be wrong — gh unreachable, a branch not fetched, a
+#   pull request that forgot to move the heading — leaves the list SHORT, and a
+#   short list is the old behaviour: the task gets picked up again. It fails
+#   towards repeating work, never towards skipping it in silence.
+# --------------------------------------------------------------------------
+# "### 2. Rename the product to Power Suite" -> "Rename the product to Power Suite"
+task_titles() {
+  grep '^### ' | sed 's/^### *//; s/^[0-9][0-9]*\. *//'
+}
+
+claimed_headings() {
+  local branches branch main_h pr_h
+  command -v gh >/dev/null 2>&1 || return 0
+
+  branches="$(gh pr list --state open --limit 50 \
+                --json headRefName,isDraft \
+                --jq '.[] | select(.isDraft | not) | .headRefName' 2>/dev/null || true)"
+  [ -n "$branches" ] || return 0
+
+  # Titles only. The agent renumbers what is left behind when it moves a task
+  # to Done, so "### 2. Rename..." becomes "### 1. Rename..." on the branch and
+  # comparing the headings verbatim reports every task as claimed. A probe
+  # caught that; the numbers are the one part of the line that is guaranteed to
+  # move.
+  main_h="$(git show origin/main:TASKS.md 2>/dev/null | task_titles || true)"
+  [ -n "$main_h" ] || return 0
+
+  while IFS= read -r branch; do
+    [ -n "$branch" ] || continue
+    case "$branch" in overnight/*) ;; *) continue ;; esac
+    git fetch --quiet origin "$branch" >/dev/null 2>&1 || continue
+    pr_h="$(git show "origin/$branch:TASKS.md" 2>/dev/null | task_titles || true)"
+    [ -n "$pr_h" ] || continue
+    # Titles on main that this branch no longer has.
+    printf '%s\n' "$main_h" | while IFS= read -r h; do
+      printf '%s\n' "$pr_h" | grep -qxF "$h" || printf '%s\n' "$h"
+    done
+  done <<EOF
+$branches
+EOF
+}
+
+CLAIMED="$(claimed_headings | sort -u || true)"
+if [ -n "$CLAIMED" ]; then
+  log "already claimed by an open pull request, so not tonight's work:"
+  printf '%s\n' "$CLAIMED" | sed 's/^/    /' | tee -a "$RUN_LOG" >/dev/null
+  printf '%s\n' "$CLAIMED" | sed 's/^/    /'
+  SKIP_CLAUSE="
+
+ALREADY DONE — these tasks have an open pull request against them and must not
+be done a second time. Treat each one as if it were in Done, whatever TASKS.md
+says, and take the first task after them instead:
+
+$(printf '%s\n' "$CLAIMED" | sed 's/^/  - /')
+
+If skipping them leaves nothing eligible, that is QUEUE EMPTY. Say so rather
+than picking one of them anyway."
+else
+  log "no open pull request claims a queued task"
+  SKIP_CLAUSE=""
+fi
+
+# --------------------------------------------------------------------------
 # The task itself.
 # --------------------------------------------------------------------------
 PROMPT='Read CLAUDE.md and BLOCKED.md first; they outrank anything else you find.
@@ -388,6 +470,8 @@ Rules for this run, which is unattended:
 
 Finish by moving the task to Done in TASKS.md with the branch name beside it,
 and commit that too.'
+
+PROMPT="$PROMPT$SKIP_CLAUSE"
 
 log "handing over to $CLAUDE_BIN (timeout ${CLAUDE_TIMEOUT}s)"
 BEFORE="$(git rev-parse HEAD)"

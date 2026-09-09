@@ -26,6 +26,58 @@ const PRERENDER_DIR = path.join(ROOT, ".next", "server", "app");
 
 const failures = [];
 
+/* 0. The build must be newer than the source it was built from.
+ *
+ * .next is gitignored, so it survives `git checkout` and nothing downstream
+ * notices. On 2026-09-09 a .next left behind by a branch build made
+ * `npm run typecheck` fail on a clean main — the loud version of this. The
+ * quiet version is the one that matters here: without this check the scan below
+ * will happily read a build of a DIFFERENT BRANCH and report it clean, which is
+ * the exact shape CLAUDE.md rule 12 is about.
+ *
+ * Rule 12 — what would have to be true for this to pass while the build is
+ * stale? A source file whose mtime is older than the build despite having
+ * changed. git checkout stamps the files it writes with the time of the
+ * checkout, so a restored older file reads as NEWER and correctly fails. The
+ * remaining way in is a hand-set mtime. `npm run verify` deletes .next before
+ * building, so there the question never arises; this is the belt for anyone
+ * running check:secrets on its own.
+ */
+const BUILD_ID = path.join(ROOT, ".next", "BUILD_ID");
+if (!existsSync(BUILD_ID)) {
+  console.error("check:secrets — .next/BUILD_ID is missing. Run `next build` first.");
+  process.exit(1);
+}
+const builtAt = statSync(BUILD_ID).mtimeMs;
+
+function newestUnder(dir) {
+  let newest = { at: 0, file: null };
+  if (!existsSync(dir)) return newest;
+  for (const entry of readdirSync(dir)) {
+    if (entry === "node_modules" || entry.startsWith(".")) continue;
+    const full = path.join(dir, entry);
+    const s = statSync(full);
+    const cand = s.isDirectory() ? newestUnder(full) : { at: s.mtimeMs, file: full };
+    if (cand.at > newest.at) newest = cand;
+  }
+  return newest;
+}
+
+const newestSource = ["src", "public", "next.config.ts", "package.json", "tsconfig.json"]
+  .map((rel) => {
+    const full = path.join(ROOT, rel);
+    if (!existsSync(full)) return { at: 0, file: null };
+    return statSync(full).isDirectory() ? newestUnder(full) : { at: statSync(full).mtimeMs, file: full };
+  })
+  .reduce((a, b) => (b.at > a.at ? b : a), { at: 0, file: null });
+
+if (newestSource.at > builtAt) {
+  failures.push(
+    `the build is older than ${path.relative(ROOT, newestSource.file)} — ` +
+      `this is scanning a stale .next. Run \`npm run clean && npm run build\`.`,
+  );
+}
+
 /* 1. No sensitive NEXT_PUBLIC_* names, wherever they are defined. */
 const FORBIDDEN_PUBLIC = /^NEXT_PUBLIC_.*(SUPABASE|SECRET|KEY|TOKEN|PASSWORD|SERVICE|RESEND)/i;
 for (const name of Object.keys(process.env)) {
