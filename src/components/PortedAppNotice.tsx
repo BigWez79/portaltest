@@ -12,7 +12,7 @@ export function PortedAppNotice({ app, blurb }: { app: string; blurb: string }) 
       <h2 className="card-title">{app} is not here yet</h2>
       <p className="card-note">
         You have access to {app} — {blurb} — but it still runs as its own app. It
-        is being moved into the portal so there is one sign-in, one deploy and one
+        is being moved into Power Suite so there is one sign-in, one deploy and one
         place to look.
       </p>
       <p className="card-note">

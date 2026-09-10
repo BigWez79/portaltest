@@ -70,7 +70,7 @@ test.describe.serial("admin screen — changing access", () => {
     await page.close();
   });
 
-  test("granting an app shows up on that person's portal", async ({ page }) => {
+  test("granting an app shows up on that person's tiles", async ({ page }) => {
     await page.goto("/admin");
     await page.getByTestId("toggle-grantable@example.test-hasExpenses").click();
     await expect(
@@ -105,7 +105,7 @@ test.describe.serial("admin screen — changing access", () => {
    *
    * What would have to be true for it to pass wrongly: the second context would
    * have to arrive at the sign-in card without having been signed in first, or
-   * with its session still intact. So it asserts the portal *before* the
+   * with its session still intact. So it asserts the tiles *before* the
    * deactivation, and the absence of the cookie after — a page that merely
    * looks signed out while the cookie survives fails here.
    */
@@ -128,7 +128,7 @@ test.describe.serial("admin screen — changing access", () => {
         page.getByTestId("toggle-grantable@example.test-active"),
       ).toHaveAttribute("aria-pressed", "false");
 
-      // Their next request: the sign-in card, not a signed-in portal carrying a
+      // Their next request: the sign-in card, not a signed-in home page carrying a
       // notice that they may not use it.
       await them.goto("/");
       await expect(them.getByTestId("login-view")).toBeVisible();
@@ -164,7 +164,11 @@ test.describe.serial("admin screen — changing access", () => {
     await page.getByTestId("invite-email").fill("newton@example.test");
     await page.getByTestId("invite-submit").click();
 
-    await expect(page.getByTestId("invite-ok")).toBeVisible();
+    // 15s, not the 5s default: this waits on a server action doing file I/O
+    // while every other worker hammers the same box. It was seen still showing
+    // "Sending…" at 5s on a full run and passing in under 4s on its own. The
+    // check itself is unchanged — the success message still has to appear.
+    await expect(page.getByTestId("invite-ok")).toBeVisible({ timeout: 15_000 });
     const row = page.getByTestId("row-newton@example.test");
     await expect(row).toBeVisible();
 
@@ -219,7 +223,11 @@ test.describe.serial("admin screen — changing access", () => {
     await page.getByTestId("invite-name").fill("Nadia Newcomer");
     await page.getByTestId("invite-email").fill("nadia@example.test");
     await page.getByTestId("invite-submit").click();
-    await expect(page.getByTestId("invite-ok")).toBeVisible();
+    // 15s, not the 5s default: this waits on a server action doing file I/O
+    // while every other worker hammers the same box. It was seen still showing
+    // "Sending…" at 5s on a full run and passing in under 4s on its own. The
+    // check itself is unchanged — the success message still has to appear.
+    await expect(page.getByTestId("invite-ok")).toBeVisible({ timeout: 15_000 });
 
     await expect(page.getByTestId("audit-nadia@example.test")).toContainText(
       "Added to the staff list",

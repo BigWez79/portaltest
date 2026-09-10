@@ -37,7 +37,7 @@ export async function notifyAccessChange(
       text: [
         ...lines,
         "",
-        `Open the portal: ${siteUrl()}`,
+        `Open Power Suite: ${siteUrl()}`,
         "",
         "If this looks wrong, reply to this email.",
       ].join("\n"),

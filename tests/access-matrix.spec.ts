@@ -83,7 +83,7 @@ test.describe("access matrix", () => {
     await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
 
-  test("an inactive row is signed out, not shown a portal with a warning", async ({
+  test("an inactive row is signed out, not shown a home page with a warning", async ({
     page,
   }) => {
     await signInAs(page, "left.the.company@example.test");

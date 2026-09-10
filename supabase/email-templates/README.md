@@ -71,6 +71,6 @@ against the list `verifyOtp` accepts and logs it plainly when it does not match.
 ./deploy/check-auth-config.sh      # signups still disabled, etc.
 ```
 
-then request a link from the portal and open it. If it bounces to the sign-in
+then request a link from Power Suite and open it. If it bounces to the sign-in
 page, the server log names the reason — no `token_hash`, wrong `type`, or
 Supabase rejecting the token itself.

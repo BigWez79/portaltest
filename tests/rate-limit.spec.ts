@@ -10,7 +10,7 @@ import { askForLink, expect, linkLedger, signOutCompletely, test } from "./harne
  *
  * Serial, and each test owns its address and its IP: two of these running
  * beside each other would count each other's requests. The IP arrives as
- * `x-forwarded-for`, which is what a deployed portal reads.
+ * `x-forwarded-for`, which is what a deployment reads.
  *
  * One thing this cannot check at 3am is that the first five emails land in an
  * inbox — the suite reaches no Supabase project and sends nothing. What it

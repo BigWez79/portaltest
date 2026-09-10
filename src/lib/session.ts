@@ -6,7 +6,7 @@ import { isTestMode } from "./env";
 /**
  * Ending a session, in the one place that knows how.
  *
- * Two callers: the Sign out button, and the portal when it finds the person
+ * Two callers: the Sign out button, and the tiles page when it finds the person
  * holding the session is no longer active staff. Both want the same thing —
  * the session gone rather than merely useless — and a second implementation of
  * that is a second thing to get wrong.

@@ -12,7 +12,7 @@ export function Portal({ access }: { access: Access }) {
       <header>
         <Image className="logo" src="/logo.png" alt="Power Analytix logo" width={54} height={54} priority />
         <div className="brand-text">
-          <div className="kicker">Suite Portal</div>
+          <div className="kicker" data-testid="product-name">Power Suite</div>
           <h1>Power Analytix</h1>
         </div>
       </header>

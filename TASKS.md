@@ -20,31 +20,9 @@ next, but nobody has written that task yet and this file is not the place to
 invent one. The shape the Margin port came out in is written up under "Margin,
 specifically" in docs/PORTING-APPS.md and is worth following.
 
-## Next up — portal hygiene
+## Next up — Power Suite hygiene
 
-### 1. Rename the product to Power Suite
-The suite is called Power Suite. The company is still Power Analytix. Do it in
-one change rather than letting it drift -- half-renamed is worse than either
-state, and it is the sort of thing that gets finished in six separate pull
-requests over a month otherwise.
-
-Rename in `src/`: the app shell, page metadata and titles, headings, and any
-user-visible string that calls the product "the portal". In `tests/`: the
-assertions and harness helpers that reference those strings. And in the docs --
-`CLAUDE.md`, `README.md`, `docs/PORTING-APPS.md`, `deploy/README.md`.
-
-**Rename no identifier.** The launchd labels `uk.poweranalytix.portal.*`, the
-plist filenames, the repository, the Supabase project, the `overnight/*` branch
-prefix, the `PORTAL_*` environment variables and `~/portal` on disk all stay
-exactly as they are. Renaming any of them breaks jobs that are already
-installed, and none of it is anything a person reads.
-
-**Done when** no user-visible string calls the product "the portal"; the page
-title and the shell heading read Power Suite; a test asserts the product name in
-both at 390 and 1440; `grep -ri "the portal" src tests` returns nothing
-user-facing; and `npm run verify` passes.
-
-### 2. Accessibility pass on the admin table
+### 1. Accessibility pass on the admin table
 The toggles are buttons with `aria-pressed` and a visually hidden label. Check
 the table's header association, focus order along a row, and that a screen
 reader announces which person a toggle belongs to.
@@ -52,7 +30,7 @@ reader announces which person a toggle belongs to.
 **Done when** an automated axe pass runs against `/` and `/admin` with no
 violations at 390 and 1440, and the screenshots are attached.
 
-### 3. Delete the import script at cutover
+### 2. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
 overwrites every access flag from a CSV. Remove it — with `scripts/staff-csv.ts`
@@ -83,6 +61,30 @@ longer tells anybody to run it.
 
 ## Done
 
+- **Renamed the product to Power Suite** — `overnight/auto-2026-09-10-0300`.
+  The product is Power Suite; the company is still Power Analytix. The tab now
+  reads "Power Suite — Power Analytix", matching the pattern the app routes
+  already used, and the line above every heading — the sign-in card, the tiles,
+  and the shell each carried their own copy of "Suite Portal" — reads Power
+  Suite. `tests/product-name.spec.ts` pins the tab and the heading signed in and
+  signed out, at 390 and 1440, reading the rendered text rather than a constant:
+  rename either back and it fails. Not only the visible strings — a comment that
+  calls the product "the portal" is how a half-rename comes back, so those moved
+  too, splitting into "Power Suite" where the product was meant and "the tiles
+  page" where `src/app/page.tsx` was. Left alone deliberately: everything that
+  names the *old* suite (`BigWez79/portal`, `portal_index.html`, "the live
+  portal", "Portal v2.0") is a different thing and still true, and no identifier
+  moved — launchd labels, the plists, `PORTAL_*`, `~/portal`, the package name,
+  the `Portal` component, the CSS class names. The two email templates in
+  `supabase/email-templates/` said "the portal" as well; they are edited here but
+  have never been pasted into Supabase (that is blocked on SMTP), so nothing has
+  drifted out of step — whoever pastes them gets the new wording. `deploy/` needed
+  no change: every "portal" in it is a launchd label, a Supabase project name or a
+  path on disk. One thing fixed on the way: the invite check in `admin.spec.ts`
+  was waiting the default 5s on a server action doing file I/O, and lost the coin
+  flip once on a loaded box — it now waits 15s for the same message, which is a
+  slower failure rather than a weaker check. No migration; nothing waiting on a
+  person. 134 checks.
 - **Deactivating somebody ends their session too** — `overnight/auto-2026-09-05-0300`.
   Deactivation already took their access away on the next page load; what was
   left was the cookie, so they saw a signed-in portal carrying a notice rather

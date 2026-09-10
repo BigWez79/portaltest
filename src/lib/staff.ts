@@ -104,7 +104,7 @@ export async function lookupStaff(email: string): Promise<StaffRow | null> {
  *   active row + is_admin  -> admin
  *   inactive row / no row  -> nothing
  *
- * An inactive row also reports `deactivated`, which the portal acts on by
+ * An inactive row also reports `deactivated`, which the tiles page acts on by
  * ending the session rather than showing a signed-in page with a warning on it.
  */
 export async function resolveAccess(identity: Identity): Promise<Access> {

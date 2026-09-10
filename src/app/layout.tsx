@@ -31,7 +31,7 @@ const albertSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Power Analytix — Portal",
+  title: "Power Suite — Power Analytix",
   description: "One sign-in for the whole Power Analytix suite.",
   robots: { index: false, follow: false },
   icons: { icon: "/logo.png" },
