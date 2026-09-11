@@ -11,7 +11,7 @@ export type AppTile = {
 };
 
 /**
- * The four tiles.
+ * The seven tiles.
  *
  * Every href is a route inside this app. Invoices, Timesheets and Expenses used
  * to be separate deployments on their own subdomains; they are being folded in

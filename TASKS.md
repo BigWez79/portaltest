@@ -6,7 +6,10 @@ and must not be picked up.
 
 Every "done when" here is meant to be checkable by something working alone at
 3am. If one is not, it is a bad task — say so in the pull request rather than
-guessing.
+guessing. A task that needs a person to judge it belongs in **Held**, not here.
+
+The numbers restart in each section, so "the first task" means the first one
+reading top to bottom — ports before hygiene — not the lowest number.
 
 ---
 
@@ -15,10 +18,63 @@ guessing.
 The agreed plan: all nine apps move off SharePoint, one at a time.
 See docs/PORTING-APPS.md for the order and the decisions behind it.
 
-Nothing queued. Margin was P1 and is done; by the agreed order Tax Breakdown is
-next, but nobody has written that task yet and this file is not the place to
-invent one. The shape the Margin port came out in is written up under "Margin,
-specifically" in docs/PORTING-APPS.md and is worth following.
+### 1. Port Tax Breakdown
+`taxbreakdown.html` in `BigWez79/portal` — note the filename has no hyphen,
+unlike the route here. 557 lines. The second of the two calculators and the last
+thing in the queue that touches no data.
+
+Read before writing this, so the shape is not guesswork:
+
+- **MSAL is there; Graph is not.** 10 references to MSAL, `msal-browser@3` from
+  jsdelivr, a hard-coded `clientId` and `tenantId` in the page — and
+  `SCOPES = ["User.Read"]`, zero calls to `graph.microsoft.com`, no lists. It is
+  a sign-in gate in front of a calculator, nothing more. This is the one place
+  Margin differed: `margin.html` had no authentication at all.
+- So step 1 of "What each port involves" is most of the work here: **delete the
+  sign-in.** No MSAL, no client id, no tenant id, no redirect handling, no
+  Sign out button of its own — `AppShell` has one. The person is signed in or
+  they never reached the route. It also takes an Entra app registration id off a
+  public page, which is worth having.
+- **Nothing to bundle.** The only off-site script is MSAL itself, and it is being
+  deleted. Unlike Margin there is no jsPDF equivalent to move to npm.
+- **One `localStorage` key**, `paTaxBreakdownInputs_v1`. Keep it, and keep its
+  JSON shape, so a browser that has used the live page keeps its figures. Moving
+  that to Postgres is a separate decision.
+- **Google Fonts are linked.** Sora and Albert Sans are self-hosted here already.
+
+Then follow how Margin came out — written up under "Margin, specifically" in
+docs/PORTING-APPS.md. The short version is **the sums first, the markup
+second**. The sums are already separable: `corpTax`, `taxSlice`,
+`personalAllowance`, `personalTax`, `employerNI`, `mileageClaim` and
+`takeHomePct` are pure functions of their arguments and touch no DOM. They move
+to `src/lib/tax-model.ts` as they are. `render` and `directorCard` are the
+markup and become a client component.
+
+Pin the model with worked examples read off the live page itself, running
+headless with every http(s) request aborted — so an example cannot quietly come
+from anywhere except the code under test.
+
+**On the figures, this one is not like Margin.** Margin's defaults were real
+revenue and a real split, and were replaced with placeholders. What is hard-coded
+here is UK statutory rates — corporation tax at 19% and 25%, marginal relief of
+3/200, a personal allowance of £12,570 tapering above £100,000. Those are public,
+they are the entire point of the calculator, and they must come across **exactly
+as they are**. The placeholder rule applies to any default *input* — a salary, a
+profit figure, a director's name — and to nothing else. If you cannot tell which
+a number is, say so in the pull request rather than changing it.
+
+The route already exists: `src/app/tax-breakdown/page.tsx`, behind
+`requireApp("taxBreakdown")`, with a placeholder in it. Porting is replacing the
+placeholder. No new entry in `src/lib/apps.ts`, no new flag, no new column, no
+migration, nothing waiting on a person.
+
+**Done when** the calculator works at `/tax-breakdown` for somebody with
+`has_tax_breakdown` and the route 404s for somebody without it; at least three
+worked examples taken from the live page pass against `src/lib/tax-model.ts`;
+a test asserts the page makes no off-site request and that the string `msal`
+appears nowhere in what is served; the page does not scroll sideways at 390,
+768, 1024 or 1440 and those screenshots are attached; and `npm run verify`
+passes.
 
 ## Next up — Power Suite hygiene
 
@@ -44,6 +100,103 @@ round.
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
 
+### 4. A 404 and a crash that look like the product
+There is no `not-found.tsx` and no `error.tsx` anywhere in `src/`. Both cases
+render Next's own page today.
+
+That matters more here than it usually would. Rule 4 says a route 404s for
+anybody without its flag, and that 404 is not an edge case — it is the designed
+answer to somebody trying `/invoices` to see what happens. What they get is an
+unstyled Next page, which tells them two things we would rather not say: that
+they reached something real, and what it is built with.
+
+Add `src/app/not-found.tsx`, `src/app/error.tsx`, and `global-error.tsx` — the
+last one catches a failure in the root layout, which `error.tsx` cannot. They
+should look like the rest of the suite and say nothing about what was missing or
+why: no path, no flag name, no stack, no "you do not have access to this".
+
+`error.tsx` is a client component and takes `{ error, reset }`. Log the digest,
+show the person nothing but a way back to the portal.
+
+Note for the test: the harness fails any test whose page logged a console error,
+so exercising `error.tsx` needs `test.use({ tolerate: [...] })` in the same
+spirit as the 404 tests already do — declare it, do not turn the check off.
+
+**Done when** a signed-in request to a route the person has no flag for renders
+the suite's own 404 rather than Next's; a test asserts the body names no route,
+no flag and no framework; the 404 renders at 390 and 1440 with screenshots
+attached; and `npm run verify` passes.
+
+### 5. Content-Security-Policy
+`next.config.ts` sets `X-Frame-Options`, `X-Content-Type-Options`,
+`Referrer-Policy` and `Permissions-Policy`, and `tests/hardening.spec.ts`
+asserts the first three. Vercel adds `Strict-Transport-Security` on top of
+those. The one header nothing sets is `Content-Security-Policy`.
+
+CSP is the one that would have mattered. What this project spent its first month
+removing was a `Sites.ReadWrite.All` token sitting in a browser, and the
+argument behind every server-side decision since is that a script running on the
+page must not be able to reach anything. Nothing enforces that; it is a property
+of the code holding, not something checked.
+
+The app is unusually well placed for a strict policy. Fonts are self-hosted,
+jsPDF is bundled rather than fetched from cdnjs, and `tests/margin.spec.ts`
+already asserts the page makes no off-site request at all. `default-src 'self'`
+should be close to reachable.
+
+The hard part is Next's inline scripts. Use a nonce issued from `src/proxy.ts`
+rather than leaving `script-src` open — and if a nonce cannot be made to work
+with this version of Next under Turbopack, **say so in the pull request with
+what you tried**, rather than shipping `'unsafe-inline'` on `script-src`
+quietly. A CSP with `'unsafe-inline'` on scripts is the rule 12 shape: a header
+that is present, asserted, and not stopping the thing it names.
+
+**HSTS is already there** and this task should not re-add it. Checked against
+the deployment on 9 September: Vercel serves
+`strict-transport-security: max-age=63072000; includeSubDomains; preload` on its
+own, and `content-security-policy` is the only one of the six that is absent.
+Setting HSTS in `next.config.ts` as well would be a second source of truth for a
+header that is already correct — and a weaker `max-age` there would quietly
+override the good one. Leave it to Vercel and say so in the pull request.
+
+If a test asserts HSTS, it has to allow for localhost not sending it, because
+localhost is not https. Assert it where it is served or not at all; an assertion
+that passes because the header is absent everywhere it is checked is the rule 12
+shape again.
+
+**Done when** every response carries a `Content-Security-Policy`;
+`tests/hardening.spec.ts` asserts it alongside the four it already checks; no page
+in the suite logs a CSP violation — the harness already fails a test whose page
+logged a console error, so the suite passing at all is the check; and
+`npm run verify` passes.
+
+### 6. Monthly Overview has no tile and no route
+docs/PORTING-APPS.md lists nine apps and the portal carries seven. The one
+missing is Monthly Overview — 383 lines, four lists, no writes. Every other app
+in that table is either ported or "route ready"; this one is "not routed yet",
+and has been since the survey on 25 August.
+
+The decision is already recorded — all nine move, agreed 25 August — so this is
+the gap between the plan and the repository, not a new question. It is queued
+below the calculators because it reads four SharePoint lists and the two
+calculators read nothing.
+
+This is the full checklist from CLAUDE.md, all of it or none: an entry in
+`src/lib/apps.ts`, a glyph in `src/components/TileIcon.tsx`, a route under
+`src/app/overview` calling `requireApp`, a column in a migration, a `Flag` in
+`src/lib/staff-admin.ts`, a column in `StaffTable`, and cases in
+`tests/access-matrix.spec.ts` and `tests/app-routes.spec.ts`.
+
+Route and tile only. **Do not port the page** — that is its own task, later in
+docs/PORTING-APPS.md's order, and it runs into the "staff names versus staff
+records" question recorded there, which is not settled. Leave the placeholder in
+and say in the pull request that the migration is waiting on a person.
+
+**Done when** the tile appears for somebody with the flag and is absent from the
+DOM for somebody without it; `/overview` 404s without the flag; the migration is
+committed and unapplied; the access matrix and route tests cover it; the portal
+does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
+
 ---
 
 ## Held — needs a person
@@ -56,6 +209,20 @@ longer tells anybody to run it.
 - Porting the seven apps (`docs/PORTING-APPS.md`) — agreed in principle, queued
   one at a time. Margin and Tax Breakdown are first and need no data migration.
 - Narrowing `admin.html`'s `AllSites.FullControl` on the live suite
+- **Saying whether the keep-alive keeps anything alive.** It answered 200 every
+  day for a week while portal-staging drifted towards being paused, which is
+  where rule 12 came from. It now runs a real query rather than a health check,
+  and has answered 200 every morning since 3 September. That is the same
+  evidence as before. What was never established is whether Supabase counts a
+  `select` as activity at all. Supabase warned on 1 September; if a second
+  warning arrives, selects do not count and the next thing to try is a write —
+  an insert into `signin_attempts`, which already expires rows out of itself.
+  Held because only a person can say whether a warning came. It cannot be
+  checked at 3am, and writing that down is better than pretending it can.
+- **Why `getUser()` sees nobody on Vercel.** Sign-in works against a local dev
+  server and against a local production build, and not on the deployment. The
+  logging from PR #10 is on main; reading what it prints needs a redeploy and
+  somebody with the Vercel runtime logs open.
 
 ---
 
