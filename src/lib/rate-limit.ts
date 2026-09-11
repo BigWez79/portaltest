@@ -6,13 +6,13 @@ import { staffSource } from "./env";
  * How many sign-in links one address, and one address's network, may ask for.
  *
  * Mirrored in supabase/migrations/0002_signin_rate_limit.sql, which is what a
- * deployed portal enforces — the numbers live in SQL there so that the limit is
+ * deployment enforces — the numbers live in SQL there so that the limit is
  * not something an API caller gets to choose. These are the same numbers, used
  * by the file-backed store the e2e suite runs against. Change both.
  *
  * The per-IP window is much looser than the per-address one: staff behind one
  * office NAT share an address, and a refusal is silent, so a tight IP limit
- * would lock colleagues out of the portal without telling anybody why.
+ * would lock colleagues out of Power Suite without telling anybody why.
  */
 export const SIGNIN_LIMITS = {
   perEmail: { limit: 5, windowMs: 60_000 },
@@ -42,10 +42,10 @@ export function ipFromHeaders(source: Headers): string | null {
  * Records a request for a sign-in link and answers whether to send one.
  *
  * Called before the link goes out, and before the test-mode short circuit, so
- * the suite exercises the same decision a deployed portal makes.
+ * the suite exercises the same decision a deployment makes.
  *
  * Fails open. If the ledger cannot be reached the link is sent: this is
- * anti-abuse, not the thing that decides who may sign in, and a portal that
+ * anti-abuse, not the thing that decides who may sign in, and a sign-in that
  * turns everybody away because one table is unavailable is the worse failure.
  * Supabase Auth's own limits are still underneath it.
  */

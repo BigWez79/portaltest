@@ -2,7 +2,7 @@
   "name": "poweranalytix-portal",
   "version": "3.0.0",
   "private": true,
-  "description": "Power Analytix Suite Portal — one sign-in for the whole suite.",
+  "description": "Power Suite — one sign-in for the whole Power Analytix suite.",
   "engines": {
     "node": ">=20.9.0"
   },

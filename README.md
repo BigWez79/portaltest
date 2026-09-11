@@ -1,7 +1,8 @@
-# Power Analytix Suite Portal
+# Power Suite
 
-One app for the whole suite: sign-in, the four apps, and the screen where staff
-access is granted. Replaces `portal_index.html` v2.0. No Microsoft dependency.
+One app for the whole Power Analytix suite: sign-in, the apps, and the screen
+where staff access is granted. Replaces `portal_index.html` v2.0. No Microsoft
+dependency.
 
 Seven tiles: Invoices, Timesheets, Expenses, Margin & Profit Split, Tax
 Breakdown, My Profile and Admin. All but Admin still run as single HTML pages in
@@ -63,8 +64,8 @@ caller out of every session they hold and clears the cookies that carried it.
 - The **Sign out button** is a server action and calls it directly.
 - **Being deactivated** ends the session too, on the deactivated person's next
   request. Their access had already gone — every route reads the staff row
-  fresh — but the cookie stayed valid, so they saw a signed-in portal with a
-  notice in it rather than the sign-in card. The portal now sends them to
+  fresh — but the cookie stayed valid, so they saw a signed-in home page with a
+  notice in it rather than the sign-in card. Power Suite now sends them to
   `/auth/sign-out`, because a server component can work out that a session
   should not continue but only a route handler can clear the cookie that makes
   it continue.

@@ -1,7 +1,7 @@
 /**
- * Every environment variable the portal reads, in one place.
+ * Every environment variable Power Suite reads, in one place.
  *
- * Nothing here is prefixed NEXT_PUBLIC_, and nothing needs to be: the portal
+ * Nothing here is prefixed NEXT_PUBLIC_, and nothing needs to be: Power Suite
  * talks to Supabase only from the server. No Supabase key of any kind — not even
  * the anon key — is sent to a browser. `npm run check:secrets` reads the built
  * output and fails if that ever changes.
@@ -66,7 +66,7 @@ export const resend = {
 
 /**
  * Fallback allow-list. A bootstrap admin sees every tile and can reach the admin
- * screen even with no staff row, so the portal can never lock its own
+ * screen even with no staff row, so Power Suite can never lock its own
  * administrator out — during the import, or after a bad flag edit.
  */
 export const bootstrapAdmins = (): string[] =>

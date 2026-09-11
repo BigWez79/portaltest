@@ -20,7 +20,7 @@ export function SignInCard({ error }: { error?: string }) {
               <span className="analytix">Analytix</span>
             </div>
           </div>
-          <div className="login-title">Suite Portal</div>
+          <div className="login-title" data-testid="product-name">Power Suite</div>
 
           {error === "link" ? (
             <div className="msg" role="alert" data-testid="signin-error">

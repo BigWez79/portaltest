@@ -87,7 +87,7 @@ export async function requestMagicLink(
 }
 
 export async function signOut() {
-  // Same ending as the one the portal reaches for somebody who has been
+  // Same ending as the one the tiles page reaches for somebody who has been
   // deactivated. Two ways of taking a session away is one too many: this used
   // to leave the test-mode cookie in place, which nothing noticed because
   // nothing clicked the button.

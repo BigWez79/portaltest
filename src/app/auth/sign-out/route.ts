@@ -6,7 +6,7 @@ import { endSession } from "@/lib/session";
  *
  * The Sign out button does not come through here — it is a server action, which
  * can clear a cookie on its own. This exists for the case a server component
- * cannot handle itself: the portal finding that whoever holds this session is
+ * cannot handle itself: the tiles page finding that whoever holds this session is
  * no longer active staff. A page render cannot write a cookie, so it redirects
  * here, and this clears it.
  *

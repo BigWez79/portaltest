@@ -32,7 +32,7 @@ test.describe("layout at every width", () => {
       );
       expect(overflow, "the page must not scroll horizontally").toBeLessThanOrEqual(0);
 
-      await testInfo.attach(`portal-${w.name}.png`, {
+      await testInfo.attach(`power-suite-${w.name}.png`, {
         body: await page.screenshot({ fullPage: true }),
         contentType: "image/png",
       });

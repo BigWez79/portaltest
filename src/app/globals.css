@@ -1,5 +1,5 @@
 /*
- * The portal itself is ported from portal_index.html v2.0, unchanged in
+ * The tiles page itself is ported from portal_index.html v2.0, unchanged in
  * appearance. The sign-in form and the admin screen are new and built from the
  * same tokens rather than a new palette.
  *
@@ -821,7 +821,7 @@ tr.inactive .toggle.on {
    Margin & Profit Split
 
    Ported from margin.html on the live suite, which carries its own copy of the
-   suite palette. Two tokens the portal does not otherwise use — the teal accent
+   suite palette. Two tokens Power Suite does not otherwise use — the teal accent
    and the "good" green — are declared here rather than added to :root, so this
    app's look stays inside this app.
 
@@ -979,7 +979,7 @@ tr.inactive .toggle.on {
   border-top: none;
 }
 
-/* buttons — the portal's global button rule is sized for the sign-in card */
+/* buttons — Power Suite's global button rule is sized for the sign-in card */
 .margin-app button {
   font-size: 0.85rem;
   border-radius: 9px;

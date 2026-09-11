@@ -32,11 +32,11 @@ export function AppShell({
     <main className="shell app-shell">
       <div className={wide ? "app-wrap wide" : "app-wrap"}>
         <header>
-          <Link href="/" className="logo-link" aria-label="Back to the portal">
+          <Link href="/" className="logo-link" aria-label="Back to Power Suite">
             <Image className="logo" src="/logo.png" alt="" width={54} height={54} priority />
           </Link>
           <div className="brand-text">
-            <div className="kicker">Suite Portal</div>
+            <div className="kicker" data-testid="product-name">Power Suite</div>
             <h1>{title}</h1>
           </div>
         </header>

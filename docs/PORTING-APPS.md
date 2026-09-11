@@ -1,6 +1,6 @@
 # Folding the suite in
 
-Nine apps move off SharePoint into this repository, one at a time. This is the
+Nine apps move off SharePoint into Power Suite, one at a time. This is the
 agreed shape, the order, and the decisions already taken.
 
 Survey of what is actually live: `BigWez79/portal`, commit `5d550d2`, read

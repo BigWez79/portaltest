@@ -4,7 +4,8 @@ Read this every run. Where this file and a chat transcript disagree, this file w
 
 ## What this is
 
-The Power Analytix suite. One app, one deploy, one sign-in: the portal, the
+Power Suite, the Power Analytix suite. The product is Power Suite; the company
+is still Power Analytix. One app, one deploy, one sign-in: the tiles, the
 staff admin screen, and routes for the seven apps behind it — Invoices,
 Timesheets, Expenses, Margin & Profit Split, Tax Breakdown, My Profile and
 Admin.
@@ -113,7 +114,7 @@ src/lib/notify.ts               access-change email; a no-op with no Resend key
 src/lib/rate-limit.ts           how often one address, or one IP, may ask for a link
 src/lib/rate-limit-store.ts     the same limit, file-backed, for the suite only
 src/lib/session.ts              endSession — the one way a session is taken away
-src/app/page.tsx                the portal — the tiles
+src/app/page.tsx                Power Suite's home — the tiles
 src/app/{invoices,timesheets,expenses,margin,tax-breakdown,profile}/
                                 guarded routes, placeholder inside
 src/app/admin/page.tsx          staff access
