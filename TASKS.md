@@ -18,63 +18,10 @@ reading top to bottom — ports before hygiene — not the lowest number.
 The agreed plan: all nine apps move off SharePoint, one at a time.
 See docs/PORTING-APPS.md for the order and the decisions behind it.
 
-### 1. Port Tax Breakdown
-`taxbreakdown.html` in `BigWez79/portal` — note the filename has no hyphen,
-unlike the route here. 557 lines. The second of the two calculators and the last
-thing in the queue that touches no data.
-
-Read before writing this, so the shape is not guesswork:
-
-- **MSAL is there; Graph is not.** 10 references to MSAL, `msal-browser@3` from
-  jsdelivr, a hard-coded `clientId` and `tenantId` in the page — and
-  `SCOPES = ["User.Read"]`, zero calls to `graph.microsoft.com`, no lists. It is
-  a sign-in gate in front of a calculator, nothing more. This is the one place
-  Margin differed: `margin.html` had no authentication at all.
-- So step 1 of "What each port involves" is most of the work here: **delete the
-  sign-in.** No MSAL, no client id, no tenant id, no redirect handling, no
-  Sign out button of its own — `AppShell` has one. The person is signed in or
-  they never reached the route. It also takes an Entra app registration id off a
-  public page, which is worth having.
-- **Nothing to bundle.** The only off-site script is MSAL itself, and it is being
-  deleted. Unlike Margin there is no jsPDF equivalent to move to npm.
-- **One `localStorage` key**, `paTaxBreakdownInputs_v1`. Keep it, and keep its
-  JSON shape, so a browser that has used the live page keeps its figures. Moving
-  that to Postgres is a separate decision.
-- **Google Fonts are linked.** Sora and Albert Sans are self-hosted here already.
-
-Then follow how Margin came out — written up under "Margin, specifically" in
-docs/PORTING-APPS.md. The short version is **the sums first, the markup
-second**. The sums are already separable: `corpTax`, `taxSlice`,
-`personalAllowance`, `personalTax`, `employerNI`, `mileageClaim` and
-`takeHomePct` are pure functions of their arguments and touch no DOM. They move
-to `src/lib/tax-model.ts` as they are. `render` and `directorCard` are the
-markup and become a client component.
-
-Pin the model with worked examples read off the live page itself, running
-headless with every http(s) request aborted — so an example cannot quietly come
-from anywhere except the code under test.
-
-**On the figures, this one is not like Margin.** Margin's defaults were real
-revenue and a real split, and were replaced with placeholders. What is hard-coded
-here is UK statutory rates — corporation tax at 19% and 25%, marginal relief of
-3/200, a personal allowance of £12,570 tapering above £100,000. Those are public,
-they are the entire point of the calculator, and they must come across **exactly
-as they are**. The placeholder rule applies to any default *input* — a salary, a
-profit figure, a director's name — and to nothing else. If you cannot tell which
-a number is, say so in the pull request rather than changing it.
-
-The route already exists: `src/app/tax-breakdown/page.tsx`, behind
-`requireApp("taxBreakdown")`, with a placeholder in it. Porting is replacing the
-placeholder. No new entry in `src/lib/apps.ts`, no new flag, no new column, no
-migration, nothing waiting on a person.
-
-**Done when** the calculator works at `/tax-breakdown` for somebody with
-`has_tax_breakdown` and the route 404s for somebody without it; at least three
-worked examples taken from the live page pass against `src/lib/tax-model.ts`;
-a test asserts the page makes no off-site request and that the string `msal`
-appears nowhere in what is served; the page does not scroll sideways at 390,
-768, 1024 or 1440 and those screenshots are attached; and `npm run verify`
-passes.
+Nothing is queued here at the moment. My Profile is next in the order, and it
+is queued once the legacy-profile question in `docs/PORTING-APPS.md` has been
+read from the data rather than guessed at. Invoices, Timesheets and Expenses are
+parked in BLOCKED.md until their repositories have been read.
 
 ## Next up — Power Suite hygiene
 
@@ -228,6 +175,38 @@ does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
 
 ## Done
 
+- **Ported Tax Breakdown** — `overnight/auto-2026-09-12-0300`. The second app
+  folded in, and the last one that touches no data. Most of the work was step 1
+  of the port checklist: `taxbreakdown.html` carries ten references to MSAL,
+  `msal-browser@3` from jsdelivr, a hard-coded Entra client id and tenant id, and
+  a Sign out button of its own — in front of a calculator whose only scope is
+  `User.Read` and which never calls Graph. None of it came across; `requireApp`
+  and the magic link do that job, and a public page stopped advertising an app
+  registration id. The sums are in `src/lib/tax-model.ts` with no DOM near them,
+  and `tests/tax-breakdown.spec.ts` pins them against **four** worked examples
+  read off the live page itself, run headless with every http(s) request aborted
+  — between them the small profits rate, the marginal relief band, the main
+  rate, a loss, the personal allowance tapering to nil, other PAYE income
+  stacked under this company's salary, both AMAP mileage bands, and the
+  Employment Allowance on and off. The figures the editing test drives were read
+  the same way rather than worked out by hand. On the numbers: the statutory
+  rates came across exactly as they are — 19%/25% with marginal relief of 3/200,
+  the £12,570 allowance and its taper, 10.75/35.75/39.35% on dividends, NI at
+  8%/2% and 15%, AMAP at 45p/25p — and only the default *inputs* became
+  placeholders. Two judgement calls are written down in the model rather than
+  made quietly: the £12,570 default salary is the personal allowance itself and
+  stayed, and so did the mileage rates. `paTaxBreakdownInputs_v1` keeps its key
+  and its exact JSON shape, so a browser that has used the live page keeps its
+  figures. One deliberate piece of ugliness survived: the live page prints `£-0`
+  for a negated zero, and so does this, because a port that quietly improves its
+  output has stopped agreeing with the page it replaces. A test asserts the page
+  fetches nothing off-site and that `msal`, both Entra identifiers and the two
+  Microsoft hostnames appear nowhere in what this origin serves — and that it
+  scanned the HTML and the JavaScript, rather than passing on an empty scan. One
+  thing fixed on the way: the two-context deactivation check in `admin.spec.ts`
+  ran out of its 30s budget once four more full-page screenshots were competing
+  for the same server, so it now has 60s — the same assertions, a slower
+  failure. No migration; nothing waiting on a person. 149 checks.
 - **Renamed the product to Power Suite** — `overnight/auto-2026-09-10-0300`.
   The product is Power Suite; the company is still Power Analytix. The tab now
   reads "Power Suite — Power Analytix", matching the pattern the app routes
