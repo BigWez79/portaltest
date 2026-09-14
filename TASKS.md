@@ -100,33 +100,6 @@ round.
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
 
-### 4. A 404 and a crash that look like the product
-There is no `not-found.tsx` and no `error.tsx` anywhere in `src/`. Both cases
-render Next's own page today.
-
-That matters more here than it usually would. Rule 4 says a route 404s for
-anybody without its flag, and that 404 is not an edge case — it is the designed
-answer to somebody trying `/invoices` to see what happens. What they get is an
-unstyled Next page, which tells them two things we would rather not say: that
-they reached something real, and what it is built with.
-
-Add `src/app/not-found.tsx`, `src/app/error.tsx`, and `global-error.tsx` — the
-last one catches a failure in the root layout, which `error.tsx` cannot. They
-should look like the rest of the suite and say nothing about what was missing or
-why: no path, no flag name, no stack, no "you do not have access to this".
-
-`error.tsx` is a client component and takes `{ error, reset }`. Log the digest,
-show the person nothing but a way back to the portal.
-
-Note for the test: the harness fails any test whose page logged a console error,
-so exercising `error.tsx` needs `test.use({ tolerate: [...] })` in the same
-spirit as the 404 tests already do — declare it, do not turn the check off.
-
-**Done when** a signed-in request to a route the person has no flag for renders
-the suite's own 404 rather than Next's; a test asserts the body names no route,
-no flag and no framework; the 404 renders at 390 and 1440 with screenshots
-attached; and `npm run verify` passes.
-
 ### 5. Content-Security-Policy
 `next.config.ts` sets `X-Frame-Options`, `X-Content-Type-Options`,
 `Referrer-Policy` and `Permissions-Policy`, and `tests/hardening.spec.ts`
@@ -228,6 +201,39 @@ does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
 
 ## Done
 
+- **A 404 and a crash that look like the product** — `overnight/auto-2026-09-14-0300`.
+  `src/app/not-found.tsx`, `src/app/error.tsx` and `src/app/global-error.tsx`,
+  all three rendering one `DeadEnd` card built from the sign-in card's own
+  lockup. The 404 is the one that mattered: rule 4 makes it the designed answer
+  to somebody trying `/invoices` to see what happens, and until now that answer
+  was Next's unstyled page saying "404 | This page could not be found", which
+  conceded both that they had reached something real and what it was built with.
+  The copy on both names no path, no flag, no status, no stack and no framework,
+  and `tests/dead-ends.spec.ts` holds a list of twenty words neither page may
+  say — watched failing with the path put back into the heading. It reads the
+  rendered text and not the served HTML, deliberately: the flight payload for a
+  `notFound()` thrown out of `requireApp` carries the segment name and every
+  response links `/_next/static/…`, so an assertion over the source would either
+  fail today or have to be written loose enough to pass on Next's own page. The
+  status code is asserted separately, because a styled 404 answering 200 would
+  be the real regression. `error.tsx` logs the digest and shows nothing — a test
+  asserts the digest line is actually written, watched failing with the log
+  removed. Exercising it needed a page that throws, so `/api/test/crash` joins
+  the seeder and the ledger under the one prefix that is a 404 outside test
+  mode; it calls no `requireApp` for the same reason they do not, there being no
+  page there at all in any other environment. Two things came with it. The
+  fonts moved out of `layout.tsx` into `src/app/brand-fonts.ts`, because
+  `global-error.tsx` renders its own `<html>` — the root layout is the thing
+  that failed — and a crash page in the wrong typeface is a crash page that does
+  not look like the product. And `tolerate` in the harness now covers thrown
+  errors and 5xx responses as well as the console: a deliberate crash answers
+  500, and the alternative to declaring that was switching the check off. The
+  default is still `[]`, so nothing already written tolerates anything new.
+  `global-error.tsx` is the one thing here the suite does not exercise — nothing
+  can break the root layout on demand without shipping a way to break the root
+  layout — so what is untested is its wrapper, the `<html>`, the fonts and the
+  stylesheet import; the card inside it is the same one the other two render.
+  No migration; nothing waiting on a person. 141 checks.
 - **Renamed the product to Power Suite** — `overnight/auto-2026-09-10-0300`.
   The product is Power Suite; the company is still Power Analytix. The tab now
   reads "Power Suite — Power Analytix", matching the pattern the app routes

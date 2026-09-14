@@ -1618,3 +1618,28 @@ tr.inactive .toggle.on {
   padding-left: 10px;
   padding-right: 22px;
 }
+
+/* ---------------------------------------------------------------------------
+   Dead ends: not-found.tsx, error.tsx and global-error.tsx
+   --------------------------------------------------------------------------- */
+
+/* The way back is an <a>, so it needs the base styles a <button> gets for free. */
+.dead-end .btn-primary {
+  display: block;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 13px;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    filter 0.15s,
+    transform 0.05s;
+}
+
+.dead-end p {
+  margin: 0 0 18px;
+  max-width: 46ch;
+  margin-inline: auto;
+}

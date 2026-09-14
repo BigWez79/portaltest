@@ -115,6 +115,8 @@ src/lib/rate-limit.ts           how often one address, or one IP, may ask for a 
 src/lib/rate-limit-store.ts     the same limit, file-backed, for the suite only
 src/lib/session.ts              endSession — the one way a session is taken away
 src/app/page.tsx                Power Suite's home — the tiles
+src/app/not-found.tsx           every 404, including rule 4's; says nothing
+src/app/error.tsx               a page that broke; global-error.tsx for the layout
 src/app/{invoices,timesheets,expenses,margin,tax-breakdown,profile}/
                                 guarded routes, placeholder inside
 src/app/admin/page.tsx          staff access
@@ -123,6 +125,8 @@ src/app/auth/callback/          where a magic link lands
 src/app/auth/sign-out/          ends the session; where a deactivated person lands
 src/app/api/test/session/       test-mode seeder; 404 in production
 src/app/api/test/rate-limit/    reads the sign-in ledger; 404 in production
+src/app/api/test/crash/         throws on purpose, so error.tsx is exercised;
+                                404 in production
 scripts/import-staff.ts         one-off CSV import; not part of running the app
 scripts/check-bundle-secrets.mjs post-build scan of what a browser receives
 supabase/migrations/            written by the machine, applied by a person

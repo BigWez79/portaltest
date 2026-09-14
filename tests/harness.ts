@@ -6,26 +6,33 @@ import { test as base, expect, type Page } from "@playwright/test";
  */
 export const test = base.extend<{ page: Page; tolerate: string[] }>({
   /**
-   * Console noise a test expects. A test that deliberately requests a 404 gets
-   * one from the browser itself; everything else still fails the run.
+   * Trouble a test expects, declared by substring. A test that deliberately
+   * requests a 404 gets a console error from the browser itself; a test that
+   * deliberately crashes a page gets a 500 and a thrown error as well. Anything
+   * not named here still fails the run.
    * Use with test.use({ tolerate: ["status of 404"] }).
+   *
+   * It covers all three channels rather than only the console, so exercising
+   * error.tsx can declare the 500 it asked for instead of the check being taken
+   * out. The default is [], so a test that declares nothing tolerates nothing.
    */
   tolerate: [[], { option: true }],
 
   page: async ({ page, tolerate }, use) => {
     const problems: string[] = [];
     const expected = (text: string) => tolerate.some((t) => text.includes(t));
+    const record = (problem: string) => {
+      if (!expected(problem)) problems.push(problem);
+    };
 
     page.on("console", (msg) => {
-      if (msg.type() === "error" && !expected(msg.text())) {
-        problems.push(`console.error: ${msg.text()}`);
-      }
+      if (msg.type() === "error") record(`console.error: ${msg.text()}`);
     });
     page.on("pageerror", (err) => {
-      problems.push(`pageerror: ${err.message}`);
+      record(`pageerror: ${err.message}`);
     });
     page.on("response", (res) => {
-      if (res.status() >= 500) problems.push(`${res.status()} from ${res.url()}`);
+      if (res.status() >= 500) record(`${res.status()} from ${res.url()}`);
     });
 
     await use(page);
