@@ -127,49 +127,6 @@ the suite's own 404 rather than Next's; a test asserts the body names no route,
 no flag and no framework; the 404 renders at 390 and 1440 with screenshots
 attached; and `npm run verify` passes.
 
-### 5. Content-Security-Policy
-`next.config.ts` sets `X-Frame-Options`, `X-Content-Type-Options`,
-`Referrer-Policy` and `Permissions-Policy`, and `tests/hardening.spec.ts`
-asserts the first three. Vercel adds `Strict-Transport-Security` on top of
-those. The one header nothing sets is `Content-Security-Policy`.
-
-CSP is the one that would have mattered. What this project spent its first month
-removing was a `Sites.ReadWrite.All` token sitting in a browser, and the
-argument behind every server-side decision since is that a script running on the
-page must not be able to reach anything. Nothing enforces that; it is a property
-of the code holding, not something checked.
-
-The app is unusually well placed for a strict policy. Fonts are self-hosted,
-jsPDF is bundled rather than fetched from cdnjs, and `tests/margin.spec.ts`
-already asserts the page makes no off-site request at all. `default-src 'self'`
-should be close to reachable.
-
-The hard part is Next's inline scripts. Use a nonce issued from `src/proxy.ts`
-rather than leaving `script-src` open — and if a nonce cannot be made to work
-with this version of Next under Turbopack, **say so in the pull request with
-what you tried**, rather than shipping `'unsafe-inline'` on `script-src`
-quietly. A CSP with `'unsafe-inline'` on scripts is the rule 12 shape: a header
-that is present, asserted, and not stopping the thing it names.
-
-**HSTS is already there** and this task should not re-add it. Checked against
-the deployment on 9 September: Vercel serves
-`strict-transport-security: max-age=63072000; includeSubDomains; preload` on its
-own, and `content-security-policy` is the only one of the six that is absent.
-Setting HSTS in `next.config.ts` as well would be a second source of truth for a
-header that is already correct — and a weaker `max-age` there would quietly
-override the good one. Leave it to Vercel and say so in the pull request.
-
-If a test asserts HSTS, it has to allow for localhost not sending it, because
-localhost is not https. Assert it where it is served or not at all; an assertion
-that passes because the header is absent everywhere it is checked is the rule 12
-shape again.
-
-**Done when** every response carries a `Content-Security-Policy`;
-`tests/hardening.spec.ts` asserts it alongside the four it already checks; no page
-in the suite logs a CSP violation — the harness already fails a test whose page
-logged a console error, so the suite passing at all is the check; and
-`npm run verify` passes.
-
 ### 6. Monthly Overview has no tile and no route
 docs/PORTING-APPS.md lists nine apps and the portal carries seven. The one
 missing is Monthly Overview — 383 lines, four lists, no writes. Every other app
@@ -228,6 +185,32 @@ does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
 
 ## Done
 
+- **A Content-Security-Policy, with a nonce** — `overnight/auto-2026-09-16-0300`.
+  The sixth header, and the one the whole project was an argument for: no
+  Supabase key is in the bundle and no token is in browser storage, but nothing
+  made a script on the page unable to reach anything — that was a property of the
+  code holding. `default-src 'self'` and no `'unsafe-inline'` on `script-src`.
+  The nonce works under Next 16.3.2 and Turbopack: `src/proxy.ts` mints 128 bits
+  per request, sets the policy on the request as well as the response, and Next
+  reads it back out to stamp every script tag — asserted by reading the served
+  HTML, because a browser blanks the `nonce` attribute once it has read it. Two
+  callers of one `contentSecurityPolicy()` rather than two literals: the proxy's
+  nonced one, and a nonce-free floor in `next.config.ts` under the chunks, the
+  fonts and the logo, which the proxy's matcher skips. Where both apply the
+  proxy's wins, which was checked rather than assumed. Three things came out of
+  it. Next's own 404 page carries a `<style>` element built on the client, so it
+  takes no nonce — a hash names that one string, and when Next changes it every
+  404 test fails on a console error, which is the check. Nothing is prerendered
+  any more: Next's 404 was baked at build time with no nonce and arrived with the
+  console full of violations, so the root layout is `force-dynamic` — every other
+  route already was. And `style-src-attr 'unsafe-inline'`, because React writes a
+  `style` attribute for anything computed and no nonce or hash mechanism reaches
+  an attribute; `style-src` itself stays strict. HSTS is Vercel's and was left
+  alone — asserting it here could only pass by accepting its absence over http on
+  127.0.0.1. `'unsafe-eval'` and inline styles are allowed under `next dev` only,
+  keyed on NODE_ENV, which the suite never runs under. Five new checks, and both
+  of the ones that matter were watched to fail against `script-src 'self'
+  'unsafe-inline'`. No migration; nothing waiting on a person. 138 checks.
 - **Renamed the product to Power Suite** — `overnight/auto-2026-09-10-0300`.
   The product is Power Suite; the company is still Power Analytix. The tab now
   reads "Power Suite — Power Analytix", matching the pattern the app routes
