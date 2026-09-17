@@ -11,6 +11,7 @@ export const FLAGS = [
   "hasExpenses",
   "hasMargin",
   "hasTaxBreakdown",
+  "hasOverview",
 ] as const;
 export type Flag = (typeof FLAGS)[number];
 
@@ -23,6 +24,7 @@ export const FLAG_COLUMN: Record<Flag, string> = {
   hasExpenses: "has_expenses",
   hasMargin: "has_margin",
   hasTaxBreakdown: "has_tax_breakdown",
+  hasOverview: "has_overview",
 };
 
 const snapshotOf = (row: StaffRow): FlagSnapshot =>
@@ -130,6 +132,7 @@ export async function inviteStaff(
         hasExpenses: false,
         hasMargin: false,
         hasTaxBreakdown: false,
+        hasOverview: false,
         invitedAt: "2026-08-25T00:00:00.000Z",
         lastSeenAt: null,
       });

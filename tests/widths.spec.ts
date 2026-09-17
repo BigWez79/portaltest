@@ -1,4 +1,4 @@
-import { expect, signInAs, signOutCompletely, test } from "./harness";
+import { ALL_TILES, expect, signInAs, signOutCompletely, test } from "./harness";
 
 /**
  * Phone-first means desktop-never unless you say so. These are named widths,
@@ -18,6 +18,14 @@ test.describe("layout at every width", () => {
       await page.setViewportSize({ width: w.width, height: w.height });
       await page.goto("/");
       await expect(page.getByTestId("tiles")).toBeVisible();
+
+      // Every tile there is. Without this the overflow check below would pass
+      // just as happily on a portal that had quietly lost one — and "does not
+      // scroll sideways" only means anything against the full set.
+      const tiles = await page.getByTestId("tiles").locator("a.tile").count();
+      expect(tiles, `${w.name} should show all ${ALL_TILES.length} tiles`).toBe(
+        ALL_TILES.length,
+      );
 
       const columns = await page
         .getByTestId("tiles")

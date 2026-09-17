@@ -170,33 +170,6 @@ in the suite logs a CSP violation — the harness already fails a test whose pag
 logged a console error, so the suite passing at all is the check; and
 `npm run verify` passes.
 
-### 6. Monthly Overview has no tile and no route
-docs/PORTING-APPS.md lists nine apps and the portal carries seven. The one
-missing is Monthly Overview — 383 lines, four lists, no writes. Every other app
-in that table is either ported or "route ready"; this one is "not routed yet",
-and has been since the survey on 25 August.
-
-The decision is already recorded — all nine move, agreed 25 August — so this is
-the gap between the plan and the repository, not a new question. It is queued
-below the calculators because it reads four SharePoint lists and the two
-calculators read nothing.
-
-This is the full checklist from CLAUDE.md, all of it or none: an entry in
-`src/lib/apps.ts`, a glyph in `src/components/TileIcon.tsx`, a route under
-`src/app/overview` calling `requireApp`, a column in a migration, a `Flag` in
-`src/lib/staff-admin.ts`, a column in `StaffTable`, and cases in
-`tests/access-matrix.spec.ts` and `tests/app-routes.spec.ts`.
-
-Route and tile only. **Do not port the page** — that is its own task, later in
-docs/PORTING-APPS.md's order, and it runs into the "staff names versus staff
-records" question recorded there, which is not settled. Leave the placeholder in
-and say in the pull request that the migration is waiting on a person.
-
-**Done when** the tile appears for somebody with the flag and is absent from the
-DOM for somebody without it; `/overview` 404s without the flag; the migration is
-committed and unapplied; the access matrix and route tests cover it; the portal
-does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
-
 ---
 
 ## Held — needs a person
@@ -228,6 +201,34 @@ does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
 
 ## Done
 
+- **Monthly Overview has a tile and a route** — `overnight/auto-2026-09-17-0300`.
+  The gap between docs/PORTING-APPS.md's nine apps and the portal's seven: the
+  eighth is now routed. All of CLAUDE.md's checklist and none of the page — an
+  entry in `src/lib/apps.ts`, a glyph, `/overview` behind `requireApp("overview")`
+  with the same placeholder the other unported apps carry, `has_overview` in
+  `0003_overview.sql`, a `Flag`, an Overview column in `StaffTable`, and cases in
+  both `tests/access-matrix.spec.ts` and `tests/app-routes.spec.ts`. The page
+  itself is deliberately not ported: it reads four SharePoint lists and runs into
+  the "staff names versus staff records" question docs/PORTING-APPS.md records as
+  unsettled, which is a decision and not a task. A fixture person of their own,
+  `overview.only@example.test`, holds the flag and nothing else, so "sees exactly
+  Monthly Overview and My Profile" is a real assertion rather than a subset of
+  Ada Everything's. The 390 width check was strengthened while it was open: it
+  asserted the page did not scroll sideways but never that anything was on it, so
+  it would have passed just as happily on a portal that had lost a tile — it now
+  counts them against `ALL_TILES` first, which is what makes "at 390 with eight
+  tiles" mean anything. One thing shaken out on the way: the eighth toggle column
+  pushed the admin screen's re-render past the 5s default, and
+  `tests/admin.spec.ts` lost that race on a full run. Every toggle in that suite
+  now goes through one `setToggle` helper that waits 15s for the row to come back
+  showing the new state — the same patience the invite check was given, and a
+  stronger check than the bare clicks three of those tests used to do, which
+  asserted on a panel without ever confirming the toggle had moved. No entry in
+  `src/lib/notify.ts`: its `APP_NAMES` covers Invoices, Timesheets, Expenses and
+  Admin and has never covered Margin or Tax Breakdown either, so an
+  access-change email names the raw flag for all three. That is a pre-existing
+  gap, not this task's, and worth a queued line of its own. The migration is
+  committed and **waiting on a person**. 139 checks.
 - **Renamed the product to Power Suite** — `overnight/auto-2026-09-10-0300`.
   The product is Power Suite; the company is still Power Analytix. The tab now
   reads "Power Suite — Power Analytix", matching the pattern the app routes
