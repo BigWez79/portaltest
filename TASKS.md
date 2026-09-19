@@ -170,33 +170,6 @@ in the suite logs a CSP violation — the harness already fails a test whose pag
 logged a console error, so the suite passing at all is the check; and
 `npm run verify` passes.
 
-### 6. Monthly Overview has no tile and no route
-docs/PORTING-APPS.md lists nine apps and the portal carries seven. The one
-missing is Monthly Overview — 383 lines, four lists, no writes. Every other app
-in that table is either ported or "route ready"; this one is "not routed yet",
-and has been since the survey on 25 August.
-
-The decision is already recorded — all nine move, agreed 25 August — so this is
-the gap between the plan and the repository, not a new question. It is queued
-below the calculators because it reads four SharePoint lists and the two
-calculators read nothing.
-
-This is the full checklist from CLAUDE.md, all of it or none: an entry in
-`src/lib/apps.ts`, a glyph in `src/components/TileIcon.tsx`, a route under
-`src/app/overview` calling `requireApp`, a column in a migration, a `Flag` in
-`src/lib/staff-admin.ts`, a column in `StaffTable`, and cases in
-`tests/access-matrix.spec.ts` and `tests/app-routes.spec.ts`.
-
-Route and tile only. **Do not port the page** — that is its own task, later in
-docs/PORTING-APPS.md's order, and it runs into the "staff names versus staff
-records" question recorded there, which is not settled. Leave the placeholder in
-and say in the pull request that the migration is waiting on a person.
-
-**Done when** the tile appears for somebody with the flag and is absent from the
-DOM for somebody without it; `/overview` 404s without the flag; the migration is
-committed and unapplied; the access matrix and route tests cover it; the portal
-does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
-
 ---
 
 ## Held — needs a person
@@ -228,6 +201,29 @@ does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
 
 ## Done
 
+- **Monthly Overview has a tile and a route** — `overnight/auto-2026-09-19-0300`.
+  docs/PORTING-APPS.md listed nine apps and the portal carried seven; the one
+  with no tile, no route and no column was Monthly Overview, and it had been
+  that way since the survey on 25 August. The whole checklist, not part of it:
+  an entry in `src/lib/apps.ts`, a glyph in `TileIcon`, `/overview` behind
+  `requireApp("overview")`, `has_overview` in `0003_overview_flag.sql`, a `Flag`
+  in `staff-admin.ts`, a column in `StaffTable`, and cases in the access matrix
+  and the route tests. The page itself is **not** ported — the placeholder is
+  still in it, deliberately: porting it reads four SharePoint lists and runs
+  into "staff names versus staff records" in docs/PORTING-APPS.md, which is not
+  settled. `0003` is committed and **waiting on a person**; nothing here applies
+  it. Two things worth saying. The new column defaults to false and no policy
+  moved — 0001's policies are on the table, so they cover a column the day it
+  exists, and adding one grants nobody anything. And the width suite was
+  checking that the tiles page does not scroll sideways without checking what
+  was on it: `everything@` holds every flag, so it now asserts the exact set of
+  eight tiles at each named width, and a page missing a tile can no longer pass
+  the overflow check by having less on it than it should. Left alone: `notify.ts`
+  names only three apps in its access-change email and falls back to the raw
+  flag for the rest — that predates this and is true of Margin and Tax Breakdown
+  too, so fixing it is its own task rather than one flag quietly special-cased.
+  `scripts/staff-csv.ts` likewise knows only the three original flag columns and
+  is deleted at cutover. 139 checks.
 - **Renamed the product to Power Suite** — `overnight/auto-2026-09-10-0300`.
   The product is Power Suite; the company is still Power Analytix. The tab now
   reads "Power Suite — Power Analytix", matching the pattern the app routes

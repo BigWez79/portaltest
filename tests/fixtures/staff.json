@@ -10,7 +10,8 @@
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z",
     "hasMargin": true,
-    "hasTaxBreakdown": true
+    "hasTaxBreakdown": true,
+    "hasOverview": true
   },
   {
     "email": "invoices.only@example.test",
@@ -23,7 +24,8 @@
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z",
     "hasMargin": false,
-    "hasTaxBreakdown": false
+    "hasTaxBreakdown": false,
+    "hasOverview": false
   },
   {
     "email": "timesheet.only@example.test",
@@ -36,7 +38,8 @@
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z",
     "hasMargin": false,
-    "hasTaxBreakdown": false
+    "hasTaxBreakdown": false,
+    "hasOverview": false
   },
   {
     "email": "expenses.only@example.test",
@@ -49,7 +52,8 @@
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z",
     "hasMargin": false,
-    "hasTaxBreakdown": false
+    "hasTaxBreakdown": false,
+    "hasOverview": false
   },
   {
     "email": "admin.only@example.test",
@@ -62,7 +66,8 @@
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z",
     "hasMargin": false,
-    "hasTaxBreakdown": false
+    "hasTaxBreakdown": false,
+    "hasOverview": false
   },
   {
     "email": "no.flags@example.test",
@@ -75,7 +80,8 @@
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z",
     "hasMargin": false,
-    "hasTaxBreakdown": false
+    "hasTaxBreakdown": false,
+    "hasOverview": false
   },
   {
     "email": "left.the.company@example.test",
@@ -88,7 +94,8 @@
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z",
     "hasMargin": true,
-    "hasTaxBreakdown": true
+    "hasTaxBreakdown": true,
+    "hasOverview": true
   },
   {
     "email": "invited@example.test",
@@ -101,7 +108,8 @@
     "invitedAt": "2026-08-24T09:00:00.000Z",
     "lastSeenAt": null,
     "hasMargin": false,
-    "hasTaxBreakdown": false
+    "hasTaxBreakdown": false,
+    "hasOverview": false
   },
   {
     "email": "margin.only@example.test",
@@ -114,7 +122,8 @@
     "hasMargin": true,
     "hasTaxBreakdown": false,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasOverview": false
   },
   {
     "email": "tax.only@example.test",
@@ -126,6 +135,21 @@
     "hasExpenses": false,
     "hasMargin": false,
     "hasTaxBreakdown": true,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasOverview": false
+  },
+  {
+    "email": "overview.only@example.test",
+    "fullName": "Olive Overview",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": false,
+    "hasTimesheet": false,
+    "hasExpenses": false,
+    "hasMargin": false,
+    "hasTaxBreakdown": false,
+    "hasOverview": true,
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z"
   },
@@ -140,7 +164,8 @@
     "hasMargin": false,
     "hasTaxBreakdown": false,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasOverview": false
   },
   {
     "email": "revocable@example.test",
@@ -153,6 +178,7 @@
     "hasMargin": false,
     "hasTaxBreakdown": false,
     "invitedAt": "2026-08-01T09:00:00.000Z",
-    "lastSeenAt": "2026-08-20T09:00:00.000Z"
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasOverview": false
   }
 ]

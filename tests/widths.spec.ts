@@ -1,4 +1,11 @@
-import { expect, signInAs, signOutCompletely, test } from "./harness";
+import {
+  ALL_TILES,
+  expect,
+  expectExactlyTiles,
+  signInAs,
+  signOutCompletely,
+  test,
+} from "./harness";
 
 /**
  * Phone-first means desktop-never unless you say so. These are named widths,
@@ -18,6 +25,11 @@ test.describe("layout at every width", () => {
       await page.setViewportSize({ width: w.width, height: w.height });
       await page.goto("/");
       await expect(page.getByTestId("tiles")).toBeVisible();
+
+      // Every tile, not merely some: `everything@` holds every flag, so a page
+      // laid out with one tile missing would otherwise pass the overflow check
+      // below by having less on it than it should.
+      await expectExactlyTiles(page, ALL_TILES);
 
       const columns = await page
         .getByTestId("tiles")
