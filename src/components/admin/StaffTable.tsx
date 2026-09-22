@@ -29,6 +29,7 @@ function Toggle({
 }) {
   const [state, action, pending] = useActionState(toggleFlag, initial);
   const on = row[flag] === true;
+  const person = row.fullName ?? row.email;
 
   return (
     <form action={action} className="toggle-form">
@@ -47,8 +48,16 @@ function Toggle({
         }
         data-testid={`toggle-${row.email}-${flag}`}
       >
+        {/*
+          The whole accessible name of the button. It names the person the way
+          the row header does, so what is heard matches what is read, and it
+          says why a disabled one cannot be pressed — `title` does not carry
+          that, because a disabled button is not focusable and not hovered by
+          anyone using a keyboard.
+        */}
         <span className="sr-only">
-          {label} for {row.email}
+          {label} for {person}
+          {disabled ? " — cannot be changed for yourself" : ""}
         </span>
         <span aria-hidden="true">{on ? "on" : "off"}</span>
       </button>
@@ -81,7 +90,9 @@ export function StaffTable({
             {PERMISSIONS.map((p) => (
               <th scope="col" key={p.flag} className="col-toggle">
                 <span className="th-long">{p.label}</span>
-                <span className="th-short">{p.short}</span>
+                <span className="th-short" aria-hidden="true">
+                  {p.short}
+                </span>
               </th>
             ))}
             <th scope="col" className="col-toggle">

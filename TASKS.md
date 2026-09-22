@@ -25,14 +25,6 @@ parked in BLOCKED.md until their repositories have been read.
 
 ## Next up — Power Suite hygiene
 
-### 1. Accessibility pass on the admin table
-The toggles are buttons with `aria-pressed` and a visually hidden label. Check
-the table's header association, focus order along a row, and that a screen
-reader announces which person a toggle belongs to.
-
-**Done when** an automated axe pass runs against `/` and `/admin` with no
-violations at 390 and 1440, and the screenshots are attached.
-
 ### 2. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
 the admin screen is the way access is granted, the script is a loaded gun: it
@@ -175,6 +167,43 @@ does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
 
 ## Done
 
+- **Accessibility pass on the admin table** — `overnight/auto-2026-09-13-0300`.
+  axe now runs against the sign-in card, the tiles and the staff screen at 390
+  and 1440, with the screenshot attached to each, and nothing is excluded and no
+  rule is switched off. It found six things. Five were contrast: the "off" pill's
+  label at 2.42:1, "invited, not signed in" at 4.42:1, a deactivated person's
+  name and address at 2.58:1, and the faded "on" pills on a deactivated row at
+  1.87:1. That last one is why opacity is gone from the table — the only value
+  that passes is 0.88, at which nothing looks faded, so the pill is drained and
+  its label left dark instead. The sixth was that the page every stranger reaches
+  had no level-one heading at all: the sign-in card's "Power Suite" was a div and
+  is now the `h1` it already looked like. Colours moved only where axe named
+  them, and one dead rule went with them — `.toggle.off[disabled]` failed at
+  1.81:1 and styles a state that cannot occur, since the only disabled toggles
+  are your own Admin and your own Active and neither is off for anybody who can
+  load the screen.
+  Then the three things axe cannot see. The column headings were abbreviated with
+  `display: none` below 720px, so a screen reader announced "Marg" for every
+  toggle in that column; the full word is now visually hidden rather than removed
+  and is what is announced at both widths, while what is drawn stays short — and
+  the test measures the boxes rather than reading innerText, because at 390 both
+  spellings are in the markup and that is the whole trick. A toggle's name now
+  says the person the way the row header does — "Invoices for Nora Noflags", not
+  their address — and a disabled one says why, since a disabled button is not
+  focusable and never shows its `title` to a keyboard. Tab walks a row left to
+  right across all seven and off the end onto the next person, which is asserted
+  rather than assumed.
+  One scan lives in `admin.spec.ts` rather than with the others: axe reads colour
+  off what is rendered, and a populated audit trail needs a write, so it is
+  scanned inside the serial suite that is already allowed to write instead of a
+  second suite resetting the shared store beside it. Every fix was watched to
+  fail without it — reverting the five colours, the heading, the `h1` and the
+  toggle names fails six of the new checks.
+  `@axe-core/playwright` is a devDependency and reaches no browser;
+  `check:secrets` still passes. The admin screen does still scroll sideways at
+  390 — that predates this, is recorded against the audit trail tests, and is a
+  change to how the screen looks rather than an accessibility violation, so it
+  is left for a person. No migration; nothing waiting on a person. 147 checks.
 - **Ported Tax Breakdown** — `overnight/auto-2026-09-12-0300`. The second app
   folded in, and the last one that touches no data. Most of the work was step 1
   of the port checklist: `taxbreakdown.html` carries ten references to MSAL,
