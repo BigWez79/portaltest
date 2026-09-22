@@ -70,6 +70,13 @@ export const timesheetStore = {
       .sort((a, b) => b.entryDate.localeCompare(a.entryDate));
   },
 
+  /** Every entry, for the overview when an admin is looking. RLS returns the
+      same set against the real table through "admins read every entry". */
+  async allEntries(): Promise<TimesheetEntry[]> {
+    const doc = await load();
+    return [...doc.entries].sort((a, b) => b.entryDate.localeCompare(a.entryDate));
+  },
+
   async locksFor(email: string): Promise<string[]> {
     const doc = await load();
     return doc.locks.filter((l) => l.staffEmail === email).map((l) => l.claimMonth);

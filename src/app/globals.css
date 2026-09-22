@@ -3189,3 +3189,302 @@ tr.inactive .toggle.on {
     text-align: left;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   My Profile
+
+   Ported from myprofile.html. Grouped by what each part is for — the business,
+   VAT, where payment goes, how invoices are numbered — rather than as one long
+   column of boxes, because somebody comes here to change one thing.
+
+   The panel at the top is the point of the page: Invoices stamps these details
+   onto every invoice, and the live suite lets one go out with them blank.
+   --------------------------------------------------------------------------- */
+
+.pf-app {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pf-status {
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pf-status.is-ready {
+  background: #e7f6ee;
+  border-color: #bfe6d1;
+}
+
+.pf-status.is-missing {
+  background: #fdf4e3;
+  border-color: #f2ddc2;
+}
+
+.pf-ready {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.pf-missing {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.9rem;
+}
+
+.pf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pf-card {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
+}
+
+.pf-h {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.pf-wide {
+  grid-column: span 2;
+}
+
+.pf-quiet {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pf-app button {
+  position: relative;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  padding: 11px 18px;
+  width: auto;
+  white-space: nowrap;
+}
+
+.pf-app button.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+  font-weight: 650;
+}
+
+.pf-app button.primary:hover {
+  filter: brightness(1.08);
+}
+
+.pf-app button[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .pf-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-wide {
+    grid-column: span 1;
+  }
+
+  .pf-card {
+    padding: 17px 18px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Monthly Overview
+
+   Ported from overview.html. A month picker, four figures, where the time went,
+   and — for an admin — everybody. The bars are drawn against the largest row
+   rather than against the total, so the shortest is still visible instead of a
+   sliver nobody can read.
+   --------------------------------------------------------------------------- */
+
+.ov-app {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ov-picker {
+  max-width: 260px;
+}
+
+.ov-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.ov-card {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
+}
+
+.ov-h {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ov-bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.ov-bars li {
+  display: grid;
+  grid-template-columns: minmax(110px, 170px) 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.ov-bar-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.ov-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand) 0%, var(--brand-deep) 100%);
+}
+
+.ov-bar-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ov-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.ov-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.ov-table th,
+.ov-table td {
+  text-align: left;
+  padding: 9px 16px 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.ov-table thead th {
+  position: relative;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-top: 0;
+}
+
+.ov-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ov-table .ov-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 0;
+}
+
+.ov-quiet,
+.ov-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.ov-empty {
+  font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+  .ov-bars li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .ov-bar-track {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .ov-card {
+    padding: 17px 18px;
+  }
+}

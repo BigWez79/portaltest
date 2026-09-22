@@ -1,5 +1,10 @@
 {
-  "locks": [{ "staffEmail": "timesheet.only@example.test", "claimMonth": "2026-06" }],
+  "locks": [
+    {
+      "staffEmail": "timesheet.only@example.test",
+      "claimMonth": "2026-06"
+    }
+  ],
   "entries": [
     {
       "id": "70000001-0000-4000-8000-000000000001",
@@ -55,6 +60,28 @@
       "hours_worked": 3,
       "work_description": "Somebody else's afternoon",
       "submitted_on": "2026-07-15T16:00:00.000Z"
+    },
+    {
+      "id": "70000006-0000-4000-8000-000000000006",
+      "staff_email": "overview.only@example.test",
+      "staff_name": "Olive Overview",
+      "entry_date": "2026-07-09",
+      "activity_type": "Routine / BAU",
+      "project": "Month end",
+      "hours_worked": 4,
+      "work_description": "Reconciliation",
+      "submitted_on": "2026-07-09T15:00:00.000Z"
+    },
+    {
+      "id": "70000007-0000-4000-8000-000000000007",
+      "staff_email": "overview.only@example.test",
+      "staff_name": "Olive Overview",
+      "entry_date": "2026-07-10",
+      "activity_type": "Annual Leave",
+      "project": "",
+      "hours_worked": 8,
+      "work_description": "",
+      "submitted_on": "2026-07-10T08:00:00.000Z"
     }
   ]
 }

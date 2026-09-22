@@ -16,7 +16,7 @@ const FLAGGED = [
   { path: "/expenses", holder: "expenses.only@example.test", landmark: "expenses-app" },
   { path: "/margin", holder: "margin.only@example.test", landmark: "margin-calculator" },
   { path: "/tax-breakdown", holder: "tax.only@example.test", landmark: "tax-calculator" },
-  { path: "/overview", holder: "overview.only@example.test", landmark: "not-ported" },
+  { path: "/overview", holder: "overview.only@example.test", landmark: "overview-app" },
 ];
 
 test.describe("app routes", () => {
@@ -58,7 +58,8 @@ test.describe("app routes", () => {
     await signInAs(page, "no.flags@example.test");
     const res = await page.goto("/profile");
     expect(res?.status()).toBe(200);
-    await expect(page.getByTestId("not-ported")).toBeVisible();
+    // Ported now, so the app itself is the landmark rather than the placeholder.
+    await expect(page.getByTestId("profile-app")).toBeVisible();
   });
 
   test("/profile 404s for a deactivated person", async ({ page }) => {

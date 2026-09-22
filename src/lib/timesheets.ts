@@ -47,6 +47,25 @@ export async function listEntries(email: string): Promise<TimesheetEntry[]> {
   return (data ?? []).map((r) => toEntry(r as Record<string, unknown>));
 }
 
+/**
+ * Every entry the caller may read — their own, or everybody's for an active
+ * admin. The query is identical either way: the policy decides, not a branch
+ * here. The `isAdmin` argument exists only so the fixture store can behave the
+ * same way, because a file has no row level security of its own.
+ */
+export async function listVisibleEntries(
+  email: string,
+  isAdmin: boolean,
+): Promise<TimesheetEntry[]> {
+  if (fixture()) {
+    const s = await store();
+    return isAdmin ? s.allEntries() : s.entriesFor(email.toLowerCase());
+  }
+  // No branch: "read own entries" and "admins read every entry" are both
+  // select policies on the same table, so one query returns the right set.
+  return listEntries(email);
+}
+
 export async function lockedMonths(email: string): Promise<string[]> {
   const key = email.toLowerCase();
   if (!key) return [];
