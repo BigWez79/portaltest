@@ -39,6 +39,32 @@ round.
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
 
+### 4. A 404 and a crash that look like the product
+There is no `not-found.tsx` and no `error.tsx` anywhere in `src/`. Both cases
+render Next's own page today.
+
+That matters more here than it usually would. Rule 4 says a route 404s for
+anybody without its flag, and that 404 is not an edge case — it is the designed
+answer to somebody trying `/invoices` to see what happens. What they get is an
+unstyled Next page, which tells them two things we would rather not say: that
+they reached something real, and what it is built with.
+
+Add `src/app/not-found.tsx`, `src/app/error.tsx`, and `global-error.tsx` — the
+last one catches a failure in the root layout, which `error.tsx` cannot. They
+should look like the rest of the suite and say nothing about what was missing or
+why: no path, no flag name, no stack, no "you do not have access to this".
+
+`error.tsx` is a client component and takes `{ error, reset }`. Log the digest,
+show the person nothing but a way back to the portal.
+
+Note for the test: the harness fails any test whose page logged a console error,
+so exercising `error.tsx` needs `test.use({ tolerate: [...] })` in the same
+spirit as the 404 tests already do — declare it, do not turn the check off.
+
+**Done when** a signed-in request to a route the person has no flag for renders
+the suite's own 404 rather than Next's; a test asserts the body names no route,
+no flag and no framework; the 404 renders at 390 and 1440 with screenshots
+attached; and `npm run verify` passes.
 ### 5. Content-Security-Policy
 `next.config.ts` sets `X-Frame-Options`, `X-Content-Type-Options`,
 `Referrer-Policy` and `Permissions-Policy`, and `tests/hardening.spec.ts`
@@ -140,6 +166,32 @@ does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
 
 ## Done
 
+- **A Content-Security-Policy, with a nonce** — `overnight/auto-2026-09-16-0300`.
+  The sixth header, and the one the whole project was an argument for: no
+  Supabase key is in the bundle and no token is in browser storage, but nothing
+  made a script on the page unable to reach anything — that was a property of the
+  code holding. `default-src 'self'` and no `'unsafe-inline'` on `script-src`.
+  The nonce works under Next 16.3.2 and Turbopack: `src/proxy.ts` mints 128 bits
+  per request, sets the policy on the request as well as the response, and Next
+  reads it back out to stamp every script tag — asserted by reading the served
+  HTML, because a browser blanks the `nonce` attribute once it has read it. Two
+  callers of one `contentSecurityPolicy()` rather than two literals: the proxy's
+  nonced one, and a nonce-free floor in `next.config.ts` under the chunks, the
+  fonts and the logo, which the proxy's matcher skips. Where both apply the
+  proxy's wins, which was checked rather than assumed. Three things came out of
+  it. Next's own 404 page carries a `<style>` element built on the client, so it
+  takes no nonce — a hash names that one string, and when Next changes it every
+  404 test fails on a console error, which is the check. Nothing is prerendered
+  any more: Next's 404 was baked at build time with no nonce and arrived with the
+  console full of violations, so the root layout is `force-dynamic` — every other
+  route already was. And `style-src-attr 'unsafe-inline'`, because React writes a
+  `style` attribute for anything computed and no nonce or hash mechanism reaches
+  an attribute; `style-src` itself stays strict. HSTS is Vercel's and was left
+  alone — asserting it here could only pass by accepting its absence over http on
+  127.0.0.1. `'unsafe-eval'` and inline styles are allowed under `next dev` only,
+  keyed on NODE_ENV, which the suite never runs under. Five new checks, and both
+  of the ones that matter were watched to fail against `script-src 'self'
+  'unsafe-inline'`. No migration; nothing waiting on a person. 138 checks.
 - **A 404 and a crash that look like the product** — `overnight/auto-2026-09-15-0300`.
   Rule 4's 404 is not an edge case, it is the answer somebody gets for trying
   `/invoices` to see what happens, and until now it was answered by Next's own

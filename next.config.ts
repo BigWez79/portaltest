@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { contentSecurityPolicy } from "./src/lib/csp";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -27,6 +28,17 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
+          /**
+           * The floor. `src/proxy.ts` replaces this with the same policy plus
+           * the request's nonce on everything it runs on, which is everything
+           * that renders; what is left here is the chunks, the fonts and the
+           * logo, none of which are documents and none of which need one.
+           *
+           * Both layers come from `contentSecurityPolicy` so there is one
+           * policy to change, not two — and a response that somehow misses the
+           * proxy gets the stricter of the two rather than none.
+           */
+          { key: "Content-Security-Policy", value: contentSecurityPolicy() },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
