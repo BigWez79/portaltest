@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FlagSnapshot } from "./staff-audit";
@@ -42,13 +43,11 @@ async function read(email: string): Promise<AuditRecord[]> {
   }
 }
 
-let writeSeq = 0;
-
 /** Write, then rename — a reader gets the whole old file or the whole new one. */
 async function write(email: string, records: AuditRecord[]): Promise<void> {
   await mkdir(DIR, { recursive: true });
   const target = fileFor(email);
-  const pending = `${target}.${process.pid}.${++writeSeq}.tmp`;
+  const pending = `${target}.${randomUUID()}.tmp`;
   await writeFile(pending, JSON.stringify(records), "utf8");
   await rename(pending, target);
 }

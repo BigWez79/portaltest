@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { StaffRow } from "./staff";
@@ -36,13 +37,11 @@ async function load(): Promise<StaffRow[]> {
  * away whatever the admin suite had just written. A rename is atomic: a reader
  * gets the whole old file or the whole new one.
  */
-let writeSeq = 0;
-
 async function save(rows: StaffRow[]): Promise<void> {
   await mkdir(path.dirname(WORKING), { recursive: true });
   // A counter, not a timestamp: two saves in the same millisecond would pick
   // the same name, and the second rename would find its file already moved.
-  const pending = `${WORKING}.${process.pid}.${++writeSeq}.tmp`;
+  const pending = `${WORKING}.${randomUUID()}.tmp`;
   await writeFile(pending, JSON.stringify(rows, null, 2), "utf8");
   await rename(pending, WORKING);
 }
