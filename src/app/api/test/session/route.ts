@@ -53,6 +53,7 @@ export async function POST() {
   const { auditStore } = await import("@/lib/audit-store");
   const { expenseStore } = await import("@/lib/expenses-store");
   const { invoiceStore } = await import("@/lib/invoices-store");
+  const { timesheetStore } = await import("@/lib/timesheets-store");
   // All of them, or a suite inherits what the last one wrote — the audit
   // entries, and now the expenses a write test left behind.
   await Promise.all([
@@ -60,6 +61,7 @@ export async function POST() {
     auditStore.reset(),
     expenseStore.reset(),
     invoiceStore.reset(),
+    timesheetStore.reset(),
   ]);
   return NextResponse.json({ ok: true });
 }

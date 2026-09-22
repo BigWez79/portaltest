@@ -1,0 +1,60 @@
+{
+  "locks": [{ "staffEmail": "timesheet.only@example.test", "claimMonth": "2026-06" }],
+  "entries": [
+    {
+      "id": "70000001-0000-4000-8000-000000000001",
+      "staff_email": "timesheet.only@example.test",
+      "staff_name": "Tessa Timesheet",
+      "entry_date": "2026-07-15",
+      "activity_type": "Project work",
+      "project": "Argyle rollout",
+      "hours_worked": 6.5,
+      "work_description": "Data migration dry run",
+      "submitted_on": "2026-07-15T17:02:00.000Z"
+    },
+    {
+      "id": "70000002-0000-4000-8000-000000000002",
+      "staff_email": "timesheet.only@example.test",
+      "staff_name": "Tessa Timesheet",
+      "entry_date": "2026-07-15",
+      "activity_type": "Meeting",
+      "project": "Argyle rollout",
+      "hours_worked": 1.5,
+      "work_description": "Weekly catch-up",
+      "submitted_on": "2026-07-15T17:03:00.000Z"
+    },
+    {
+      "id": "70000003-0000-4000-8000-000000000003",
+      "staff_email": "timesheet.only@example.test",
+      "staff_name": "Tessa Timesheet",
+      "entry_date": "2026-07-14",
+      "activity_type": "Annual Leave",
+      "project": "",
+      "hours_worked": 8,
+      "work_description": "",
+      "submitted_on": "2026-07-14T08:00:00.000Z"
+    },
+    {
+      "id": "70000004-0000-4000-8000-000000000004",
+      "staff_email": "timesheet.only@example.test",
+      "staff_name": "Tessa Timesheet",
+      "entry_date": "2026-06-24",
+      "activity_type": "Development",
+      "project": "Borough portal",
+      "hours_worked": 7,
+      "work_description": "Report builder",
+      "submitted_on": "2026-06-24T18:10:00.000Z"
+    },
+    {
+      "id": "70000005-0000-4000-8000-000000000005",
+      "staff_email": "everything@example.test",
+      "staff_name": "Ada Everything",
+      "entry_date": "2026-07-15",
+      "activity_type": "Admin",
+      "project": "Not yours",
+      "hours_worked": 3,
+      "work_description": "Somebody else's afternoon",
+      "submitted_on": "2026-07-15T16:00:00.000Z"
+    }
+  ]
+}

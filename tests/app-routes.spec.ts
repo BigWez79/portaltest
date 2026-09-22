@@ -12,7 +12,7 @@ import { expect, signInAs, signOutCompletely, test } from "./harness";
  */
 const FLAGGED = [
   { path: "/invoices", holder: "invoices.only@example.test", landmark: "invoices-app" },
-  { path: "/timesheets", holder: "timesheet.only@example.test", landmark: "not-ported" },
+  { path: "/timesheets", holder: "timesheet.only@example.test", landmark: "timesheets-app" },
   { path: "/expenses", holder: "expenses.only@example.test", landmark: "expenses-app" },
   { path: "/margin", holder: "margin.only@example.test", landmark: "margin-calculator" },
   { path: "/tax-breakdown", holder: "tax.only@example.test", landmark: "tax-calculator" },

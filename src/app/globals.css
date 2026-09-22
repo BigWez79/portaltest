@@ -2913,3 +2913,279 @@ tr.inactive .toggle.on {
     margin-left: 0;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Timesheets
+
+   Ported from timesheet.html — the largest file on the live suite and the one
+   people open daily. Its shape is a month, then the days in it, then the
+   activities on each day, because that is the order somebody checking their
+   own week reads it in. A day is several rows: a meeting, some project work,
+   an hour of admin.
+
+   Leave and sickness are marked rather than counted twice — the month total
+   includes them, the worked figure does not, and people need both numbers for
+   different reasons.
+   --------------------------------------------------------------------------- */
+
+.ts-app {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.ts-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.ts-card {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
+}
+
+.ts-h {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ts-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 16px;
+}
+
+.ts-wide {
+  grid-column: span 2;
+}
+
+/* Leave has no hours box — the number is fixed, so the space says so rather
+   than offering a field that ignores what is typed into it. */
+.ts-fixed {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  background: var(--panel2);
+}
+
+.ts-month-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ts-month-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.015em;
+  color: var(--brand-deep);
+}
+
+.ts-lock {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: #eef4ff;
+  border: 1px solid #cfddf7;
+  color: var(--brand-dk);
+  font-weight: 600;
+}
+
+/* a day ------------------------------------------------------------------- */
+
+.ts-day {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.ts-day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.ts-day-name {
+  font-weight: 650;
+  font-size: 0.95rem;
+}
+
+.ts-day-hours {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.ts-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.ts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.ts-table th,
+.ts-table td {
+  text-align: left;
+  padding: 8px 16px 8px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.ts-table thead th {
+  position: relative;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-top: 0;
+}
+
+.ts-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ts-table .ts-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ts-table td.ts-row-actions {
+  padding-right: 0;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ts-away {
+  margin-left: 8px;
+}
+
+.ts-inline {
+  display: inline;
+}
+
+.ts-close {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.ts-quiet,
+.ts-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.ts-empty {
+  font-size: 0.95rem;
+}
+
+/* buttons, from the suite's set ------------------------------------------- */
+
+.ts-app button {
+  position: relative;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  padding: 11px 18px;
+  width: auto;
+  white-space: nowrap;
+}
+
+.ts-app button.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+  font-weight: 650;
+}
+
+.ts-app button.primary:hover {
+  filter: brightness(1.08);
+}
+
+.ts-app button.quiet {
+  background: var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 7px 13px;
+}
+
+.ts-app button.quiet:hover {
+  background: var(--ink);
+}
+
+.ts-app button.quiet.danger:hover {
+  background: var(--err);
+}
+
+.ts-app button[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .ts-app {
+    gap: 16px;
+  }
+
+  .ts-card {
+    padding: 17px 18px;
+    gap: 14px;
+  }
+
+  .ts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ts-wide {
+    grid-column: span 1;
+  }
+
+  .ts-row-actions {
+    text-align: left;
+  }
+}
