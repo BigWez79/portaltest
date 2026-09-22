@@ -228,7 +228,7 @@ button {
   font-family: var(--font-sora), sans-serif;
   font-weight: 700;
   font-size: 19px;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
 }
 
 /* messages */
@@ -592,8 +592,19 @@ button[disabled] {
 }
 
 @media (max-width: 720px) {
+  /* Not display:none. The column heading is announced with every toggle in the
+     column, and "Marg" is not the name of anything. The full word stays in the
+     accessible name at every width; only what is drawn gets shortened. */
   .th-long {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
   .th-short {
     display: inline;
@@ -634,16 +645,20 @@ button[disabled] {
   display: inline-block;
   margin-top: 3px;
   font-size: 11px;
-  color: #8a6d1f;
+  /* 4.75:1 on the amber. The shade this replaced was 4.42:1. */
+  color: #85681a;
   background: #fbf3dc;
   border: 1px solid #f0e0b0;
   border-radius: 5px;
   padding: 1px 6px;
 }
 
+/* Greyed, but readable: 4.84:1 rather than the 2.58:1 this was. The name drops
+   to the same muted token the address already uses, which is still a plain step
+   down from --ink and needs no fourth grey inventing. */
 tr.inactive .person-name,
 tr.inactive .person-email {
-  color: #9aa1b6;
+  color: var(--muted);
 }
 
 .toggle-form {
@@ -664,7 +679,9 @@ tr.inactive .person-email {
   border-radius: 7px;
   border: 1px solid var(--line);
   background: #f4f6fc;
-  color: #98a0b7;
+  /* 4.66:1 on the pill's own background. The slate this replaced read 2.42:1,
+     which at 10.5px uppercase is the hardest label on the screen to read. */
+  color: #666e8c;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
@@ -802,9 +819,15 @@ tr.inactive .person-email {
 }
 
 /* An inactive person's app flags are moot — say so visually rather than showing
-   four confident "on" pills against a greyed name. */
+   four confident "on" pills against a greyed name.
+   This was `opacity: 0.42`, which put the label at 1.87:1. Opacity is the wrong
+   tool: the only value that passes is 0.88, at which nothing looks faded. The
+   pill is drained instead and its label left dark — still plainly a quieter
+   blue than an active row's, and still plainly not the slate of an "off". */
 tr.inactive .toggle.on {
-  opacity: 0.42;
+  background: #f0f4fc;
+  border-color: #d5dff3;
+  color: #4a5e94;
 }
 
 /* Disabled-and-on must not read as off. Keep the colour, soften the edge. */
@@ -814,9 +837,11 @@ tr.inactive .toggle.on {
   border-style: dashed;
 }
 
-.toggle.off[disabled] {
-  color: #b3b9cb;
-}
+/* There was a `.toggle.off[disabled]` rule here, lightening an off pill further
+   when it could not be changed. It read 1.81:1, and it styles a state that
+   cannot happen: the only disabled toggles are your own Admin and your own
+   Active, and neither is off for anybody who can load this screen. The dashed
+   border above is what says "disabled". */
 
 /* ---------------------------------------------------------------------------
    Margin & Profit Split
