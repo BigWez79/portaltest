@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import {
   lockClaimMonth,
   removeExpense,
@@ -70,6 +70,15 @@ export function ExpensesApp({
     return { amount: mileageAmount(m, prior, rates), prior };
   }, [type, miles, date, rows, rates, editing]);
 
+  // A save that succeeded leaves the form sitting in "Edit expense" with the
+  // old row still loaded, which reads as though nothing happened. Drop back to
+  // a blank Add form once the server says it took.
+  useEffect(() => {
+    if (form.status === "ok" && editing) clearEdit();
+    // clearEdit is stable for this component's lifetime
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.status]);
+
   const isLocked = (month: string) => locked.includes(month);
 
   function startEdit(row: Expense) {
@@ -94,7 +103,10 @@ export function ExpensesApp({
         <form action={formAction} className="exp-form" data-testid="expense-form">
           {editing ? <input type="hidden" name="id" value={editing.id} /> : null}
 
-          <div className="exp-grid">
+          {/* Keyed on the row being edited so React rebuilds the uncontrolled
+              fields when you switch rows. Without it, defaultValue is only read
+              on first mount and Edit appears to do nothing to them. */}
+          <div className="exp-grid" key={editing?.id ?? "new"}>
             <label className="field">
               <span className="field-label">Date</span>
               <input
@@ -140,11 +152,21 @@ export function ExpensesApp({
                 </label>
                 <label className="field">
                   <span className="field-label">From</span>
-                  <input type="text" name="fromLocation" data-testid="expense-from" />
+                  <input
+                    type="text"
+                    name="fromLocation"
+                    defaultValue={editing?.fromLocation ?? ""}
+                    data-testid="expense-from"
+                  />
                 </label>
                 <label className="field">
                   <span className="field-label">To</span>
-                  <input type="text" name="toLocation" data-testid="expense-to" />
+                  <input
+                    type="text"
+                    name="toLocation"
+                    defaultValue={editing?.toLocation ?? ""}
+                    data-testid="expense-to"
+                  />
                 </label>
               </>
             ) : (
@@ -157,12 +179,17 @@ export function ExpensesApp({
                     step="0.01"
                     min="0"
                     required
+                    defaultValue={editing && editing.expenseType !== "Mileage" ? editing.amount : ""}
                     data-testid="expense-amount"
                   />
                 </label>
                 <label className="field">
                   <span className="field-label">Receipt held</span>
-                  <select name="receiptHeld" defaultValue="yes" data-testid="expense-receipt">
+                  <select
+                    name="receiptHeld"
+                    defaultValue={editing?.receiptHeld === false ? "no" : "yes"}
+                    data-testid="expense-receipt"
+                  >
                     <option value="yes">Yes</option>
                     <option value="no">No</option>
                   </select>
@@ -172,12 +199,22 @@ export function ExpensesApp({
 
             <label className="field exp-wide">
               <span className="field-label">Reason</span>
-              <input type="text" name="reason" data-testid="expense-reason" />
+              <input
+                type="text"
+                name="reason"
+                defaultValue={editing?.reason ?? ""}
+                data-testid="expense-reason"
+              />
             </label>
 
             <label className="field exp-wide">
               <span className="field-label">Notes</span>
-              <input type="text" name="notes" data-testid="expense-notes" />
+              <input
+                type="text"
+                name="notes"
+                defaultValue={editing?.notes ?? ""}
+                data-testid="expense-notes"
+              />
             </label>
           </div>
 

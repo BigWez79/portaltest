@@ -1627,16 +1627,14 @@ tr.inactive .toggle.on {
    the thing you are changing. One column instead: the form, then each claim
    month newest first, so editing a row and seeing it update needs no tab.
 
-   Controls borrow the suite's own vocabulary rather than inventing one: the
-   brand gradient for the action that commits, a bordered quiet button for the
-   ones that do not, and the same field treatment the Margin app uses so a
-   select and a date input are the same object at a glance.
+   Spacing runs on one scale: 8 inside a field, 16 between fields, 20 between
+   blocks in a card, 22 between cards. Nothing here picks its own number.
    --------------------------------------------------------------------------- */
 
 .exp-app {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
 }
 
 .exp-card {
@@ -1644,10 +1642,10 @@ tr.inactive .toggle.on {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 20px 22px;
+  padding: 22px 24px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   box-shadow:
     0 1px 0 rgba(0, 0, 0, 0.02),
     0 20px 44px -30px rgba(16, 24, 58, 0.4);
@@ -1657,7 +1655,7 @@ tr.inactive .toggle.on {
   margin: 0;
   font-size: 17px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
   color: var(--ink);
   display: flex;
   align-items: center;
@@ -1666,10 +1664,18 @@ tr.inactive .toggle.on {
 
 /* form ------------------------------------------------------------------- */
 
+.exp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 210px, not 180: at 1280 five fields across left From and To wider than the
+   text anybody types into them, and the row read as five empty boxes. */
 .exp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
 }
 
 .exp-wide {
@@ -1679,7 +1685,8 @@ tr.inactive .toggle.on {
 .exp-app .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .exp-app input[type="text"],
@@ -1692,23 +1699,24 @@ tr.inactive .toggle.on {
   background: var(--card);
   border: 1px solid var(--line);
   color: var(--ink);
-  padding: 10px 12px;
+  padding: 11px 13px;
   border-radius: 10px;
   outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
 }
 
 .exp-app select {
-  /* A native select is a different height from a text input on macOS unless
-     the appearance is taken over. Same box, same baseline, own chevron. */
+  /* A native select is a different height from a text input on macOS unless the
+     appearance is taken over. Same box, same baseline, own chevron. */
   appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position:
-    calc(100% - 17px) calc(50% + 1px),
-    calc(100% - 12px) calc(50% + 1px);
+    calc(100% - 18px) calc(50% + 1px),
+    calc(100% - 13px) calc(50% + 1px);
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
-  padding-right: 34px;
+  padding-right: 36px;
 }
 
 .exp-app input:focus,
@@ -1729,17 +1737,18 @@ tr.inactive .toggle.on {
 
 /* buttons ---------------------------------------------------------------- */
 
-/* position: relative so the .sr-only spans inside these buttons have a
-   containing block. .sr-only is position: absolute, and without a positioned
-   ancestor it resolves against the initial containing block — escaping the
-   table's scroll container and pushing the whole document sideways by the
-   width of text nobody can see. That is what failed the 390px check. */
 .exp-app button {
+  /* position: relative so the .sr-only spans inside have a containing block.
+     .sr-only is position: absolute, and without a positioned ancestor it
+     resolves against the initial containing block — escaping the table's
+     scroll container and pushing the whole document sideways by the width of
+     text nobody can see. That is what failed the 390px width check. */
   position: relative;
   font-size: 0.9rem;
   border-radius: 10px;
-  padding: 10px 16px;
+  padding: 11px 18px;
   width: auto;
+  white-space: nowrap;
 }
 
 .exp-app button.primary {
@@ -1752,35 +1761,36 @@ tr.inactive .toggle.on {
   filter: brightness(1.08);
 }
 
+/* Solid navy, white text. These used to be outlined in the line colour with
+   muted grey text, which on a white card read as disabled rather than as a
+   button you may press. */
 .exp-app button.quiet {
-  background: transparent;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  font-weight: 550;
-  font-size: 0.84rem;
-  padding: 7px 12px;
+  background: var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 14px;
 }
 
 .exp-app button.quiet:hover {
-  border-color: var(--brand);
-  color: var(--brand-dk);
+  background: var(--ink);
 }
 
 .exp-app button.quiet.danger:hover {
-  border-color: var(--err);
-  color: var(--err);
+  background: var(--err);
 }
 
 .exp-app button[disabled] {
-  filter: grayscale(0.4);
+  opacity: 0.55;
   cursor: default;
+  filter: none;
 }
 
 /* the mileage preview ---------------------------------------------------- */
 
 .exp-preview {
   margin: 0;
-  padding: 11px 14px;
+  padding: 13px 16px;
   border-radius: 12px;
   background: var(--bg);
   border: 1px solid var(--line);
@@ -1790,7 +1800,7 @@ tr.inactive .toggle.on {
 
 .exp-quiet {
   color: var(--muted);
-  font-size: 0.84rem;
+  font-size: 0.85rem;
 }
 
 .exp-actions {
@@ -1813,7 +1823,8 @@ tr.inactive .toggle.on {
 .exp-total {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 19px;
+  font-size: 20px;
+  letter-spacing: -0.015em;
   color: var(--brand-deep);
 }
 
@@ -1829,13 +1840,13 @@ tr.inactive .toggle.on {
   font-weight: 650;
 }
 
-/* min-width: 0 is what makes the overflow actually scroll. A flex item defaults
-   to min-width: auto, which is the width of its content — so the table pushes
-   the card open and the whole page scrolls sideways instead of just this box.
-   The 390px width check is what catches it. */
+/* min-width: 0 is what lets the overflow actually scroll: a flex item defaults
+   to min-width: auto, which is the width of its content. */
 .exp-scroll {
   overflow-x: auto;
   min-width: 0;
+  margin-inline: -4px;
+  padding-inline: 4px;
 }
 
 .exp-table {
@@ -1847,7 +1858,7 @@ tr.inactive .toggle.on {
 .exp-table th,
 .exp-table td {
   text-align: left;
-  padding: 10px 14px 10px 0;
+  padding: 12px 18px 12px 0;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
@@ -1860,26 +1871,38 @@ tr.inactive .toggle.on {
   text-transform: uppercase;
   color: var(--muted);
   white-space: nowrap;
+  padding-top: 0;
 }
 
 .exp-table tbody tr:last-child td {
   border-bottom: none;
+  padding-bottom: 0;
 }
 
-/* The header sits over the numbers, so it aligns with them. th and td both
-   carry the class for that reason. */
+/* The amount is the column the eye goes to, so it sits hard against the
+   actions rather than floating in the middle of the row. */
 .exp-table .exp-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  padding-right: 14px;
+  font-weight: 650;
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 18px;
+}
+
+/* No width: 1% here. A 1% cell collapses to a few pixels and its flex children
+   then paint straight over the amount beside it — the figure was still in the
+   DOM, just hidden behind two buttons. nowrap sizes it to the buttons instead. */
+.exp-table td.exp-row-actions {
+  padding-right: 0;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .exp-row-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  padding-right: 0;
 }
 
 .exp-inline {
@@ -1891,20 +1914,19 @@ tr.inactive .toggle.on {
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
-  padding-top: 2px;
 }
 
 /* rates ------------------------------------------------------------------ */
 
 .exp-rates {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 14px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
   align-items: end;
 }
 
 /* Without this the button is a grid item and stretches to a full column,
-   which makes the least important action on the page the widest thing on it. */
+   making the least important action on the page the widest thing on it. */
 .exp-rates button {
   justify-self: start;
 }
@@ -1915,8 +1937,18 @@ tr.inactive .toggle.on {
 }
 
 @media (max-width: 640px) {
+  .exp-app {
+    gap: 16px;
+  }
+
   .exp-card {
-    padding: 16px 17px;
+    padding: 18px;
+    gap: 16px;
+  }
+
+  .exp-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .exp-row-actions {
@@ -1925,6 +1957,6 @@ tr.inactive .toggle.on {
 
   .exp-table th,
   .exp-table td {
-    padding-right: 10px;
+    padding-right: 12px;
   }
 }
