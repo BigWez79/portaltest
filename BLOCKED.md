@@ -48,8 +48,26 @@ request. Do not work around an item on this list, and do not re-queue one.
 
 ## Release
 
-- **Merging.** The machine opens pull requests. It never merges and never pushes
-  to `main`.
+- **Merging.** An attended session may merge a green `overnight/*` pull request
+  into `main` when a person has asked for it in that session. The unattended
+  runner never merges, never pushes to `main`, and never merges its own work.
+  Closing a superseded pull request follows the same rule.
+
+  Attended is the whole of it. The 03:00 job opens pull requests with nobody
+  watching; a runner that could also merge would be approving its own work, and
+  the two stalls this repository has had would have shipped five near-identical
+  implementations instead of stacking them somewhere a person could see them.
+
+  Green is the other half, and it is structural rather than a promise: `main`
+  requires the `verify` check, so a red pull request cannot be merged by anyone.
+  If that protection is ever removed, this permission goes with it — the rule
+  was written assuming the check is what stops a bad merge, not good intentions.
+
+  Two things stay out regardless. A pull request that changes `BLOCKED.md` or
+  `CLAUDE.md` is merged by a person: a machine that can merge changes to its own
+  constraints is not constrained by them. And nothing here permits a push to
+  `main` — merging is a button on a reviewed pull request, not a shortcut past
+  the branch.
 - **The domain cutover.** Moving `portal.poweranalytix.co.uk` to Vercel is one
   way and it is the front door for everyone.
 - **Retiring the old static portal.** The v2.0 file is archived on a branch, not

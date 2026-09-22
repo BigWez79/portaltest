@@ -20,7 +20,11 @@ export function SignInCard({ error }: { error?: string }) {
               <span className="analytix">Analytix</span>
             </div>
           </div>
-          <div className="login-title" data-testid="product-name">Power Suite</div>
+          {/* The card's h1. It was a div, which left the page every stranger
+              reaches with no level-one heading at all. */}
+          <h1 className="login-title" data-testid="product-name">
+            Power Suite
+          </h1>
 
           {error === "link" ? (
             <div className="msg" role="alert" data-testid="signin-error">

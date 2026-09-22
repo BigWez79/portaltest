@@ -228,7 +228,7 @@ button {
   font-family: var(--font-sora), sans-serif;
   font-weight: 700;
   font-size: 19px;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
 }
 
 /* messages */
@@ -436,7 +436,8 @@ button[disabled] {
   gap: 18px;
 }
 
-/* A ported app that came from a wider page of its own. margin.html is 1080. */
+/* A ported app that came from a wider page of its own. margin.html is 1080,
+   taxbreakdown.html 1040; one width covers both. */
 .app-wrap.wide {
   max-width: 1080px;
 }
@@ -591,8 +592,19 @@ button[disabled] {
 }
 
 @media (max-width: 720px) {
+  /* Not display:none. The column heading is announced with every toggle in the
+     column, and "Marg" is not the name of anything. The full word stays in the
+     accessible name at every width; only what is drawn gets shortened. */
   .th-long {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
   .th-short {
     display: inline;
@@ -633,16 +645,20 @@ button[disabled] {
   display: inline-block;
   margin-top: 3px;
   font-size: 11px;
-  color: #8a6d1f;
+  /* 4.75:1 on the amber. The shade this replaced was 4.42:1. */
+  color: #85681a;
   background: #fbf3dc;
   border: 1px solid #f0e0b0;
   border-radius: 5px;
   padding: 1px 6px;
 }
 
+/* Greyed, but readable: 4.84:1 rather than the 2.58:1 this was. The name drops
+   to the same muted token the address already uses, which is still a plain step
+   down from --ink and needs no fourth grey inventing. */
 tr.inactive .person-name,
 tr.inactive .person-email {
-  color: #9aa1b6;
+  color: var(--muted);
 }
 
 .toggle-form {
@@ -663,7 +679,9 @@ tr.inactive .person-email {
   border-radius: 7px;
   border: 1px solid var(--line);
   background: #f4f6fc;
-  color: #98a0b7;
+  /* 4.66:1 on the pill's own background. The slate this replaced read 2.42:1,
+     which at 10.5px uppercase is the hardest label on the screen to read. */
+  color: #666e8c;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
@@ -801,9 +819,15 @@ tr.inactive .person-email {
 }
 
 /* An inactive person's app flags are moot — say so visually rather than showing
-   four confident "on" pills against a greyed name. */
+   four confident "on" pills against a greyed name.
+   This was `opacity: 0.42`, which put the label at 1.87:1. Opacity is the wrong
+   tool: the only value that passes is 0.88, at which nothing looks faded. The
+   pill is drained instead and its label left dark — still plainly a quieter
+   blue than an active row's, and still plainly not the slate of an "off". */
 tr.inactive .toggle.on {
-  opacity: 0.42;
+  background: #f0f4fc;
+  border-color: #d5dff3;
+  color: #4a5e94;
 }
 
 /* Disabled-and-on must not read as off. Keep the colour, soften the edge. */
@@ -813,9 +837,11 @@ tr.inactive .toggle.on {
   border-style: dashed;
 }
 
-.toggle.off[disabled] {
-  color: #b3b9cb;
-}
+/* There was a `.toggle.off[disabled]` rule here, lightening an off pill further
+   when it could not be changed. It read 1.81:1, and it styles a state that
+   cannot happen: the only disabled toggles are your own Admin and your own
+   Active, and neither is off for anybody who can load this screen. The dashed
+   border above is what says "disabled". */
 
 /* ---------------------------------------------------------------------------
    Margin & Profit Split
@@ -1631,4 +1657,456 @@ tr.inactive .toggle.on {
 .trouble .card-note {
   margin-left: auto;
   margin-right: auto;
+/* ---------------------------------------------------------------------------
+   Tax Breakdown
+
+   Ported from taxbreakdown.html on the live suite, which carries its own copy
+   of the suite palette. Three tokens Power Suite does not otherwise use — the
+   "good" green, the amber a subtotal is printed in, and the ledger's own dark
+   ground — are declared here rather than added to :root, so this app's look
+   stays inside this app.
+
+   Everything is one column on a phone by construction: the four input cards,
+   the four summary cards and the two director cards are all auto-fit grids with
+   a minimum that a 390px viewport cannot fit two of. Nothing here scrolls
+   sideways at any width, which the suite asserts.
+   --------------------------------------------------------------------------- */
+
+.tax-app {
+  --good: #1f8a5f;
+  --ledger-ink: #eef2fb;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* toolbar */
+.tax-app .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.tax-app .toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.tax-app .save-status {
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 130px;
+  text-align: right;
+}
+
+.tax-app .tax-year-tag {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  letter-spacing: 0.06em;
+}
+
+.tax-app .company-input {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--line);
+  color: var(--ink);
+  padding: 2px 0;
+  min-width: 200px;
+  max-width: 100%;
+}
+
+.tax-app .company-input:focus {
+  outline: none;
+  border-bottom-color: var(--brand);
+}
+
+/* Power Suite's global button rule is sized for the sign-in card, and the
+   global .btn-ghost is full width. This one sits in a toolbar. */
+.tax-app .btn-reset {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+}
+
+.tax-app .btn-reset:hover {
+  border-color: var(--brand);
+  color: var(--brand-dk);
+}
+
+/* the four input cards */
+.tax-app .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.tax-app .card h2 {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.tax-app .card h2 .num {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--brand-dk);
+  background: #eef4ff;
+  border: 1px solid #cfddf7;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.tax-app .director-name-input {
+  font-family: var(--font-sora), sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  border: none;
+  border-bottom: 1px dashed var(--line);
+  background: transparent;
+  padding: 3px 0;
+  margin-bottom: 14px;
+  width: 100%;
+  color: var(--ink);
+}
+
+.tax-app .director-name-input:focus {
+  outline: none;
+  border-bottom-color: var(--brand);
+}
+
+.tax-app .field {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.tax-app .field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.tax-app .field input {
+  width: 100%;
+  font-size: 15px;
+  padding: 10px 12px;
+}
+
+/* A number box with its spinners is 40px of chrome this layout has not got. */
+.tax-app input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.tax-app input[type="number"]::-webkit-outer-spin-button,
+.tax-app input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.tax-app .hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+.tax-app .sub-heading {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--brand);
+  font-weight: 600;
+  margin: 18px 0 10px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.tax-app .two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tax-app .mileage-result {
+  margin-top: 8px;
+  background: #eef4ff;
+  border: 1px solid #cfddf7;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--brand-dk);
+  font-size: 12.5px;
+}
+
+.tax-app .mileage-result strong {
+  color: var(--brand-deep);
+  font-family: var(--font-sora), sans-serif;
+}
+
+.tax-app .toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.tax-app .toggle-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand);
+}
+
+.tax-app .slider-row label {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.tax-app .slider-row .value {
+  font-family: var(--font-sora), sans-serif;
+  font-weight: 700;
+  color: var(--brand-dk);
+}
+
+.tax-app .slider-row input[type="range"] {
+  width: 100%;
+  margin-top: 6px;
+  accent-color: var(--brand);
+}
+
+.tax-app .split-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* the ledger */
+.tax-app .ledger {
+  background: linear-gradient(135deg, var(--brand-deep) 0%, #142a68 100%);
+  color: var(--ledger-ink);
+  border-radius: var(--radius);
+  padding: 26px;
+  margin-bottom: 24px;
+  box-shadow: 0 20px 44px -28px rgba(16, 24, 58, 0.55);
+}
+
+.tax-app .ledger h3 {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 18px;
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+
+.tax-app .ledger .sub {
+  font-size: 12px;
+  color: #b9c6ec;
+  margin-bottom: 16px;
+}
+
+.tax-app .ledger-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.18);
+}
+
+.tax-app .ledger-row.total {
+  border-bottom: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  margin-top: 4px;
+  padding-top: 10px;
+  font-weight: 700;
+  font-size: 15.5px;
+  font-family: var(--font-sora), sans-serif;
+  color: #ffcf7a;
+}
+
+.tax-app .ledger-row .neg {
+  color: #ffb0a6;
+}
+
+.tax-app .ledger-row .pos {
+  color: #9fe6bd;
+}
+
+/* the four summary cards */
+.tax-app .summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.tax-app .stat-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--brand);
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 14px 30px -24px rgba(16, 24, 58, 0.35);
+}
+
+.tax-app .stat-card.tax {
+  border-left-color: var(--err);
+}
+
+.tax-app .stat-card.takehome {
+  border-left-color: var(--good);
+}
+
+.tax-app .stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.tax-app .stat-value {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.tax-app .stat-detail {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* one card per director */
+.tax-app .director-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.tax-app .dr-card h3 {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--line);
+  color: var(--ink);
+}
+
+.tax-app .dr-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 13px;
+  padding: 6px 0;
+  color: var(--muted);
+}
+
+.tax-app .dr-line span:last-child {
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tax-app .dr-line.deduct span:last-child {
+  color: var(--err);
+}
+
+.tax-app .dr-line.other span:last-child {
+  color: var(--muted);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.tax-app .dr-line.final {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 12px;
+  font-weight: 700;
+}
+
+.tax-app .dr-line.final span:last-child {
+  color: var(--good);
+  font-size: 16px;
+  font-family: var(--font-sora), sans-serif;
+}
+
+.tax-app .bar-track {
+  height: 8px;
+  background: #eef2fb;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  margin: 14px 0 4px;
+}
+
+.tax-app .bar-fill {
+  height: 100%;
+}
+
+.tax-app .bar-fill.good {
+  background: var(--good);
+}
+
+.tax-app .bar-fill.rest {
+  flex: 1;
+  background: var(--err);
+}
+
+.tax-app .note {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 24px;
+  line-height: 1.7;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .tax-app .stat-value {
+    font-size: 20px;
+  }
+
+  .tax-app .save-status {
+    text-align: left;
+  }
 }

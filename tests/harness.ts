@@ -1,4 +1,5 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { test as base, expect, type Page, type TestInfo } from "@playwright/test";
 
 /**
  * A crash counts as a failure. Any console error, uncaught exception or 5xx
@@ -125,6 +126,41 @@ export async function linkLedger(
 export async function resetStaff(page: Page) {
   const res = await onceMore(() => page.request.post("/api/test/session?reset=1"));
   expect(res.ok(), "the fixture store should be resettable").toBeTruthy();
+}
+
+/**
+ * An axe pass over whatever is on the screen, with the screenshot attached.
+ *
+ * Nothing is excluded and no rule is disabled. If a rule ever has to go it is
+ * named at the call site with why, or this stops being a check — and a run that
+ * examined nothing reports no violations just as loudly as a clean page, so the
+ * count of rules axe actually applied is asserted too.
+ *
+ * Callers assert the thing they came to look at is on the screen first. Axe is
+ * perfectly happy with a page that failed to render.
+ */
+export async function axeScan(page: Page, testInfo: TestInfo, shot: string) {
+  const results = await new AxeBuilder({ page }).analyze();
+
+  await testInfo.attach(`a11y-${shot}.png`, {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+
+  expect(
+    results.passes.length + results.violations.length + results.incomplete.length,
+    "axe should have run rules against this page, not skipped it",
+  ).toBeGreaterThan(0);
+
+  // Rebuilt rather than passed through: an axe violation prints as [Object] and
+  // the run is over by the time anybody reads it.
+  const readable = results.violations.map((v) => ({
+    rule: v.id,
+    impact: v.impact,
+    help: v.help,
+    where: v.nodes.map((n) => ({ target: n.target, why: n.failureSummary })),
+  }));
+  expect(readable, `axe violations on ${shot}`).toEqual([]);
 }
 
 export const ALL_TILES = [
