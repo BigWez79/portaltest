@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { contentSecurityPolicy, newNonce } from "@/lib/csp";
 
 /**
  * Next.js calls this on every request. It was `middleware.ts` until Next 16
@@ -7,6 +8,10 @@ import { createServerClient } from "@supabase/ssr";
  *
  * Refreshes the Supabase session cookie, so a signed-in person
  * is not thrown out mid-session when the access token expires.
+ *
+ * It also issues the request's CSP nonce. That has to happen here and not in a
+ * page, because the header has to be on the request before Next renders — Next
+ * reads the nonce back out of it to stamp its own inline scripts.
  *
  * It does not decide *which* app somebody may open — requireApp does that, per
  * route, from the staff row. This only keeps the session alive and sends
@@ -24,14 +29,33 @@ import { createServerClient } from "@supabase/ssr";
 const PUBLIC_PATHS = ["/", "/auth/callback", "/auth/sign-out", "/api/test"];
 
 export async function proxy(request: NextRequest) {
-  const response = NextResponse.next({ request });
+  const nonce = newNonce();
+  const csp = contentSecurityPolicy(nonce);
+
+  // The header goes on the request as well as the response. The response one is
+  // what the browser enforces; the request one is what Next reads the nonce out
+  // of when it renders. Set only the response header and the page is served
+  // under a policy that blocks the page's own scripts.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("content-security-policy", csp);
+
+  // Every way out of this function, redirects included — a redirect that
+  // renders nothing still deserves the header, and forgetting one is exactly
+  // how a policy ends up covering everything except the interesting case.
+  const sealed = <T extends NextResponse>(res: T): T => {
+    res.headers.set("Content-Security-Policy", csp);
+    return res;
+  };
+
+  const response = sealed(NextResponse.next({ request: { headers: requestHeaders } }));
   const { pathname } = request.nextUrl;
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (process.env.E2E_TEST_MODE === "1") {
     if (!isPublic && !request.cookies.get("e2e-session")) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return sealed(NextResponse.redirect(new URL("/", request.url)));
     }
     return response;
   }
@@ -81,7 +105,7 @@ export async function proxy(request: NextRequest) {
   if (!user && !isPublic) {
     const target = new URL("/", request.url);
     target.searchParams.set("next", pathname);
-    return NextResponse.redirect(target);
+    return sealed(NextResponse.redirect(target));
   }
 
   return response;
