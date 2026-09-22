@@ -140,6 +140,18 @@ export async function resetStaff(page: Page) {
  * perfectly happy with a page that failed to render.
  */
 export async function axeScan(page: Page, testInfo: TestInfo, shot: string) {
+  // Wait for the page-load animation to finish before measuring anything.
+  // `rise` fades the shell in from opacity 0 over half a second, and axe reads
+  // the *composited* colour: scanned mid-animation, --muted #69718c arrives as
+  // #707792 against the card and fails contrast by a tenth. The colours are not
+  // wrong — the scan was early. Run by hand against the same build, dev or
+  // production, axe reports zero violations every time.
+  await page
+    .waitForFunction(() => document.getAnimations().every((a) => a.playState === "finished"), null, {
+      timeout: 5000,
+    })
+    .catch(() => {});
+
   const results = await new AxeBuilder({ page }).analyze();
 
   await testInfo.attach(`a11y-${shot}.png`, {
