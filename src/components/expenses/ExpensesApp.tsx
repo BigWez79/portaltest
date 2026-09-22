@@ -205,11 +205,11 @@ export function ExpensesApp({
           ) : null}
 
           <div className="exp-actions">
-            <button type="submit" disabled={saving} data-testid="expense-submit">
+            <button type="submit" className="primary" disabled={saving} data-testid="expense-submit">
               {saving ? "Saving…" : editing ? "Update expense" : "Add expense"}
             </button>
             {editing ? (
-              <button type="button" className="ghost" onClick={clearEdit} data-testid="expense-cancel">
+              <button type="button" className="quiet" onClick={clearEdit} data-testid="expense-cancel">
                 Cancel
               </button>
             ) : null}
@@ -260,7 +260,7 @@ export function ExpensesApp({
 
             <div className="exp-scroll">
               <table className="exp-table">
-                <caption className="visually-hidden">
+                <caption className="sr-only">
                   Expenses claimed in {monthName(month)}
                 </caption>
                 <thead>
@@ -273,7 +273,7 @@ export function ExpensesApp({
                       Amount
                     </th>
                     <th scope="col">
-                      <span className="visually-hidden">Actions</span>
+                      <span className="sr-only">Actions</span>
                     </th>
                   </tr>
                 </thead>
@@ -294,16 +294,16 @@ export function ExpensesApp({
                           <>
                             <button
                               type="button"
-                              className="ghost"
+                              className="quiet"
                               onClick={() => startEdit(r)}
                               data-testid={`edit-${r.id}`}
                             >
-                              Edit<span className="visually-hidden"> {r.expenseType} on {r.expenseDate}</span>
+                              Edit<span className="sr-only"> {r.expenseType} on {r.expenseDate}</span>
                             </button>
                             <form action={removeAction} className="exp-inline">
                               <input type="hidden" name="id" value={r.id} />
-                              <button type="submit" className="ghost danger" data-testid={`remove-${r.id}`}>
-                                Remove<span className="visually-hidden"> {r.expenseType} on {r.expenseDate}</span>
+                              <button type="submit" className="quiet danger" data-testid={`remove-${r.id}`}>
+                                Remove<span className="sr-only"> {r.expenseType} on {r.expenseDate}</span>
                               </button>
                             </form>
                           </>
@@ -318,7 +318,7 @@ export function ExpensesApp({
             {shut ? null : (
               <form action={lockAction} className="exp-submit-claim">
                 <input type="hidden" name="month" value={month} />
-                <button type="submit" data-testid={`submit-${month}`}>
+                <button type="submit" className="primary" data-testid={`submit-${month}`}>
                   Submit {monthName(month)} claim
                 </button>
                 <span className="exp-quiet">Once submitted, the month can no longer be changed.</span>
@@ -344,7 +344,7 @@ export function ExpensesApp({
               <span className="field-label">Rate beyond it</span>
               <input type="number" name="rate2" step="0.001" min="0" defaultValue={rates.rate2} data-testid="rate2" />
             </label>
-            <button type="submit" disabled={savingRates} data-testid="save-rates">
+            <button type="submit" className="primary" disabled={savingRates} data-testid="save-rates">
               {savingRates ? "Saving…" : "Save rates"}
             </button>
           </form>
