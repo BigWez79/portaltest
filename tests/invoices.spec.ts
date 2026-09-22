@@ -1,0 +1,208 @@
+import { expect, resetStaff, signInAs, test } from "./harness";
+
+/**
+ * Invoices — the heaviest port, and the only app producing a document somebody
+ * outside the company reads.
+ *
+ * The write tests run serially after a reset: parallel workers share one
+ * fixture file, and a suite that leaves an invoice behind poisons the next one.
+ */
+
+const SELLER = "invoices.only@example.test";
+const OTHER = "everything@example.test";
+
+test.describe("invoices — reading your own", () => {
+  test("your invoices are listed, newest first, with their totals", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    await expect(page.getByTestId("invoices-app")).toBeVisible();
+    await expect(page.getByTestId("total-INV-0001")).toHaveText("£1,800.00");
+    await expect(page.getByTestId("total-INV-0002")).toHaveText("£480.00");
+  });
+
+  test("somebody else's invoice is not in the page, even sharing a number", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // everything@ also has an INV-0001. Numbers are unique per seller, so the
+    // one on screen must be this seller's £1,800 and not the other £108.
+    await expect(page.getByTestId("total-INV-0001")).not.toHaveText("£108.00");
+    await expect(page.getByText("Somebody else's work")).toHaveCount(0);
+  });
+
+  test("a status says what may still be done to an invoice", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    await expect(page.getByTestId("status-INV-0001")).toHaveText("Sent");
+    await expect(page.getByTestId("status-INV-0002")).toHaveText("Paid");
+  });
+
+  test("the summary counts drafts and adds up what is owed", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // One sent invoice at £1,800 owed; one paid at £480.
+    await expect(page.getByTestId("kpi-owed")).toContainText("£1,800.00");
+    await expect(page.getByTestId("kpi-paid")).toContainText("£480.00");
+  });
+
+  test("the lines add up to the total printed under them", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    await expect(page.getByTestId("net-INV-0001")).toHaveText("£1,500.00");
+    await expect(page.getByTestId("vat-INV-0001")).toHaveText("£300.00");
+    await expect(page.getByTestId("grand-INV-0001")).toHaveText("£1,800.00");
+  });
+
+  test("a paid invoice offers nothing that would change it", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0002").click();
+
+    await expect(page.getByTestId("locked-INV-0002")).toBeVisible();
+    await expect(page.getByTestId("line-form")).toHaveCount(0);
+    await expect(page.getByTestId("discard-INV-0002")).toHaveCount(0);
+  });
+});
+
+test.describe.serial("invoices — writing", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetStaff(page);
+  });
+
+  test("an invoice can be raised and starts as a draft", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    await page.getByTestId("invoice-no").fill("INV-0044");
+    await page.getByTestId("invoice-customer").selectOption({ label: "Argyle Energy" });
+    await page.getByTestId("invoice-date").fill("2026-08-03");
+    await page.getByTestId("raise-submit").click();
+
+    await expect(page.getByTestId("raise-ok")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("status-INV-0044")).toHaveText("Draft");
+  });
+
+  test("a number already used is refused", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    await page.getByTestId("invoice-no").fill("INV-0001");
+    await page.getByTestId("invoice-customer").selectOption({ label: "Argyle Energy" });
+    await page.getByTestId("invoice-date").fill("2026-08-04");
+    await page.getByTestId("raise-submit").click();
+
+    await expect(page.getByTestId("raise-error")).toContainText("already have an invoice", {
+      timeout: 15000,
+    });
+  });
+
+  test("the number offered next follows the ones already used", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // INV-0001 and INV-0002 exist, so the box should offer INV-0003 — and keep
+    // the four-digit width it was started with.
+    await expect(page.getByTestId("invoice-no")).toHaveValue("INV-0003");
+  });
+
+  test("a line is priced at the invoice's rate and moves the totals", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    await page.getByTestId("line-desc").fill("Extra day");
+    await page.getByTestId("line-qty").fill("2");
+    await page.getByTestId("line-unit").fill("250");
+    await page.getByTestId("line-add").click();
+
+    // £500 net at 20% is £100 VAT, on top of the £1,500/£300 already there.
+    await expect(page.getByTestId("net-INV-0001")).toHaveText("£2,000.00", { timeout: 15000 });
+    await expect(page.getByTestId("vat-INV-0001")).toHaveText("£400.00");
+    await expect(page.getByTestId("grand-INV-0001")).toHaveText("£2,400.00");
+  });
+
+  test("the preview says what a line comes to before it is added", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    await page.getByTestId("line-qty").fill("3");
+    await page.getByTestId("line-unit").fill("100");
+
+    await expect(page.getByTestId("line-preview")).toContainText("£360.00");
+  });
+
+  test("removing a line brings the totals back down", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    await page.getByTestId("strike-e0000001-0000-4000-8000-000000000001").click();
+
+    await expect(page.getByTestId("grand-INV-0001")).toHaveText("£0.00", { timeout: 15000 });
+  });
+
+  test("a draft can be sent, and a sent invoice paid", async ({ page }) => {
+    await signInAs(page, OTHER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    await page.getByTestId("send-INV-0001").click();
+    await expect(page.getByTestId("status-INV-0001")).toHaveText("Sent", { timeout: 15000 });
+
+    await page.getByTestId("pay-INV-0001").click();
+    await expect(page.getByTestId("status-INV-0001")).toHaveText("Paid", { timeout: 15000 });
+
+    // And now it is closed to further change. No second click: the row stayed
+    // expanded through both status changes, so clicking would collapse it.
+    await expect(page.getByTestId("locked-INV-0001")).toBeVisible();
+  });
+
+  test("a customer can be added and is then available to invoice", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("tab-customers").click();
+
+    await page.getByTestId("cust-name").fill("Caldicot Metals");
+    await page.getByTestId("cust-town").fill("Newport");
+    await page.getByTestId("cust-save").click();
+
+    await expect(page.getByTestId("cust-ok")).toBeVisible({ timeout: 15000 });
+    await page.getByTestId("tab-invoices").click();
+    await expect(
+      page.getByTestId("invoice-customer").locator("option", { hasText: "Caldicot Metals" }),
+    ).toHaveCount(1);
+  });
+});
+
+test.describe("invoices — the guard", () => {
+  test.use({ tolerate: ["status of 404"] });
+
+  test("somebody without the flag gets a 404, not a 403", async ({ page }) => {
+    await signInAs(page, "no.flags@example.test");
+    const res = await page.goto("/invoices");
+    expect(res?.status()).toBe(404);
+  });
+});
+
+test.describe("invoices — layout", () => {
+  for (const width of [390, 1440]) {
+    test(`the invoice table fits at ${width}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await signInAs(page, SELLER);
+      await page.goto("/invoices");
+      await page.getByTestId("open-INV-0001").click();
+
+      await expect(page.getByTestId("invoices-app")).toBeVisible();
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, "the page must not scroll sideways").toBeLessThanOrEqual(0);
+    });
+  }
+});

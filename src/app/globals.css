@@ -2599,3 +2599,317 @@ tr.inactive .toggle.on {
     padding-right: 12px;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Invoices
+
+   Ported from invoices.html. The live page is a wizard — pick a customer, save
+   a header, then a separate panel for lines — which means the thing you are
+   building is never on screen with the thing you are building it from. Here an
+   invoice expands in place, its lines and its totals under it, and the next
+   line is typed at the bottom of the same table.
+
+   The status is the one piece of state that changes what you may do, so it is
+   a coloured pill on the row rather than a column you have to look for.
+   --------------------------------------------------------------------------- */
+
+.inv-app {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.inv-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.inv-card {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
+}
+
+.inv-h {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inv-form,
+.inv-lineform {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inv-grid,
+.inv-linegrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 16px;
+}
+
+.inv-wide {
+  grid-column: span 2;
+}
+
+/* the row that opens an invoice ------------------------------------------ */
+
+.inv-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.inv-toggle {
+  flex: 1 1 260px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  width: auto;
+  color: var(--ink);
+  font-weight: 500;
+  flex-wrap: wrap;
+}
+
+.inv-no {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--brand-deep);
+}
+
+.inv-cust {
+  font-size: 0.95rem;
+}
+
+.inv-date,
+.inv-quiet {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.inv-quiet {
+  margin: 0;
+}
+
+.inv-status {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+
+.inv-status.is-draft {
+  background: var(--panel2);
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.inv-status.is-sent {
+  background: #eef4ff;
+  border-color: #cfddf7;
+  color: var(--brand-dk);
+}
+
+.inv-status.is-paid {
+  background: #e7f6ee;
+  border-color: #bfe6d1;
+  color: #14724a;
+}
+
+.inv-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-left: auto;
+}
+
+/* the lines --------------------------------------------------------------- */
+
+.inv-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.inv-table th,
+.inv-table td {
+  text-align: left;
+  padding: 10px 16px 10px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.inv-table thead th {
+  position: relative;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-top: 0;
+}
+
+.inv-table .inv-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.inv-table tfoot th {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: none;
+}
+
+.inv-table tfoot td {
+  border-bottom: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.inv-table tfoot tr.inv-grand th,
+.inv-table tfoot tr.inv-grand td {
+  color: var(--brand-deep);
+  font-size: 1rem;
+  font-weight: 700;
+  border-top: 2px solid var(--line);
+}
+
+.inv-table td.inv-line-actions {
+  padding-right: 0;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.inv-noline {
+  color: var(--muted);
+}
+
+.inv-inline {
+  display: inline;
+}
+
+.inv-preview {
+  margin: 0;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  font-size: 0.93rem;
+}
+
+.inv-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.inv-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* buttons, borrowing the suite's set -------------------------------------- */
+
+.inv-app button {
+  position: relative;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  padding: 11px 18px;
+  width: auto;
+  white-space: nowrap;
+}
+
+.inv-app button.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+  font-weight: 650;
+}
+
+.inv-app button.primary:hover {
+  filter: brightness(1.08);
+}
+
+.inv-app button.quiet {
+  background: var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 14px;
+}
+
+.inv-app button.quiet:hover {
+  background: var(--ink);
+}
+
+.inv-app button.quiet.danger:hover {
+  background: var(--err);
+}
+
+.inv-app button.inv-toggle:hover .inv-no {
+  text-decoration: underline;
+}
+
+.inv-app button[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .inv-app {
+    gap: 16px;
+  }
+
+  .inv-card {
+    padding: 17px 18px;
+    gap: 14px;
+  }
+
+  .inv-grid,
+  .inv-linegrid {
+    grid-template-columns: 1fr;
+  }
+
+  .inv-wide {
+    grid-column: span 1;
+  }
+
+  .inv-total {
+    margin-left: 0;
+  }
+}
