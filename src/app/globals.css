@@ -17,6 +17,13 @@
   --muted: #69718c;
   --err: #b3261e;
   --radius: 16px;
+
+  /* Lifted out of .margin-app, which is where the suite's look was worked out.
+     They were scoped to one app because at the time only one app had a look;
+     every page uses them now. */
+  --panel2: #f3f6fd;
+  --good: #1e9e57;
+  --accent2: #0ea394;
 }
 
 * {
@@ -106,6 +113,132 @@ h1 {
   line-height: 1.05;
   margin: 3px 0 0;
   letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------------------------
+   The suite's vocabulary
+
+   These were written inside .margin-app and are the look the whole suite is
+   meant to have. Unprefixed here so every page draws on the same set rather
+   than each one inventing a pill and a button of its own. The .margin-app
+   rules still exist and still win where they are more specific — nothing that
+   works today stops working.
+
+   Use: .tag beside a heading for the caption that explains it, .seg for a
+   two-way view switch, .btn-add for "one more of these", .btn-good for the
+   action that produces a document, .kpi for a figure worth reading first.
+   --------------------------------------------------------------------------- */
+
+.tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  color: var(--brand-dk);
+  font-weight: 600;
+  background: #eef4ff;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1px solid #cfddf7;
+  vertical-align: middle;
+}
+
+.seg {
+  display: inline-flex;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.seg button {
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 16px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: 0;
+  width: auto;
+}
+
+.seg button[aria-pressed="true"],
+.seg button.active {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-add {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--brand);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  width: auto;
+}
+
+.btn-add:hover {
+  border-color: var(--brand);
+  background: var(--panel2);
+}
+
+.btn-good {
+  background: var(--accent2);
+  color: #fff;
+  font-weight: 600;
+  width: auto;
+}
+
+.btn-good:hover {
+  filter: brightness(1.08);
+}
+
+/* A figure worth reading before the detail under it. */
+.kpi {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.kpi .k {
+  font-size: 0.74rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi .v {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi.good .v { color: var(--good); }
+.kpi.accent .v { color: var(--brand-deep); }
+.kpi.warn .v { color: #a8681f; }
+
+/* Inputs across the suite sit on the tinted panel, not on white. White on a
+   white card gives a field no edge until you focus it. */
+.app-field input[type="text"],
+.app-field input[type="number"],
+.app-field input[type="date"],
+.app-field select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 10px 12px;
+  border-radius: 10px;
+  outline: none;
+}
+
+.app-field input:focus,
+.app-field select:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(80, 125, 229, 0.16);
 }
 
 .card {
@@ -363,7 +496,9 @@ footer {
   font-family: inherit;
   font-size: 16px;
   color: var(--ink);
-  background: #fff;
+  /* The tinted panel, matching every app's fields. A white input on a white
+     card has no edge until it is focused. */
+  background: var(--panel2);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 13px;
@@ -371,7 +506,10 @@ footer {
 }
 
 .field input::placeholder {
-  color: #a3aac0;
+  /* Darkened when the field moved onto the tinted panel: #a3aac0 dropped to
+     2.14:1 there. axe does not check placeholders, which is exactly why it is
+     worth doing by hand. */
+  color: #7f87a2;
 }
 
 .field input:focus {
@@ -2121,65 +2259,194 @@ tr.inactive .toggle.on {
    the thing you are changing. One column instead: the form, then each claim
    month newest first, so editing a row and seeing it update needs no tab.
 
-   Every table is inside .exp-scroll. A claim row has six columns and 390px
-   cannot hold them; the alternative is a page that scrolls sideways, which the
-   suite asserts against at every width.
+   Spacing runs on one scale: 8 inside a field, 16 between fields, 20 between
+   blocks in a card, 22 between cards. Nothing here picks its own number.
    --------------------------------------------------------------------------- */
 
 .exp-app {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
 }
 
 .exp-card {
-  background: var(--surface);
+  min-width: 0;
+  background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px 20px;
+  border-radius: var(--radius);
+  padding: 22px 24px 24px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
 }
 
 .exp-h {
   margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+/* form ------------------------------------------------------------------- */
+
+.exp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 185px: the mileage row is five fields — date, type, miles, from, to — and at
+   1280 the card is about 1030px wide inside its padding. Five 210px columns
+   need 1114 and so one wrapped alone onto the next line; five 185px columns
+   need 1014 and sit together. Below that the grid drops to one column. */
 .exp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 12px 14px;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 16px;
 }
 
 .exp-wide {
   grid-column: 1 / -1;
 }
 
+.exp-app .field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.exp-app input[type="text"],
+.exp-app input[type="number"],
+.exp-app input[type="date"],
+.exp-app select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.95rem;
+  /* The tinted panel, as Margin and Tax Breakdown use. White on a white card
+     leaves a field with no edge until it is focused. */
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 11px 13px;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.exp-app select {
+  /* A native select is a different height from a text input on macOS unless the
+     appearance is taken over. Same box, same baseline, own chevron. */
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% + 1px),
+    calc(100% - 13px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+.exp-app input:focus,
+.exp-app select:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(80, 125, 229, 0.16);
+}
+
+.exp-app input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.exp-app input[type="number"]::-webkit-outer-spin-button,
+.exp-app input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* buttons ---------------------------------------------------------------- */
+
+.exp-app button {
+  /* position: relative so the .sr-only spans inside have a containing block.
+     .sr-only is position: absolute, and without a positioned ancestor it
+     resolves against the initial containing block — escaping the table's
+     scroll container and pushing the whole document sideways by the width of
+     text nobody can see. That is what failed the 390px width check. */
+  position: relative;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  padding: 11px 18px;
+  width: auto;
+  white-space: nowrap;
+}
+
+.exp-app button.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+  font-weight: 650;
+}
+
+.exp-app button.primary:hover {
+  filter: brightness(1.08);
+}
+
+/* Solid navy, white text. These used to be outlined in the line colour with
+   muted grey text, which on a white card read as disabled rather than as a
+   button you may press. */
+.exp-app button.quiet {
+  background: var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 14px;
+}
+
+.exp-app button.quiet:hover {
+  background: var(--ink);
+}
+
+.exp-app button.quiet.danger:hover {
+  background: var(--err);
+}
+
+.exp-app button[disabled] {
+  opacity: 0.55;
+  cursor: default;
+  filter: none;
+}
+
+/* the mileage preview ---------------------------------------------------- */
+
 .exp-preview {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--surface-sunk, rgba(127, 127, 127, 0.08));
-  font-size: 14px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-size: 0.93rem;
+  color: var(--ink);
 }
 
 .exp-quiet {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.85rem;
 }
 
 .exp-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
 }
+
+/* a claim month ---------------------------------------------------------- */
 
 .exp-month-head {
   display: flex;
@@ -2191,50 +2458,84 @@ tr.inactive .toggle.on {
 
 .exp-total {
   font-variant-numeric: tabular-nums;
-  font-weight: 650;
-  font-size: 17px;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.015em;
+  color: var(--brand-deep);
 }
 
+/* Same pill as .tag, which is the caption shape the suite uses beside a
+   heading. Kept as its own selector only for the uppercase treatment a status
+   wants and a caption does not. */
 .exp-lock {
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  font-weight: 500;
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: #eef4ff;
+  border: 1px solid #cfddf7;
+  color: var(--brand-dk);
+  font-weight: 600;
 }
 
+/* min-width: 0 is what lets the overflow actually scroll: a flex item defaults
+   to min-width: auto, which is the width of its content. */
 .exp-scroll {
   overflow-x: auto;
+  min-width: 0;
+  margin-inline: -4px;
+  padding-inline: 4px;
 }
 
 .exp-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 0.92rem;
 }
 
 .exp-table th,
 .exp-table td {
   text-align: left;
-  padding: 9px 12px 9px 0;
+  padding: 12px 18px 12px 0;
   border-bottom: 1px solid var(--line);
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .exp-table th {
-  font-size: 12px;
-  font-weight: 600;
+  position: relative;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
   color: var(--muted);
   white-space: nowrap;
+  padding-top: 0;
 }
 
+.exp-table tbody tr:last-child td {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* The amount is the column the eye goes to, so it sits hard against the
+   actions rather than floating in the middle of the row. */
 .exp-table .exp-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 18px;
+}
+
+/* No width: 1% here. A 1% cell collapses to a few pixels and its flex children
+   then paint straight over the amount beside it — the figure was still in the
+   DOM, just hidden behind two buttons. nowrap sizes it to the buttons instead. */
+.exp-table td.exp-row-actions {
   padding-right: 0;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .exp-row-actions {
@@ -2250,15 +2551,23 @@ tr.inactive .toggle.on {
 .exp-submit-claim {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
+/* rates ------------------------------------------------------------------ */
+
 .exp-rates {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
   align-items: end;
+}
+
+/* Without this the button is a grid item and stretches to a full column,
+   making the least important action on the page the widest thing on it. */
+.exp-rates button {
+  justify-self: start;
 }
 
 .exp-empty {
@@ -2267,11 +2576,26 @@ tr.inactive .toggle.on {
 }
 
 @media (max-width: 640px) {
+  .exp-app {
+    gap: 16px;
+  }
+
   .exp-card {
-    padding: 15px 16px;
+    padding: 18px;
+    gap: 16px;
+  }
+
+  .exp-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .exp-row-actions {
     justify-content: flex-start;
+  }
+
+  .exp-table th,
+  .exp-table td {
+    padding-right: 12px;
   }
 }
