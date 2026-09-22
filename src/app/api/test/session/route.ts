@@ -51,8 +51,10 @@ export async function POST() {
   }
   const { fixtureStore } = await import("@/lib/fixture-store");
   const { auditStore } = await import("@/lib/audit-store");
-  // Both, or a suite inherits the audit entries the last one wrote.
-  await Promise.all([fixtureStore.reset(), auditStore.reset()]);
+  const { expenseStore } = await import("@/lib/expenses-store");
+  // All of them, or a suite inherits what the last one wrote — the audit
+  // entries, and now the expenses a write test left behind.
+  await Promise.all([fixtureStore.reset(), auditStore.reset(), expenseStore.reset()]);
   return NextResponse.json({ ok: true });
 }
 

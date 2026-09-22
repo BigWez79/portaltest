@@ -2112,3 +2112,164 @@ tr.inactive .toggle.on {
   margin-left: auto;
   margin-right: auto;
 }
+   Expenses
+
+   Ported from expenses.html. The live page is a two-tab layout — add on one,
+   history on the other — which hides the thing you are about to change from
+   the thing you are changing. One column instead: the form, then each claim
+   month newest first, so editing a row and seeing it update needs no tab.
+
+   Every table is inside .exp-scroll. A claim row has six columns and 390px
+   cannot hold them; the alternative is a page that scrolls sideways, which the
+   suite asserts against at every width.
+   --------------------------------------------------------------------------- */
+
+.exp-app {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.exp-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.exp-h {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.exp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px 14px;
+}
+
+.exp-wide {
+  grid-column: 1 / -1;
+}
+
+.exp-preview {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-sunk, rgba(127, 127, 127, 0.08));
+  font-size: 14px;
+}
+
+.exp-quiet {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.exp-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.exp-month-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.exp-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  font-size: 17px;
+}
+
+.exp-lock {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.exp-scroll {
+  overflow-x: auto;
+}
+
+.exp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.exp-table th,
+.exp-table td {
+  text-align: left;
+  padding: 9px 12px 9px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.exp-table th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.exp-table .exp-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding-right: 0;
+}
+
+.exp-row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.exp-inline {
+  display: inline;
+}
+
+.exp-submit-claim {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.exp-rates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 14px;
+  align-items: end;
+}
+
+.exp-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .exp-card {
+    padding: 15px 16px;
+  }
+
+  .exp-row-actions {
+    justify-content: flex-start;
+  }
+}
