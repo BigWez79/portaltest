@@ -121,6 +121,13 @@ test.describe.serial("admin screen — changing access", () => {
     page,
     browser,
   }) => {
+    // Two browser contexts, a server action and six navigations do not fit the
+    // default 30s on a box that is also screenshotting the ported calculators
+    // at four widths — this one timed out once the Tax Breakdown port landed,
+    // having passed alone every time. Same assertions, a slower failure: the
+    // same trade the invite check took in tests/admin.spec.ts before it.
+    test.setTimeout(60_000);
+
     const theirs = await browser.newContext();
     const them = await theirs.newPage();
 
