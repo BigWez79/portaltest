@@ -140,6 +140,18 @@ export async function resetStaff(page: Page) {
  * perfectly happy with a page that failed to render.
  */
 export async function axeScan(page: Page, testInfo: TestInfo, shot: string) {
+  // Wait for the page-load animation to finish before measuring anything.
+  // `rise` fades the shell in from opacity 0 over half a second, and axe reads
+  // the *composited* colour: scanned mid-animation, --muted #69718c arrives as
+  // #707792 against the card and fails contrast by a tenth. The colours were
+  // never wrong — the scan was early. Without this the suite reports five
+  // contrast violations that no browser ever shows a person.
+  await page
+    .waitForFunction(() => document.getAnimations().every((a) => a.playState === "finished"), null, {
+      timeout: 5000,
+    })
+    .catch(() => {});
+
   const results = await new AxeBuilder({ page }).analyze();
 
   await testInfo.attach(`a11y-${shot}.png`, {
@@ -183,7 +195,12 @@ export async function expectExactlyTiles(page: Page, expected: readonly string[]
   for (const id of ALL_TILES) {
     const locator = page.getByTestId(`tile-${id}`);
     if (expected.includes(id)) {
-      await expect(locator, `${id} tile should be shown`).toBeVisible();
+      // 15s, not the 5s default. The tiles page is server-rendered on every
+      // request, and under a full parallel run the box is busy enough that the
+      // render lands after five seconds — the same flake PR #31 widened on the
+      // invite form. A slower assertion, not a weaker one: the tile still has
+      // to appear, and the DOM-absence check below is untouched.
+      await expect(locator, `${id} tile should be shown`).toBeVisible({ timeout: 15000 });
     } else {
       await expect(locator, `${id} tile should not be in the DOM at all`).toHaveCount(0);
     }
