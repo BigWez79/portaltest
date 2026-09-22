@@ -7,26 +7,39 @@ import { test as base, expect, type Page, type TestInfo } from "@playwright/test
  */
 export const test = base.extend<{ page: Page; tolerate: string[] }>({
   /**
-   * Console noise a test expects. A test that deliberately requests a 404 gets
-   * one from the browser itself; everything else still fails the run.
+   * Noise a test expects. A test that deliberately requests a 404 gets a console
+   * error from the browser itself; everything else still fails the run.
    * Use with test.use({ tolerate: ["status of 404"] }).
+   *
+   * It is matched against all three kinds of problem, not only console output,
+   * because the test that renders the error boundary needs the 500 that put it
+   * there. The substrings are matched against the same strings that would be
+   * reported — so a 5xx is excused by naming its status and its URL,
+   * `500 from http://127.0.0.1:3100/api/test/crash`, and no other request is
+   * covered by that.
+   *
+   * Rule 12 — what would make this excuse something real? A test declaring a
+   * substring broad enough to cover a request it did not mean, `500 from` on its
+   * own being the obvious one. That is visible in the test file, which is the
+   * point of declaring it there rather than turning the listener off.
    */
   tolerate: [[], { option: true }],
 
   page: async ({ page, tolerate }, use) => {
     const problems: string[] = [];
     const expected = (text: string) => tolerate.some((t) => text.includes(t));
+    const report = (text: string) => {
+      if (!expected(text)) problems.push(text);
+    };
 
     page.on("console", (msg) => {
-      if (msg.type() === "error" && !expected(msg.text())) {
-        problems.push(`console.error: ${msg.text()}`);
-      }
+      if (msg.type() === "error") report(`console.error: ${msg.text()}`);
     });
     page.on("pageerror", (err) => {
-      problems.push(`pageerror: ${err.message}`);
+      report(`pageerror: ${err.message}`);
     });
     page.on("response", (res) => {
-      if (res.status() >= 500) problems.push(`${res.status()} from ${res.url()}`);
+      if (res.status() >= 500) report(`${res.status()} from ${res.url()}`);
     });
 
     await use(page);

@@ -39,33 +39,6 @@ round.
 **Done when** the script is gone, `npm run verify` still passes, and README no
 longer tells anybody to run it.
 
-### 4. A 404 and a crash that look like the product
-There is no `not-found.tsx` and no `error.tsx` anywhere in `src/`. Both cases
-render Next's own page today.
-
-That matters more here than it usually would. Rule 4 says a route 404s for
-anybody without its flag, and that 404 is not an edge case — it is the designed
-answer to somebody trying `/invoices` to see what happens. What they get is an
-unstyled Next page, which tells them two things we would rather not say: that
-they reached something real, and what it is built with.
-
-Add `src/app/not-found.tsx`, `src/app/error.tsx`, and `global-error.tsx` — the
-last one catches a failure in the root layout, which `error.tsx` cannot. They
-should look like the rest of the suite and say nothing about what was missing or
-why: no path, no flag name, no stack, no "you do not have access to this".
-
-`error.tsx` is a client component and takes `{ error, reset }`. Log the digest,
-show the person nothing but a way back to the portal.
-
-Note for the test: the harness fails any test whose page logged a console error,
-so exercising `error.tsx` needs `test.use({ tolerate: [...] })` in the same
-spirit as the 404 tests already do — declare it, do not turn the check off.
-
-**Done when** a signed-in request to a route the person has no flag for renders
-the suite's own 404 rather than Next's; a test asserts the body names no route,
-no flag and no framework; the 404 renders at 390 and 1440 with screenshots
-attached; and `npm run verify` passes.
-
 ### 5. Content-Security-Policy
 `next.config.ts` sets `X-Frame-Options`, `X-Content-Type-Options`,
 `Referrer-Policy` and `Permissions-Policy`, and `tests/hardening.spec.ts`
@@ -236,6 +209,51 @@ does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
   390 — that predates this, is recorded against the audit trail tests, and is a
   change to how the screen looks rather than an accessibility violation, so it
   is left for a person. No migration; nothing waiting on a person. 147 checks.
+- **A 404 and a crash that look like the product** — `overnight/auto-2026-09-15-0300`.
+  Rule 4's 404 is not an edge case, it is the answer somebody gets for trying
+  `/invoices` to see what happens, and until now it was answered by Next's own
+  page: "404 | This page could not be found", system font, no brand. There is now
+  `src/app/not-found.tsx`, `src/app/error.tsx` and `src/app/global-error.tsx`,
+  the first two sharing one `TroubleCard` so the "not here" screen and the "went
+  wrong" screen are indistinguishable — a different card for a route that exists
+  would be the 403 this project refused to serve, wearing a hat. Built from the
+  sign-in card's own classes, not new ones, because restyling is a person's job;
+  the only CSS added centres `.card-note`, which is capped at 56ch for the admin
+  screen's prose and reads as a block shoved left inside a centred card.
+  `error.tsx` logs the digest and shows nothing else: no stack, no path, no
+  digest on the page, and `reset` is deliberately not rendered. `global-error.tsx`
+  carries its own `<html>` and inline styles because the layout that imports
+  globals.css is the thing that failed — and nothing in the suite can exercise
+  it, since a test that shipped a broken root layout to prove the fallback works
+  would be its own outage. That one is reviewed by reading it, which is said here
+  rather than pretended otherwise.
+  `src/app/api/test/crash/` throws so the suite can see `error.tsx` for real —
+  under `/api/test` with the seeder and the ledger, so there is one test-mode
+  namespace and not two, and 404 outside `E2E_TEST_MODE` like its neighbours. The
+  harness grew one change to go with it: `tolerate` now filters the 5xx and
+  `pageerror` lines as well as console output, because the test that renders the
+  error boundary needs the 500 that put it there. It is matched against the same
+  strings that would be reported, so `500 from …/api/test/crash` excuses that one
+  request and no other — a 500 from anywhere else in that test still fails it.
+  All eight new checks were watched to fail with `not-found.tsx` and `error.tsx`
+  taken away.
+  **One thing found and not fixed, which the next person should decide on.** The
+  rendered 404 names nothing, and that is what the test asserts. The *markup*
+  still does: Next streams the requested segment's resolved metadata into the
+  flight payload, so the HTML for a 404 on `/invoices` contains the string
+  "Invoices — Power Analytix" and the HTML for a 404 on a nonsense path does not.
+  The two also differ in length, because an unknown path renders the static
+  `/_not-found` and a guarded one renders the error fallback. So a signed-in
+  person can still tell a route that exists from one that does not, by reading
+  the source rather than the screen. Closing the metadata half means moving every
+  guarded route's `metadata` export to a `generateMetadata` that resolves access
+  first — which doubles the staff lookup per page load unless `getCurrentUser`
+  and `resolveAccess` are wrapped in React's `cache()` first. That is a change to
+  the one place that answers "who is this", and not one to make unattended on the
+  way past. Closing the length half is a fight with Next that may not be
+  winnable. Neither is a leak of who has what, and the tile names are already
+  public in `docs/PORTING-APPS.md`; it is a leak of which routes are real.
+  No migration; nothing waiting on a person. 142 checks.
 - **Renamed the product to Power Suite** — `overnight/auto-2026-09-10-0300`.
   The product is Power Suite; the company is still Power Analytix. The tab now
   reads "Power Suite — Power Analytix", matching the pattern the app routes

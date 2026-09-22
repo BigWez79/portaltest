@@ -2097,4 +2097,15 @@ tr.inactive .toggle.on {
   .tax-app .save-status {
     text-align: left;
   }
+   404, and a crash
+   --------------------------------------------------------------------------- */
+
+/*
+ * Both borrow the sign-in card's centred layout. .card-note is capped at 56ch
+ * and left-aligned for the admin screen's prose, which inside a centred card
+ * reads as a block pushed to one side — centre the box, keep the cap.
+ */
+.trouble .card-note {
+  margin-left: auto;
+  margin-right: auto;
 }
