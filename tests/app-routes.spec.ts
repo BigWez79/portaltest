@@ -8,14 +8,14 @@ import { expect, signInAs, signOutCompletely, test } from "./harness";
 /**
  * `landmark` is what proves the page actually rendered. It is "not-ported" for
  * the routes still waiting on their app's own code, and the app's own root once
- * that app has been folded in — Margin is the first of those.
+ * that app has been folded in — Margin and Tax Breakdown so far.
  */
 const FLAGGED = [
   { path: "/invoices", holder: "invoices.only@example.test", landmark: "not-ported" },
   { path: "/timesheets", holder: "timesheet.only@example.test", landmark: "not-ported" },
   { path: "/expenses", holder: "expenses.only@example.test", landmark: "not-ported" },
   { path: "/margin", holder: "margin.only@example.test", landmark: "margin-calculator" },
-  { path: "/tax-breakdown", holder: "tax.only@example.test", landmark: "not-ported" },
+  { path: "/tax-breakdown", holder: "tax.only@example.test", landmark: "tax-calculator" },
   { path: "/overview", holder: "overview.only@example.test", landmark: "not-ported" },
 ];
 

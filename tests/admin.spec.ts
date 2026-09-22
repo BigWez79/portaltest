@@ -1,5 +1,13 @@
 import type { Page } from "@playwright/test";
-import { expect, expectExactlyTiles, resetStaff, signInAs, signOutCompletely, test } from "./harness";
+import {
+  axeScan,
+  expect,
+  expectExactlyTiles,
+  resetStaff,
+  signInAs,
+  signOutCompletely,
+  test,
+} from "./harness";
 
 // Two of these ask for a page that must 404; the browser logs that itself.
 test.describe("admin screen — who can reach it", () => {
@@ -124,6 +132,13 @@ test.describe.serial("admin screen — changing access", () => {
     page,
     browser,
   }) => {
+    // Two browser contexts, a server action and six navigations do not fit the
+    // default 30s on a box that is also screenshotting the ported calculators
+    // at four widths — this one timed out once the Tax Breakdown port landed,
+    // having passed alone every time. Same assertions, a slower failure: the
+    // same trade the invite check took in tests/admin.spec.ts before it.
+    test.setTimeout(60_000);
+
     const theirs = await browser.newContext();
     const them = await theirs.newPage();
 
@@ -277,6 +292,42 @@ test.describe.serial("admin screen — changing access", () => {
         body: await page.screenshot({ fullPage: true }),
         contentType: "image/png",
       });
+    });
+  }
+
+  // The accessibility pass lives in a11y.spec.ts, with one exception: axe reads
+  // colour off what is rendered, and a populated audit trail cannot be rendered
+  // without writing. Reaching it from there would mean a second suite resetting
+  // the shared fixture store beside this one, which is the flake this describe
+  // exists to avoid. So the scan of the trail's own colours happens here, where
+  // the write is already ordered.
+  for (const w of [
+    { name: "390-phone", width: 390, height: 844 },
+    { name: "1440-desktop", width: 1440, height: 900 },
+  ]) {
+    test(`a trail with something in it is clean to axe at ${w.name}`, async ({
+      page,
+    }, testInfo) => {
+      // Two writes, a full axe pass over the whole screen and a full-page
+      // screenshot. Same reason as the scans in a11y.spec.ts: more time, not
+      // less checking.
+      test.slow();
+      await page.setViewportSize({ width: w.width, height: w.height });
+      await page.goto("/admin");
+
+      // One granted and one removed: the trail draws them in two different
+      // colours and only one of them is the suite's usual blue.
+      await page.getByTestId("toggle-grantable@example.test-hasExpenses").click();
+      await expect(page.getByTestId("audit-grantable@example.test")).toContainText(
+        "Granted Expenses",
+      );
+      await page.getByTestId("toggle-revocable@example.test-hasInvoices").click();
+      await expect(page.getByTestId("audit-revocable@example.test")).toContainText(
+        "Removed Invoices",
+      );
+
+      await expect(page.getByTestId("audit-trail")).toBeVisible();
+      await axeScan(page, testInfo, `admin-trail-${w.name}`);
     });
   }
 
