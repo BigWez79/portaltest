@@ -13,6 +13,7 @@ const PERMISSIONS: Array<{ flag: Flag; label: string; short: string }> = [
   { flag: "hasExpenses", label: "Expenses", short: "Exp" },
   { flag: "hasMargin", label: "Margin", short: "Marg" },
   { flag: "hasTaxBreakdown", label: "Tax", short: "Tax" },
+  { flag: "hasOverview", label: "Overview", short: "Over" },
   { flag: "isAdmin", label: "Admin", short: "Admin" },
 ];
 

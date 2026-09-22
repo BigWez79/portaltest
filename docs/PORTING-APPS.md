@@ -18,7 +18,7 @@ copies are stale.
 | Portal | 209 | 1 | 0 | rebuilt |
 | Margin & Profit Split | 848 | 0 | 0 | **ported** |
 | Tax Breakdown | 557 | 0 | 0 | **ported** |
-| Monthly Overview | 383 | 4 | 0 | not routed yet |
+| Monthly Overview | 383 | 4 | 0 | route ready |
 | My Profile | 375 | 5 | 2 | route ready |
 | Expenses | 586 | 4 | 5 | route ready |
 | Invoices | 1,004 | 6 | 12 | route ready |

@@ -95,6 +95,7 @@ test.describe("the staff table, read rather than seen", () => {
     { flag: "hasExpenses", label: "Expenses", short: "Exp" },
     { flag: "hasMargin", label: "Margin", short: "Marg" },
     { flag: "hasTaxBreakdown", label: "Tax", short: "Tax" },
+    { flag: "hasOverview", label: "Overview", short: "Over" },
     { flag: "isAdmin", label: "Admin", short: "Admin" },
     // The Active column's heading is a single span — nothing to abbreviate.
     { flag: "active", label: "Active", short: "" },
