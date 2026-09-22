@@ -18,73 +18,12 @@ reading top to bottom — ports before hygiene — not the lowest number.
 The agreed plan: all nine apps move off SharePoint, one at a time.
 See docs/PORTING-APPS.md for the order and the decisions behind it.
 
-### 1. Port Tax Breakdown
-`taxbreakdown.html` in `BigWez79/portal` — note the filename has no hyphen,
-unlike the route here. 557 lines. The second of the two calculators and the last
-thing in the queue that touches no data.
-
-Read before writing this, so the shape is not guesswork:
-
-- **MSAL is there; Graph is not.** 10 references to MSAL, `msal-browser@3` from
-  jsdelivr, a hard-coded `clientId` and `tenantId` in the page — and
-  `SCOPES = ["User.Read"]`, zero calls to `graph.microsoft.com`, no lists. It is
-  a sign-in gate in front of a calculator, nothing more. This is the one place
-  Margin differed: `margin.html` had no authentication at all.
-- So step 1 of "What each port involves" is most of the work here: **delete the
-  sign-in.** No MSAL, no client id, no tenant id, no redirect handling, no
-  Sign out button of its own — `AppShell` has one. The person is signed in or
-  they never reached the route. It also takes an Entra app registration id off a
-  public page, which is worth having.
-- **Nothing to bundle.** The only off-site script is MSAL itself, and it is being
-  deleted. Unlike Margin there is no jsPDF equivalent to move to npm.
-- **One `localStorage` key**, `paTaxBreakdownInputs_v1`. Keep it, and keep its
-  JSON shape, so a browser that has used the live page keeps its figures. Moving
-  that to Postgres is a separate decision.
-- **Google Fonts are linked.** Sora and Albert Sans are self-hosted here already.
-
-Then follow how Margin came out — written up under "Margin, specifically" in
-docs/PORTING-APPS.md. The short version is **the sums first, the markup
-second**. The sums are already separable: `corpTax`, `taxSlice`,
-`personalAllowance`, `personalTax`, `employerNI`, `mileageClaim` and
-`takeHomePct` are pure functions of their arguments and touch no DOM. They move
-to `src/lib/tax-model.ts` as they are. `render` and `directorCard` are the
-markup and become a client component.
-
-Pin the model with worked examples read off the live page itself, running
-headless with every http(s) request aborted — so an example cannot quietly come
-from anywhere except the code under test.
-
-**On the figures, this one is not like Margin.** Margin's defaults were real
-revenue and a real split, and were replaced with placeholders. What is hard-coded
-here is UK statutory rates — corporation tax at 19% and 25%, marginal relief of
-3/200, a personal allowance of £12,570 tapering above £100,000. Those are public,
-they are the entire point of the calculator, and they must come across **exactly
-as they are**. The placeholder rule applies to any default *input* — a salary, a
-profit figure, a director's name — and to nothing else. If you cannot tell which
-a number is, say so in the pull request rather than changing it.
-
-The route already exists: `src/app/tax-breakdown/page.tsx`, behind
-`requireApp("taxBreakdown")`, with a placeholder in it. Porting is replacing the
-placeholder. No new entry in `src/lib/apps.ts`, no new flag, no new column, no
-migration, nothing waiting on a person.
-
-**Done when** the calculator works at `/tax-breakdown` for somebody with
-`has_tax_breakdown` and the route 404s for somebody without it; at least three
-worked examples taken from the live page pass against `src/lib/tax-model.ts`;
-a test asserts the page makes no off-site request and that the string `msal`
-appears nowhere in what is served; the page does not scroll sideways at 390,
-768, 1024 or 1440 and those screenshots are attached; and `npm run verify`
-passes.
+Nothing is queued here at the moment. My Profile is next in the order, and it
+is queued once the legacy-profile question in `docs/PORTING-APPS.md` has been
+read from the data rather than guessed at. Invoices, Timesheets and Expenses are
+parked in BLOCKED.md until their repositories have been read.
 
 ## Next up — Power Suite hygiene
-
-### 1. Accessibility pass on the admin table
-The toggles are buttons with `aria-pressed` and a visually hidden label. Check
-the table's header association, focus order along a row, and that a screen
-reader announces which person a toggle belongs to.
-
-**Done when** an automated axe pass runs against `/` and `/admin` with no
-violations at 390 and 1440, and the screenshots are attached.
 
 ### 2. Delete the import script at cutover
 `scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
@@ -126,7 +65,6 @@ spirit as the 404 tests already do — declare it, do not turn the check off.
 the suite's own 404 rather than Next's; a test asserts the body names no route,
 no flag and no framework; the 404 renders at 390 and 1440 with screenshots
 attached; and `npm run verify` passes.
-
 ### 5. Content-Security-Policy
 `next.config.ts` sets `X-Frame-Options`, `X-Content-Type-Options`,
 `Referrer-Policy` and `Permissions-Policy`, and `tests/hardening.spec.ts`
@@ -170,33 +108,6 @@ in the suite logs a CSP violation — the harness already fails a test whose pag
 logged a console error, so the suite passing at all is the check; and
 `npm run verify` passes.
 
-### 6. Monthly Overview has no tile and no route
-docs/PORTING-APPS.md lists nine apps and the portal carries seven. The one
-missing is Monthly Overview — 383 lines, four lists, no writes. Every other app
-in that table is either ported or "route ready"; this one is "not routed yet",
-and has been since the survey on 25 August.
-
-The decision is already recorded — all nine move, agreed 25 August — so this is
-the gap between the plan and the repository, not a new question. It is queued
-below the calculators because it reads four SharePoint lists and the two
-calculators read nothing.
-
-This is the full checklist from CLAUDE.md, all of it or none: an entry in
-`src/lib/apps.ts`, a glyph in `src/components/TileIcon.tsx`, a route under
-`src/app/overview` calling `requireApp`, a column in a migration, a `Flag` in
-`src/lib/staff-admin.ts`, a column in `StaffTable`, and cases in
-`tests/access-matrix.spec.ts` and `tests/app-routes.spec.ts`.
-
-Route and tile only. **Do not port the page** — that is its own task, later in
-docs/PORTING-APPS.md's order, and it runs into the "staff names versus staff
-records" question recorded there, which is not settled. Leave the placeholder in
-and say in the pull request that the migration is waiting on a person.
-
-**Done when** the tile appears for somebody with the flag and is absent from the
-DOM for somebody without it; `/overview` 404s without the flag; the migration is
-committed and unapplied; the access matrix and route tests cover it; the portal
-does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
-
 ---
 
 ## Held — needs a person
@@ -228,6 +139,174 @@ does not scroll sideways at 390 with eight tiles; and `npm run verify` passes.
 
 ## Done
 
+- **Monthly Overview has a tile and a route** — `overnight/auto-2026-09-17-0300`.
+  The gap between docs/PORTING-APPS.md's nine apps and the portal's seven: the
+  eighth is now routed. All of CLAUDE.md's checklist and none of the page — an
+  entry in `src/lib/apps.ts`, a glyph, `/overview` behind `requireApp("overview")`
+  with the same placeholder the other unported apps carry, `has_overview` in
+  `0003_overview.sql`, a `Flag`, an Overview column in `StaffTable`, and cases in
+  both `tests/access-matrix.spec.ts` and `tests/app-routes.spec.ts`. The page
+  itself is deliberately not ported: it reads four SharePoint lists and runs into
+  the "staff names versus staff records" question docs/PORTING-APPS.md records as
+  unsettled, which is a decision and not a task. A fixture person of their own,
+  `overview.only@example.test`, holds the flag and nothing else, so "sees exactly
+  Monthly Overview and My Profile" is a real assertion rather than a subset of
+  Ada Everything's. The 390 width check was strengthened while it was open: it
+  asserted the page did not scroll sideways but never that anything was on it, so
+  it would have passed just as happily on a portal that had lost a tile — it now
+  counts them against `ALL_TILES` first, which is what makes "at 390 with eight
+  tiles" mean anything. One thing shaken out on the way: the eighth toggle column
+  pushed the admin screen's re-render past the 5s default, and
+  `tests/admin.spec.ts` lost that race on a full run. Every toggle in that suite
+  now goes through one `setToggle` helper that waits 15s for the row to come back
+  showing the new state — the same patience the invite check was given, and a
+  stronger check than the bare clicks three of those tests used to do, which
+  asserted on a panel without ever confirming the toggle had moved. No entry in
+  `src/lib/notify.ts`: its `APP_NAMES` covers Invoices, Timesheets, Expenses and
+  Admin and has never covered Margin or Tax Breakdown either, so an
+  access-change email names the raw flag for all three. That is a pre-existing
+  gap, not this task's, and worth a queued line of its own. The migration is
+  committed and **waiting on a person**. 139 checks.
+- **A Content-Security-Policy, with a nonce** — `overnight/auto-2026-09-16-0300`.
+  The sixth header, and the one the whole project was an argument for: no
+  Supabase key is in the bundle and no token is in browser storage, but nothing
+  made a script on the page unable to reach anything — that was a property of the
+  code holding. `default-src 'self'` and no `'unsafe-inline'` on `script-src`.
+  The nonce works under Next 16.3.2 and Turbopack: `src/proxy.ts` mints 128 bits
+  per request, sets the policy on the request as well as the response, and Next
+  reads it back out to stamp every script tag — asserted by reading the served
+  HTML, because a browser blanks the `nonce` attribute once it has read it. Two
+  callers of one `contentSecurityPolicy()` rather than two literals: the proxy's
+  nonced one, and a nonce-free floor in `next.config.ts` under the chunks, the
+  fonts and the logo, which the proxy's matcher skips. Where both apply the
+  proxy's wins, which was checked rather than assumed. Three things came out of
+  it. Next's own 404 page carries a `<style>` element built on the client, so it
+  takes no nonce — a hash names that one string, and when Next changes it every
+  404 test fails on a console error, which is the check. Nothing is prerendered
+  any more: Next's 404 was baked at build time with no nonce and arrived with the
+  console full of violations, so the root layout is `force-dynamic` — every other
+  route already was. And `style-src-attr 'unsafe-inline'`, because React writes a
+  `style` attribute for anything computed and no nonce or hash mechanism reaches
+  an attribute; `style-src` itself stays strict. HSTS is Vercel's and was left
+  alone — asserting it here could only pass by accepting its absence over http on
+  127.0.0.1. `'unsafe-eval'` and inline styles are allowed under `next dev` only,
+  keyed on NODE_ENV, which the suite never runs under. Five new checks, and both
+  of the ones that matter were watched to fail against `script-src 'self'
+  'unsafe-inline'`. No migration; nothing waiting on a person. 138 checks.
+- **A 404 and a crash that look like the product** — `overnight/auto-2026-09-15-0300`.
+  Rule 4's 404 is not an edge case, it is the answer somebody gets for trying
+  `/invoices` to see what happens, and until now it was answered by Next's own
+  page: "404 | This page could not be found", system font, no brand. There is now
+  `src/app/not-found.tsx`, `src/app/error.tsx` and `src/app/global-error.tsx`,
+  the first two sharing one `TroubleCard` so the "not here" screen and the "went
+  wrong" screen are indistinguishable — a different card for a route that exists
+  would be the 403 this project refused to serve, wearing a hat. Built from the
+  sign-in card's own classes, not new ones, because restyling is a person's job;
+  the only CSS added centres `.card-note`, which is capped at 56ch for the admin
+  screen's prose and reads as a block shoved left inside a centred card.
+  `error.tsx` logs the digest and shows nothing else: no stack, no path, no
+  digest on the page, and `reset` is deliberately not rendered. `global-error.tsx`
+  carries its own `<html>` and inline styles because the layout that imports
+  globals.css is the thing that failed — and nothing in the suite can exercise
+  it, since a test that shipped a broken root layout to prove the fallback works
+  would be its own outage. That one is reviewed by reading it, which is said here
+  rather than pretended otherwise.
+  `src/app/api/test/crash/` throws so the suite can see `error.tsx` for real —
+  under `/api/test` with the seeder and the ledger, so there is one test-mode
+  namespace and not two, and 404 outside `E2E_TEST_MODE` like its neighbours. The
+  harness grew one change to go with it: `tolerate` now filters the 5xx and
+  `pageerror` lines as well as console output, because the test that renders the
+  error boundary needs the 500 that put it there. It is matched against the same
+  strings that would be reported, so `500 from …/api/test/crash` excuses that one
+  request and no other — a 500 from anywhere else in that test still fails it.
+  All eight new checks were watched to fail with `not-found.tsx` and `error.tsx`
+  taken away.
+  **One thing found and not fixed, which the next person should decide on.** The
+  rendered 404 names nothing, and that is what the test asserts. The *markup*
+  still does: Next streams the requested segment's resolved metadata into the
+  flight payload, so the HTML for a 404 on `/invoices` contains the string
+  "Invoices — Power Analytix" and the HTML for a 404 on a nonsense path does not.
+  The two also differ in length, because an unknown path renders the static
+  `/_not-found` and a guarded one renders the error fallback. So a signed-in
+  person can still tell a route that exists from one that does not, by reading
+  the source rather than the screen. Closing the metadata half means moving every
+  guarded route's `metadata` export to a `generateMetadata` that resolves access
+  first — which doubles the staff lookup per page load unless `getCurrentUser`
+  and `resolveAccess` are wrapped in React's `cache()` first. That is a change to
+  the one place that answers "who is this", and not one to make unattended on the
+  way past. Closing the length half is a fight with Next that may not be
+  winnable. Neither is a leak of who has what, and the tile names are already
+  public in `docs/PORTING-APPS.md`; it is a leak of which routes are real.
+  No migration; nothing waiting on a person. 142 checks.
+- **Accessibility pass on the admin table** — `overnight/auto-2026-09-13-0300`.
+  axe now runs against the sign-in card, the tiles and the staff screen at 390
+  and 1440, with the screenshot attached to each, and nothing is excluded and no
+  rule is switched off. It found six things. Five were contrast: the "off" pill's
+  label at 2.42:1, "invited, not signed in" at 4.42:1, a deactivated person's
+  name and address at 2.58:1, and the faded "on" pills on a deactivated row at
+  1.87:1. That last one is why opacity is gone from the table — the only value
+  that passes is 0.88, at which nothing looks faded, so the pill is drained and
+  its label left dark instead. The sixth was that the page every stranger reaches
+  had no level-one heading at all: the sign-in card's "Power Suite" was a div and
+  is now the `h1` it already looked like. Colours moved only where axe named
+  them, and one dead rule went with them — `.toggle.off[disabled]` failed at
+  1.81:1 and styles a state that cannot occur, since the only disabled toggles
+  are your own Admin and your own Active and neither is off for anybody who can
+  load the screen.
+  Then the three things axe cannot see. The column headings were abbreviated with
+  `display: none` below 720px, so a screen reader announced "Marg" for every
+  toggle in that column; the full word is now visually hidden rather than removed
+  and is what is announced at both widths, while what is drawn stays short — and
+  the test measures the boxes rather than reading innerText, because at 390 both
+  spellings are in the markup and that is the whole trick. A toggle's name now
+  says the person the way the row header does — "Invoices for Nora Noflags", not
+  their address — and a disabled one says why, since a disabled button is not
+  focusable and never shows its `title` to a keyboard. Tab walks a row left to
+  right across all seven and off the end onto the next person, which is asserted
+  rather than assumed.
+  One scan lives in `admin.spec.ts` rather than with the others: axe reads colour
+  off what is rendered, and a populated audit trail needs a write, so it is
+  scanned inside the serial suite that is already allowed to write instead of a
+  second suite resetting the shared store beside it. Every fix was watched to
+  fail without it — reverting the five colours, the heading, the `h1` and the
+  toggle names fails six of the new checks.
+  `@axe-core/playwright` is a devDependency and reaches no browser;
+  `check:secrets` still passes. The admin screen does still scroll sideways at
+  390 — that predates this, is recorded against the audit trail tests, and is a
+  change to how the screen looks rather than an accessibility violation, so it
+  is left for a person. No migration; nothing waiting on a person. 147 checks.
+- **Ported Tax Breakdown** — `overnight/auto-2026-09-12-0300`. The second app
+  folded in, and the last one that touches no data. Most of the work was step 1
+  of the port checklist: `taxbreakdown.html` carries ten references to MSAL,
+  `msal-browser@3` from jsdelivr, a hard-coded Entra client id and tenant id, and
+  a Sign out button of its own — in front of a calculator whose only scope is
+  `User.Read` and which never calls Graph. None of it came across; `requireApp`
+  and the magic link do that job, and a public page stopped advertising an app
+  registration id. The sums are in `src/lib/tax-model.ts` with no DOM near them,
+  and `tests/tax-breakdown.spec.ts` pins them against **four** worked examples
+  read off the live page itself, run headless with every http(s) request aborted
+  — between them the small profits rate, the marginal relief band, the main
+  rate, a loss, the personal allowance tapering to nil, other PAYE income
+  stacked under this company's salary, both AMAP mileage bands, and the
+  Employment Allowance on and off. The figures the editing test drives were read
+  the same way rather than worked out by hand. On the numbers: the statutory
+  rates came across exactly as they are — 19%/25% with marginal relief of 3/200,
+  the £12,570 allowance and its taper, 10.75/35.75/39.35% on dividends, NI at
+  8%/2% and 15%, AMAP at 45p/25p — and only the default *inputs* became
+  placeholders. Two judgement calls are written down in the model rather than
+  made quietly: the £12,570 default salary is the personal allowance itself and
+  stayed, and so did the mileage rates. `paTaxBreakdownInputs_v1` keeps its key
+  and its exact JSON shape, so a browser that has used the live page keeps its
+  figures. One deliberate piece of ugliness survived: the live page prints `£-0`
+  for a negated zero, and so does this, because a port that quietly improves its
+  output has stopped agreeing with the page it replaces. A test asserts the page
+  fetches nothing off-site and that `msal`, both Entra identifiers and the two
+  Microsoft hostnames appear nowhere in what this origin serves — and that it
+  scanned the HTML and the JavaScript, rather than passing on an empty scan. One
+  thing fixed on the way: the two-context deactivation check in `admin.spec.ts`
+  ran out of its 30s budget once four more full-page screenshots were competing
+  for the same server, so it now has 60s — the same assertions, a slower
+  failure. No migration; nothing waiting on a person. 149 checks.
 - **Renamed the product to Power Suite** — `overnight/auto-2026-09-10-0300`.
   The product is Power Suite; the company is still Power Analytix. The tab now
   reads "Power Suite — Power Analytix", matching the pattern the app routes

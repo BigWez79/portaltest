@@ -9,6 +9,7 @@ export type AppKey =
   | "expenses"
   | "margin"
   | "taxBreakdown"
+  | "overview"
   | "profile"
   | "admin";
 

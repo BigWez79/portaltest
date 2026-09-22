@@ -1,4 +1,5 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { test as base, expect, type Page, type TestInfo } from "@playwright/test";
 
 /**
  * A crash counts as a failure. Any console error, uncaught exception or 5xx
@@ -6,26 +7,39 @@ import { test as base, expect, type Page } from "@playwright/test";
  */
 export const test = base.extend<{ page: Page; tolerate: string[] }>({
   /**
-   * Console noise a test expects. A test that deliberately requests a 404 gets
-   * one from the browser itself; everything else still fails the run.
+   * Noise a test expects. A test that deliberately requests a 404 gets a console
+   * error from the browser itself; everything else still fails the run.
    * Use with test.use({ tolerate: ["status of 404"] }).
+   *
+   * It is matched against all three kinds of problem, not only console output,
+   * because the test that renders the error boundary needs the 500 that put it
+   * there. The substrings are matched against the same strings that would be
+   * reported — so a 5xx is excused by naming its status and its URL,
+   * `500 from http://127.0.0.1:3100/api/test/crash`, and no other request is
+   * covered by that.
+   *
+   * Rule 12 — what would make this excuse something real? A test declaring a
+   * substring broad enough to cover a request it did not mean, `500 from` on its
+   * own being the obvious one. That is visible in the test file, which is the
+   * point of declaring it there rather than turning the listener off.
    */
   tolerate: [[], { option: true }],
 
   page: async ({ page, tolerate }, use) => {
     const problems: string[] = [];
     const expected = (text: string) => tolerate.some((t) => text.includes(t));
+    const report = (text: string) => {
+      if (!expected(text)) problems.push(text);
+    };
 
     page.on("console", (msg) => {
-      if (msg.type() === "error" && !expected(msg.text())) {
-        problems.push(`console.error: ${msg.text()}`);
-      }
+      if (msg.type() === "error") report(`console.error: ${msg.text()}`);
     });
     page.on("pageerror", (err) => {
-      problems.push(`pageerror: ${err.message}`);
+      report(`pageerror: ${err.message}`);
     });
     page.on("response", (res) => {
-      if (res.status() >= 500) problems.push(`${res.status()} from ${res.url()}`);
+      if (res.status() >= 500) report(`${res.status()} from ${res.url()}`);
     });
 
     await use(page);
@@ -114,12 +128,48 @@ export async function resetStaff(page: Page) {
   expect(res.ok(), "the fixture store should be resettable").toBeTruthy();
 }
 
+/**
+ * An axe pass over whatever is on the screen, with the screenshot attached.
+ *
+ * Nothing is excluded and no rule is disabled. If a rule ever has to go it is
+ * named at the call site with why, or this stops being a check — and a run that
+ * examined nothing reports no violations just as loudly as a clean page, so the
+ * count of rules axe actually applied is asserted too.
+ *
+ * Callers assert the thing they came to look at is on the screen first. Axe is
+ * perfectly happy with a page that failed to render.
+ */
+export async function axeScan(page: Page, testInfo: TestInfo, shot: string) {
+  const results = await new AxeBuilder({ page }).analyze();
+
+  await testInfo.attach(`a11y-${shot}.png`, {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+
+  expect(
+    results.passes.length + results.violations.length + results.incomplete.length,
+    "axe should have run rules against this page, not skipped it",
+  ).toBeGreaterThan(0);
+
+  // Rebuilt rather than passed through: an axe violation prints as [Object] and
+  // the run is over by the time anybody reads it.
+  const readable = results.violations.map((v) => ({
+    rule: v.id,
+    impact: v.impact,
+    help: v.help,
+    where: v.nodes.map((n) => ({ target: n.target, why: n.failureSummary })),
+  }));
+  expect(readable, `axe violations on ${shot}`).toEqual([]);
+}
+
 export const ALL_TILES = [
   "invoices",
   "timesheet",
   "expenses",
   "margin",
   "taxBreakdown",
+  "overview",
   "profile",
   "admin",
 ] as const;

@@ -1,4 +1,4 @@
-/** The four tile glyphs, lifted verbatim from portal v2.0. */
+/** A glyph per tile. The first four are lifted verbatim from portal v2.0. */
 export function TileIcon({ id }: { id: string }) {
   switch (id) {
     case "invoices":
@@ -37,6 +37,15 @@ export function TileIcon({ id }: { id: string }) {
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M11 4.2A8 8 0 1 0 19.8 13H11Z" />
           <path d="M14.5 3.2A8 8 0 0 1 21 9.7l-6.5 1.3Z" />
+        </svg>
+      );
+    case "overview":
+      // Bars: a month's figures side by side. Nothing else in the set is a
+      // chart, and at 20px that reads faster than a calendar would.
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 20h16" />
+          <path d="M8 20v-7M12 20v-11M16 20v-4" />
         </svg>
       );
     case "profile":

@@ -11,7 +11,7 @@ export type AppTile = {
 };
 
 /**
- * The seven tiles.
+ * The eight tiles.
  *
  * Every href is a route inside this app. Invoices, Timesheets and Expenses used
  * to be separate deployments on their own subdomains; they are being folded in
@@ -62,6 +62,14 @@ export const APP_TILES: AppTile[] = [
     href: "/tax-breakdown",
     tone: "brand",
     grants: (a) => a.apps.taxBreakdown,
+  },
+  {
+    id: "overview",
+    name: "Monthly Overview",
+    blurb: "Your month at a glance, across the suite.",
+    href: "/overview",
+    tone: "brand",
+    grants: (a) => a.apps.overview,
   },
   {
     id: "profile",

@@ -30,6 +30,19 @@ const albertSans = localFont({
   fallback: ["system-ui", "sans-serif"],
 });
 
+/**
+ * Nothing here is prerendered, because everything here is served under a CSP
+ * carrying a per-request nonce and a page built at build time has no request to
+ * take one from. Every route was already dynamic — each reads the session —
+ * except Next's own 404, which is what an unknown path gets: it was baked at
+ * build time with no nonce on its script tags, so the browser refused every one
+ * of them and the page arrived with the console full of violations.
+ *
+ * Declared on the layout rather than on a 404 page, so it is true of anything
+ * added later as well.
+ */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Power Suite — Power Analytix",
   description: "One sign-in for the whole Power Analytix suite.",

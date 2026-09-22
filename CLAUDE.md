@@ -6,9 +6,9 @@ Read this every run. Where this file and a chat transcript disagree, this file w
 
 Power Suite, the Power Analytix suite. The product is Power Suite; the company
 is still Power Analytix. One app, one deploy, one sign-in: the tiles, the
-staff admin screen, and routes for the seven apps behind it — Invoices,
-Timesheets, Expenses, Margin & Profit Split, Tax Breakdown, My Profile and
-Admin.
+staff admin screen, and routes for the eight apps behind it — Invoices,
+Timesheets, Expenses, Margin & Profit Split, Tax Breakdown, Monthly Overview,
+My Profile and Admin.
 
 All of those except Admin still run as single HTML pages in `BigWez79/portal`,
 served by GitHub Pages. Their routes here exist and are guarded, with a
@@ -109,20 +109,24 @@ src/lib/supabase/server.ts      request-scoped client (RLS) + the service-role c
 src/lib/current-user.ts         "who is this" — the one place that answers it
 src/lib/staff.ts                the caller's own row, and access resolution
 src/lib/staff-admin.ts          list, set a flag, invite
-src/lib/apps.ts                 the seven tiles
+src/lib/apps.ts                 the eight tiles
 src/lib/notify.ts               access-change email; a no-op with no Resend key
 src/lib/rate-limit.ts           how often one address, or one IP, may ask for a link
 src/lib/rate-limit-store.ts     the same limit, file-backed, for the suite only
 src/lib/session.ts              endSession — the one way a session is taken away
 src/app/page.tsx                Power Suite's home — the tiles
-src/app/{invoices,timesheets,expenses,margin,tax-breakdown,profile}/
+src/app/{invoices,timesheets,expenses,margin,tax-breakdown,overview,profile}/
                                 guarded routes, placeholder inside
 src/app/admin/page.tsx          staff access
+src/app/not-found.tsx           the 404 rule 4 serves; names nothing it turned away
+src/app/error.tsx               a crash; the digest to the log, a way back to the person
+src/app/global-error.tsx        the same, for a root layout that failed to render
 src/app/actions/                server actions — each re-checks the caller
 src/app/auth/callback/          where a magic link lands
 src/app/auth/sign-out/          ends the session; where a deactivated person lands
 src/app/api/test/session/       test-mode seeder; 404 in production
 src/app/api/test/rate-limit/    reads the sign-in ledger; 404 in production
+src/app/api/test/crash/         throws, so the suite can see error.tsx; 404 in production
 scripts/import-staff.ts         one-off CSV import; not part of running the app
 scripts/check-bundle-secrets.mjs post-build scan of what a browser receives
 supabase/migrations/            written by the machine, applied by a person

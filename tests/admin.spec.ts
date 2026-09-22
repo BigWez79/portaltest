@@ -1,4 +1,13 @@
-import { expect, expectExactlyTiles, resetStaff, signInAs, signOutCompletely, test } from "./harness";
+import type { Page } from "@playwright/test";
+import {
+  axeScan,
+  expect,
+  expectExactlyTiles,
+  resetStaff,
+  signInAs,
+  signOutCompletely,
+  test,
+} from "./harness";
 
 // Two of these ask for a page that must 404; the browser logs that itself.
 test.describe("admin screen — who can reach it", () => {
@@ -49,6 +58,22 @@ test.describe("admin screen — who can reach it", () => {
 });
 
 /**
+ * Flips one toggle and waits for the row to come back showing the new state.
+ *
+ * The wait is the point. Clicking runs a server action that writes to the
+ * fixture store while every other worker hammers the same box, and the 5s
+ * default lost that race on a full run — the same slowness the invite check was
+ * given 15s for. Nothing here is weakened: the toggle still has to end up in the
+ * state that was asked for, and anything asserted afterwards is asserted against
+ * a page that has actually been re-rendered rather than one still mid-flight.
+ */
+async function setToggle(page: Page, email: string, flag: string, on: boolean) {
+  const toggle = page.getByTestId(`toggle-${email}-${flag}`);
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", String(on), { timeout: 15_000 });
+}
+
+/**
  * These write to the fixture store, so they run one after another and reset
  * first. They also flip flags only on `grantable@` and `revocable@`, who exist
  * for this suite alone.
@@ -72,10 +97,7 @@ test.describe.serial("admin screen — changing access", () => {
 
   test("granting an app shows up on that person's tiles", async ({ page }) => {
     await page.goto("/admin");
-    await page.getByTestId("toggle-grantable@example.test-hasExpenses").click();
-    await expect(
-      page.getByTestId("toggle-grantable@example.test-hasExpenses"),
-    ).toHaveAttribute("aria-pressed", "true");
+    await setToggle(page, "grantable@example.test", "hasExpenses", true);
 
     await signInAs(page, "grantable@example.test");
     await page.goto("/");
@@ -85,10 +107,7 @@ test.describe.serial("admin screen — changing access", () => {
 
   test("removing an app takes the tile away again", async ({ page }) => {
     await page.goto("/admin");
-    await page.getByTestId("toggle-revocable@example.test-hasInvoices").click();
-    await expect(
-      page.getByTestId("toggle-revocable@example.test-hasInvoices"),
-    ).toHaveAttribute("aria-pressed", "false");
+    await setToggle(page, "revocable@example.test", "hasInvoices", false);
 
     await signInAs(page, "revocable@example.test");
     await page.goto("/");
@@ -113,6 +132,13 @@ test.describe.serial("admin screen — changing access", () => {
     page,
     browser,
   }) => {
+    // Two browser contexts, a server action and six navigations do not fit the
+    // default 30s on a box that is also screenshotting the ported calculators
+    // at four widths — this one timed out once the Tax Breakdown port landed,
+    // having passed alone every time. Same assertions, a slower failure: the
+    // same trade the invite check took in tests/admin.spec.ts before it.
+    test.setTimeout(60_000);
+
     const theirs = await browser.newContext();
     const them = await theirs.newPage();
 
@@ -123,10 +149,7 @@ test.describe.serial("admin screen — changing access", () => {
 
       // An admin, in another browser entirely, deactivates them.
       await page.goto("/admin");
-      await page.getByTestId("toggle-grantable@example.test-active").click();
-      await expect(
-        page.getByTestId("toggle-grantable@example.test-active"),
-      ).toHaveAttribute("aria-pressed", "false");
+      await setToggle(page, "grantable@example.test", "active", false);
 
       // Their next request: the sign-in card, not a signed-in home page carrying a
       // notice that they may not use it.
@@ -187,10 +210,7 @@ test.describe.serial("admin screen — changing access", () => {
     // Nothing has been changed since the reset, so the panel says so.
     await expect(page.getByTestId("audit")).toContainText("No access has been changed yet.");
 
-    await page.getByTestId("toggle-grantable@example.test-hasExpenses").click();
-    await expect(
-      page.getByTestId("toggle-grantable@example.test-hasExpenses"),
-    ).toHaveAttribute("aria-pressed", "true");
+    await setToggle(page, "grantable@example.test", "hasExpenses", true);
 
     const panel = page.getByTestId("audit-grantable@example.test");
     await expect(panel).toContainText("Granted Expenses");
@@ -202,10 +222,7 @@ test.describe.serial("admin screen — changing access", () => {
 
   test("the trail survives a reload and reads the same way", async ({ page }) => {
     await page.goto("/admin");
-    await page.getByTestId("toggle-revocable@example.test-hasInvoices").click();
-    await expect(
-      page.getByTestId("toggle-revocable@example.test-hasInvoices"),
-    ).toHaveAttribute("aria-pressed", "false");
+    await setToggle(page, "revocable@example.test", "hasInvoices", false);
 
     await page.reload();
     const panel = page.getByTestId("audit-revocable@example.test");
@@ -215,7 +232,7 @@ test.describe.serial("admin screen — changing access", () => {
 
   test("deactivating reads as deactivating, and adding as being added", async ({ page }) => {
     await page.goto("/admin");
-    await page.getByTestId("toggle-grantable@example.test-active").click();
+    await setToggle(page, "grantable@example.test", "active", false);
     await expect(page.getByTestId("audit-grantable@example.test")).toContainText(
       "Deactivated",
     );
@@ -238,7 +255,7 @@ test.describe.serial("admin screen — changing access", () => {
     // Only decisions belong here. `left.the.company@` is touched by nothing this
     // suite does, so nothing should be listed against them.
     await page.goto("/admin");
-    await page.getByTestId("toggle-grantable@example.test-hasMargin").click();
+    await setToggle(page, "grantable@example.test", "hasMargin", true);
     await expect(page.getByTestId("audit-trail")).toBeVisible();
     await expect(page.getByTestId("audit-left.the.company@example.test")).toHaveCount(0);
   });
@@ -258,7 +275,7 @@ test.describe.serial("admin screen — changing access", () => {
     test(`the trail fits at ${w.name}`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width: w.width, height: w.height });
       await page.goto("/admin");
-      await page.getByTestId("toggle-grantable@example.test-hasTaxBreakdown").click();
+      await setToggle(page, "grantable@example.test", "hasTaxBreakdown", true);
       await expect(page.getByTestId("audit-grantable@example.test")).toContainText(
         "Granted Tax Breakdown",
       );
@@ -275,6 +292,42 @@ test.describe.serial("admin screen — changing access", () => {
         body: await page.screenshot({ fullPage: true }),
         contentType: "image/png",
       });
+    });
+  }
+
+  // The accessibility pass lives in a11y.spec.ts, with one exception: axe reads
+  // colour off what is rendered, and a populated audit trail cannot be rendered
+  // without writing. Reaching it from there would mean a second suite resetting
+  // the shared fixture store beside this one, which is the flake this describe
+  // exists to avoid. So the scan of the trail's own colours happens here, where
+  // the write is already ordered.
+  for (const w of [
+    { name: "390-phone", width: 390, height: 844 },
+    { name: "1440-desktop", width: 1440, height: 900 },
+  ]) {
+    test(`a trail with something in it is clean to axe at ${w.name}`, async ({
+      page,
+    }, testInfo) => {
+      // Two writes, a full axe pass over the whole screen and a full-page
+      // screenshot. Same reason as the scans in a11y.spec.ts: more time, not
+      // less checking.
+      test.slow();
+      await page.setViewportSize({ width: w.width, height: w.height });
+      await page.goto("/admin");
+
+      // One granted and one removed: the trail draws them in two different
+      // colours and only one of them is the suite's usual blue.
+      await page.getByTestId("toggle-grantable@example.test-hasExpenses").click();
+      await expect(page.getByTestId("audit-grantable@example.test")).toContainText(
+        "Granted Expenses",
+      );
+      await page.getByTestId("toggle-revocable@example.test-hasInvoices").click();
+      await expect(page.getByTestId("audit-revocable@example.test")).toContainText(
+        "Removed Invoices",
+      );
+
+      await expect(page.getByTestId("audit-trail")).toBeVisible();
+      await axeScan(page, testInfo, `admin-trail-${w.name}`);
     });
   }
 

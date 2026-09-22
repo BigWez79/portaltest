@@ -17,8 +17,8 @@ copies are stale.
 |---|---:|---:|---:|---|
 | Portal | 209 | 1 | 0 | rebuilt |
 | Margin & Profit Split | 848 | 0 | 0 | **ported** |
-| Tax Breakdown | 557 | 0 | 0 | route ready |
-| Monthly Overview | 383 | 4 | 0 | not routed yet |
+| Tax Breakdown | 557 | 0 | 0 | **ported** |
+| Monthly Overview | 383 | 4 | 0 | route ready |
 | My Profile | 375 | 5 | 2 | route ready |
 | Expenses | 586 | 4 | 5 | route ready |
 | Invoices | 1,004 | 6 | 12 | route ready |
@@ -116,6 +116,51 @@ Breakdown next:
 - Seven staff columns do not fit a phone. The staff block scrolls inside
   itself, so the page never scrolls sideways — asserted at 390, 768, 1024 and
   1440, along with the columns all being on screen from 768 up.
+
+## Tax Breakdown, specifically
+
+Read from the live page, 12 September: 557 lines, of which ~265 are inline
+script and ~158 inline style.
+
+- **MSAL is there; Graph is not.** Ten references to MSAL, `msal-browser@3` from
+  jsdelivr, a hard-coded `clientId` and `tenantId`, and `SCOPES = ["User.Read"]`
+  — with zero calls to `graph.microsoft.com` and no lists. It is a sign-in gate
+  in front of a calculator. Step 1 was therefore most of the work, and deleting
+  it also takes an Entra app registration id off a public page.
+- **Nothing to bundle.** MSAL was the only off-site script and Google Fonts the
+  only off-site stylesheet; Sora and Albert Sans are self-hosted here already.
+- **The hard-coded figures are UK statutory rates**, not this company's numbers,
+  and they came across exactly as they are. The placeholder rule applies to
+  default *inputs* — the revenue, the three expense lines and the two pension
+  contributions — and those were replaced. Two judgement calls are recorded in
+  `src/lib/tax-model.ts`: the £12,570 default salary is the personal allowance
+  itself and stayed, as did the 45p/25p AMAP mileage rates.
+- **One `localStorage` key**, `paTaxBreakdownInputs_v1`, kept with its exact JSON
+  shape, so a browser that has used the live page keeps its figures.
+
+**Ported on `overnight/auto-2026-09-12-0300`.** How it came out:
+
+- The sums live in `src/lib/tax-model.ts` — `corpTax`, `taxSlice`,
+  `personalAllowance`, `personalTax`, `employerNI`, `mileageClaim` and
+  `takeHomePct` were already pure there, so they moved unchanged. The markup is
+  a client component, as Margin's is; the calculator recalculates on every
+  keystroke and has no server state beyond the guard.
+- `tests/tax-breakdown.spec.ts` holds four worked examples read off the live page
+  running headless with every http(s) request aborted. Between them they cover
+  the small profits rate, the marginal relief band, the main rate, a loss, the
+  personal allowance tapering to nil, other PAYE income, both AMAP mileage bands
+  and the Employment Allowance on and off. The figures driven by the editing test
+  were read the same way rather than derived by hand.
+- **The `£-0` stayed.** The live page's `fmtSigned` tests `n < 0`, which is false
+  for a negated zero, so a zero expense prints as `£-0`. It is reproduced and
+  pinned, because a port that quietly improves its output is a port that no
+  longer agrees with the page it replaces.
+- A test asserts the page fetches nothing off-site and that `msal`, both Entra
+  identifiers and the two Microsoft hostnames appear nowhere in what this origin
+  serves — and that it actually scanned the HTML and the JavaScript, rather than
+  passing on an empty scan.
+- The live page is 1040px wide, so the route reuses `AppShell`'s `wide` option
+  rather than adding a third width.
 
 ## Open questions, to be answered when they bite
 

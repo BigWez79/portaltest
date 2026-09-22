@@ -8,14 +8,15 @@ import { expect, signInAs, signOutCompletely, test } from "./harness";
 /**
  * `landmark` is what proves the page actually rendered. It is "not-ported" for
  * the routes still waiting on their app's own code, and the app's own root once
- * that app has been folded in — Margin is the first of those.
+ * that app has been folded in — Margin and Tax Breakdown so far.
  */
 const FLAGGED = [
   { path: "/invoices", holder: "invoices.only@example.test", landmark: "not-ported" },
   { path: "/timesheets", holder: "timesheet.only@example.test", landmark: "not-ported" },
   { path: "/expenses", holder: "expenses.only@example.test", landmark: "expenses-app" },
   { path: "/margin", holder: "margin.only@example.test", landmark: "margin-calculator" },
-  { path: "/tax-breakdown", holder: "tax.only@example.test", landmark: "not-ported" },
+  { path: "/tax-breakdown", holder: "tax.only@example.test", landmark: "tax-calculator" },
+  { path: "/overview", holder: "overview.only@example.test", landmark: "not-ported" },
 ];
 
 test.describe("app routes", () => {
@@ -82,7 +83,15 @@ test.describe("app routes", () => {
 
     await signInAs(page, "everything@example.test");
     await page.goto("/timesheets");
-    for (const id of ["invoices", "expenses", "margin", "taxBreakdown", "profile", "admin"]) {
+    for (const id of [
+      "invoices",
+      "expenses",
+      "margin",
+      "taxBreakdown",
+      "overview",
+      "profile",
+      "admin",
+    ]) {
       await expect(page.getByTestId(`switch-${id}`)).toBeVisible();
     }
     await expect(page.getByTestId("switch-timesheet")).toHaveCount(0);
@@ -98,6 +107,7 @@ test.describe("app routes", () => {
       ["expenses", "/expenses"],
       ["margin", "/margin"],
       ["taxBreakdown", "/tax-breakdown"],
+      ["overview", "/overview"],
       ["profile", "/profile"],
       ["admin", "/admin"],
     ]) {
