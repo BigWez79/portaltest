@@ -2112,6 +2112,8 @@ tr.inactive .toggle.on {
   margin-left: auto;
   margin-right: auto;
 }
+
+/* ---------------------------------------------------------------------------
    Expenses
 
    Ported from expenses.html. The live page is a two-tab layout — add on one,
