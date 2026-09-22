@@ -11,6 +11,7 @@ export type StaffRow = {
   hasExpenses: boolean;
   hasMargin: boolean;
   hasTaxBreakdown: boolean;
+  hasOverview: boolean;
   invitedAt?: string | null;
   lastSeenAt?: string | null;
 };
@@ -38,6 +39,7 @@ export type Access = {
     expenses: boolean;
     margin: boolean;
     taxBreakdown: boolean;
+    overview: boolean;
   };
 };
 
@@ -49,7 +51,7 @@ type Identity = {
 // Kept as one string literal on purpose: supabase-js infers the row type from
 // the literal, and a concatenation turns the whole select into an error type.
 // prettier-ignore
-export const STAFF_COLUMNS = "email, full_name, active, is_admin, has_invoices, has_timesheet, has_expenses, has_margin, has_tax_breakdown, invited_at, last_seen_at";
+export const STAFF_COLUMNS = "email, full_name, active, is_admin, has_invoices, has_timesheet, has_expenses, has_margin, has_tax_breakdown, has_overview, invited_at, last_seen_at";
 
 export function toStaffRow(row: Record<string, unknown>): StaffRow {
   return {
@@ -62,6 +64,7 @@ export function toStaffRow(row: Record<string, unknown>): StaffRow {
     hasExpenses: row.has_expenses === true,
     hasMargin: row.has_margin === true,
     hasTaxBreakdown: row.has_tax_breakdown === true,
+    hasOverview: row.has_overview === true,
     invitedAt: (row.invited_at as string | null) ?? null,
     lastSeenAt: (row.last_seen_at as string | null) ?? null,
   };
@@ -140,6 +143,7 @@ export async function resolveAccess(identity: Identity): Promise<Access> {
       expenses: grant(row?.hasExpenses),
       margin: grant(row?.hasMargin),
       taxBreakdown: grant(row?.hasTaxBreakdown),
+      overview: grant(row?.hasOverview),
     },
   };
 }

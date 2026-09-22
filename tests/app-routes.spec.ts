@@ -16,6 +16,7 @@ const FLAGGED = [
   { path: "/expenses", holder: "expenses.only@example.test", landmark: "not-ported" },
   { path: "/margin", holder: "margin.only@example.test", landmark: "margin-calculator" },
   { path: "/tax-breakdown", holder: "tax.only@example.test", landmark: "tax-calculator" },
+  { path: "/overview", holder: "overview.only@example.test", landmark: "not-ported" },
 ];
 
 test.describe("app routes", () => {
@@ -82,7 +83,15 @@ test.describe("app routes", () => {
 
     await signInAs(page, "everything@example.test");
     await page.goto("/timesheets");
-    for (const id of ["invoices", "expenses", "margin", "taxBreakdown", "profile", "admin"]) {
+    for (const id of [
+      "invoices",
+      "expenses",
+      "margin",
+      "taxBreakdown",
+      "overview",
+      "profile",
+      "admin",
+    ]) {
       await expect(page.getByTestId(`switch-${id}`)).toBeVisible();
     }
     await expect(page.getByTestId("switch-timesheet")).toHaveCount(0);
@@ -98,6 +107,7 @@ test.describe("app routes", () => {
       ["expenses", "/expenses"],
       ["margin", "/margin"],
       ["taxBreakdown", "/tax-breakdown"],
+      ["overview", "/overview"],
       ["profile", "/profile"],
       ["admin", "/admin"],
     ]) {

@@ -169,6 +169,7 @@ export const ALL_TILES = [
   "expenses",
   "margin",
   "taxBreakdown",
+  "overview",
   "profile",
   "admin",
 ] as const;

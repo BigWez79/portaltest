@@ -59,6 +59,7 @@ const LABEL: Record<Flag, string> = {
   hasExpenses: "Expenses",
   hasMargin: "Margin",
   hasTaxBreakdown: "Tax Breakdown",
+  hasOverview: "Monthly Overview",
 };
 
 /** How one flag moving reads in a sentence. */

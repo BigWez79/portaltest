@@ -24,7 +24,16 @@ test.describe("access matrix", () => {
       who: "every flag and admin",
       email: "everything@example.test",
       name: "Ada Everything",
-      tiles: ["invoices", "timesheet", "expenses", "margin", "taxBreakdown", "profile", "admin"],
+      tiles: [
+        "invoices",
+        "timesheet",
+        "expenses",
+        "margin",
+        "taxBreakdown",
+        "overview",
+        "profile",
+        "admin",
+      ],
     },
     {
       who: "invoices only",
@@ -55,6 +64,12 @@ test.describe("access matrix", () => {
       email: "tax.only@example.test",
       name: "Tex Tax",
       tiles: ["taxBreakdown", "profile"],
+    },
+    {
+      who: "monthly overview only",
+      email: "overview.only@example.test",
+      name: "Olive Overview",
+      tiles: ["overview", "profile"],
     },
     {
       who: "admin with no app flags",
