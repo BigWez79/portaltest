@@ -8,6 +8,16 @@ import { expect, resetStores, signInAs, test } from "./harness";
  * fixture file, and a suite that leaves an invoice behind poisons the next one.
  */
 
+/**
+ * One worker, in order. Two blocks below reset the invoice store, and
+ * `test.describe.serial` orders the tests inside a block without saying
+ * anything about two blocks running beside each other — one block's reset
+ * lands in the middle of the other's work and the failure surfaces somewhere
+ * unrelated. `scripts/check-test-isolation.mjs` fails the build if a spec
+ * forgets this.
+ */
+test.describe.configure({ mode: "serial" });
+
 const SELLER = "invoices.only@example.test";
 const OTHER = "everything@example.test";
 
@@ -35,7 +45,10 @@ test.describe("invoices — reading your own", () => {
     await signInAs(page, SELLER);
     await page.goto("/invoices");
 
-    await expect(page.getByTestId("status-INV-0001")).toHaveText("Sent");
+    // INV-0001 was sent and its 14 days ran out in July, so the list says
+    // Overdue — the stored status is still Sent and nothing wrote otherwise.
+    await expect(page.getByTestId("status-INV-0001")).toHaveText("Overdue");
+    await expect(page.getByTestId("status-INV-0001")).toHaveAttribute("data-stored", "Sent");
     await expect(page.getByTestId("status-INV-0002")).toHaveText("Paid");
   });
 
@@ -153,7 +166,12 @@ test.describe.serial("invoices — writing", () => {
     await page.getByTestId("open-INV-0001").click();
 
     await page.getByTestId("send-INV-0001").click();
-    await expect(page.getByTestId("status-INV-0001")).toHaveText("Sent", { timeout: 15000 });
+    // The stored status, not the pill: this invoice is dated far enough back
+    // that sending it makes it immediately overdue, which is correct and is
+    // not what this test is about.
+    await expect(page.getByTestId("status-INV-0001")).toHaveAttribute("data-stored", "Sent", {
+      timeout: 15000,
+    });
 
     await page.getByTestId("pay-INV-0001").click();
     await expect(page.getByTestId("status-INV-0001")).toHaveText("Paid", { timeout: 15000 });
@@ -228,7 +246,7 @@ test.describe("invoices — the document", () => {
     // The stored status is still Sent. Overdue is worked out at render time, so
     // it is right the morning after it falls due with nothing scheduled — and
     // wrong for nobody if that schedule ever stopped.
-    await expect(page.getByTestId("status-INV-0001")).toHaveText("Sent");
+    await expect(page.getByTestId("status-INV-0001")).toHaveAttribute("data-stored", "Sent");
   });
 
   test("paid beats overdue, and a draft is never overdue", async ({ page }) => {
@@ -288,6 +306,83 @@ test.describe("invoices — the document", () => {
     expect(visible.nav, "nor does the page furniture").toBe(false);
 
     await page.emulateMedia({ media: "screen" });
+  });
+});
+
+test.describe("invoices — the filters", () => {
+  test("each filter shows the set it names", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // INV-0001 sent and past its 14 days; INV-0002 paid.
+    await expect(page.getByTestId("filter-count")).toHaveText("2 of 2");
+
+    await page.getByTestId("filter-paid").click();
+    await expect(page.getByTestId("invoice-INV-0002")).toBeVisible();
+    await expect(page.getByTestId("invoice-INV-0001")).toHaveCount(0);
+
+    await page.getByTestId("filter-overdue").click();
+    await expect(page.getByTestId("invoice-INV-0001")).toBeVisible();
+    await expect(page.getByTestId("invoice-INV-0002")).toHaveCount(0);
+
+    // Outstanding is everything not yet paid — it answers "what am I still
+    // owed", so an overdue invoice belongs in it and a paid one does not.
+    await page.getByTestId("filter-outstanding").click();
+    await expect(page.getByTestId("invoice-INV-0001")).toBeVisible();
+    await expect(page.getByTestId("invoice-INV-0002")).toHaveCount(0);
+
+    await page.getByTestId("filter-all").click();
+    await expect(page.getByTestId("filter-count")).toHaveText("2 of 2");
+  });
+
+  test("a filter that matches nothing says so rather than looking empty", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    await page.getByTestId("filter-due-in-7-days").click();
+    await expect(page.getByTestId("filter-empty")).toContainText("Due in 7 days");
+    await expect(page.getByTestId("filter-count")).toHaveText("0 of 2");
+  });
+});
+
+test.describe.serial("invoices — due in 7 days", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetStores(page, "invoices");
+  });
+
+  test("an invoice falling due this week is in that filter and nowhere near Overdue", async ({
+    page,
+  }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // Dated relative to today rather than fixed in a fixture. A hard-coded
+    // date would pass this week and quietly stop testing anything the week
+    // after — the filter is about the gap between two dates, so the test has
+    // to be too. This seller's terms are 30 days, so 25 days ago falls due in
+    // five.
+    const raised = new Date();
+    raised.setDate(raised.getDate() - 25);
+    const iso = raised.toISOString().slice(0, 10);
+
+    await page.getByTestId("invoice-no").fill("INV-0091");
+    await page.getByTestId("invoice-customer").selectOption({ index: 1 });
+    await page.getByTestId("invoice-date").fill(iso);
+    await page.getByTestId("raise-submit").click();
+    await expect(page.getByTestId("invoice-INV-0091")).toBeVisible({ timeout: 15000 });
+
+    // A draft is never chased, so it has to be sent before it can be due.
+    await page.getByTestId("open-INV-0091").click();
+    await page.getByTestId("send-INV-0091").click();
+    await expect(page.getByTestId("status-INV-0091")).toHaveAttribute("data-stored", "Sent", {
+      timeout: 15000,
+    });
+
+    await page.getByTestId("filter-due-in-7-days").click();
+    await expect(page.getByTestId("invoice-INV-0091")).toBeVisible();
+
+    await page.getByTestId("filter-overdue").click();
+    await expect(page.getByTestId("invoice-INV-0091")).toHaveCount(0);
   });
 });
 

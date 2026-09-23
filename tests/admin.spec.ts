@@ -96,8 +96,10 @@ test.describe.serial("admin screen — changing access", () => {
   });
 
   test.afterAll(async ({ browser }) => {
+    // Through the helper rather than posting to the seeder, so
+    // scripts/check-test-isolation.mjs can see which stores this file touches.
     const page = await browser.newPage();
-    await page.request.post("/api/test/session?reset=staff,audit");
+    await resetStores(page, "staff", "audit");
     await page.close();
   });
 

@@ -2713,6 +2713,35 @@ tr.inactive .toggle.on {
   margin: 0;
 }
 
+.inv-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+/* Five buttons will not sit in a row on a phone. The group scrolls rather than
+   wrapping, so the set still reads as one control. */
+.inv-filters .seg {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.inv-count {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Overdue is the one state somebody needs to spot without reading. */
+.inv-status.is-overdue {
+  background: #fdecea;
+  border-color: #f3c3bd;
+  color: var(--err);
+}
+
 .inv-status {
   font-size: 0.68rem;
   letter-spacing: 0.06em;

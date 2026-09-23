@@ -37,23 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. What an invoice is worth knowing about
-The port has Draft, Sent and Paid and stops there. The original derives more.
-
-`dueDate`, `effectiveStatus`, `daysUntilDue` and `matchesFilter` already exist
-in `src/lib/invoices-calc.ts` — they landed with the document, which needed the
-due date and the badge. What is left is the screen.
-
-- [ ] The five filter buttons: All / Outstanding / Due in 7 days / Overdue / Paid
-- [ ] The list shows the effective status, not the stored one, so an overdue
-      invoice reads as overdue in the list as well as on the document
-- [ ] Badge colours in the list, matching the document
-
-**Done when** an invoice dated past its terms and marked Sent shows as Overdue
-with no write having happened, each filter returns the right set against a
-fixture with one invoice in each state, and `npm run verify` passes.
-
-### 2. Correcting an invoice, and the number on it
+### 1. Correcting an invoice, and the number on it
 Raised is not final. The original lets a header be corrected and an invoice
 deleted, and it numbers them properly.
 
@@ -70,7 +54,7 @@ deleted, and it numbers them properly.
 invoice keeps its number, a full address reaches the document, and
 `npm run verify` passes.
 
-### 3. The expenses claim
+### 2. The expenses claim
 `f303a141-expenses.html` has `Download claim (PDF)` and the port has nothing.
 
 - [ ] Title `EXPENSES CLAIM`, logo, claim month, generated date
@@ -85,7 +69,7 @@ invoice keeps its number, a full address reaches the document, and
 produces both tables, both subtotals and a total equal to their sum, and
 `npm run verify` passes.
 
-### 4. Expenses — the two screens, and an admin's copy
+### 3. Expenses — the two screens, and an admin's copy
 The original keeps `My entries` and `Monthly claim` apart; the port merged
 them, which is why a month's claim is hard to see.
 
@@ -97,7 +81,7 @@ them, which is why a month's claim is hard to see.
 claim, a non-admin calling that action is refused (rule 5), and
 `npm run verify` passes.
 
-### 5. Timesheets — a day is the unit
+### 4. Timesheets — a day is the unit
 The port is not a thinner version of the original, it is a different model, and
 this is the task that fixes that. Today a day with three activities takes three
 actions to correct and the shape of the day cannot be changed at all.
@@ -114,7 +98,7 @@ actions to correct and the shape of the day cannot be changed at all.
 deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
 refused; and `npm run verify` passes.
 
-### 6. Timesheets — the day rate and the period
+### 5. Timesheets — the day rate and the period
 - [ ] A day rate on the profile, with `Save day rate`
 - [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
 - [ ] The button label follows the period: `Invoice` for a month, `Statement`
@@ -123,7 +107,7 @@ refused; and `npm run verify` passes.
 **Done when** the switch changes the range and the label, the rate persists,
 and `npm run verify` passes.
 
-### 7. Timesheets — three documents
+### 6. Timesheets — three documents
 `1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
 
 - [ ] `Timesheet_<name>_<period>.pdf` — the full record
@@ -133,7 +117,7 @@ and `npm run verify` passes.
 **Done when** all three come out for a period holding billable and non-billable
 days, the draft is watermarked as a draft, and `npm run verify` passes.
 
-### 8. Timesheets — Issue invoice
+### 7. Timesheets — Issue invoice
 The original hands billable days to the invoicing system with net, VAT and
 gross already worked out. In the port the two apps do not speak.
 
@@ -141,7 +125,7 @@ gross already worked out. In the port the two apps do not speak.
 billable day at the day rate, the timesheet records that it was issued and
 refuses to issue the same period twice, and `npm run verify` passes.
 
-### 9. Monthly Overview is the wrong page
+### 8. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -168,7 +152,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 10. Admin — the three controls that are missing
+### 9. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -178,7 +162,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 11. The runner opens a second pull request for work it already did
+### 10. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -338,6 +322,35 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **The invoice filters, and a check for the bug that keeps finding me** —
+  `overnight/suite-theme`. All / Outstanding / Due in 7 days / Overdue / Paid,
+  and the list now shows what an invoice actually is rather than what was last
+  written to it: an invoice sent in July with 14-day terms reads Overdue, while
+  `data-stored` still says Sent, because nothing wrote anything.
+
+  The "due in 7 days" test dates its invoice relative to today rather than
+  taking a fixture date. A hard-coded date would pass this week and quietly
+  stop testing anything the week after — the filter is about the gap between
+  two dates, so the test has to be as well.
+
+  `scripts/check-test-isolation.mjs` is the real content of this one. Twice in
+  an hour I shipped the same bug: two `test.describe.serial` blocks in one file
+  both resetting the same fixture store. `serial` orders the tests inside a
+  block and says nothing about two blocks running beside each other, so one
+  block's reset lands between another's save and its reload — and it surfaces
+  somewhere unrelated. Once as a sort-code bug in My Profile, once as an admin
+  tile that would not disappear. The check reads the specs, fails on a file with
+  two serial blocks that resets a store without being file-serial, and fails on
+  two specs resetting the same store. It found a third case in `admin.spec.ts`
+  on its first run. It is in `npm run verify`.
+
+  Rule 12, on the check itself: it would pass wrongly if a spec reset a store by
+  posting to the seeder rather than calling `resetStores`. So it looks for that
+  too and reports it as unreadable rather than ignoring it — it can say "I
+  cannot tell", and it does, loudly.
+
+  npm run verify: 255 passed.
 
 - **The invoice document** — `overnight/suite-theme`. The largest single thing
   the port had dropped: the suite could raise an invoice and had no way to send

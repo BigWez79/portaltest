@@ -13,11 +13,15 @@ import {
 } from "@/app/actions/invoices";
 import {
   DEFAULT_TAX_RATE,
+  INVOICE_FILTERS,
+  effectiveStatus,
   gbp,
   lineAmounts,
+  matchesFilter,
   nextInvoiceNo,
   type Customer,
   type Invoice,
+  type InvoiceFilter,
   type InvoiceLine,
 } from "@/lib/invoices-calc";
 
@@ -45,6 +49,7 @@ export function InvoicesApp({
   const [cust, custAction, savingCustomer] = useActionState(saveCustomer, idle);
 
   const [tab, setTab] = useState<"invoices" | "customers">("invoices");
+  const [filter, setFilter] = useState<InvoiceFilter>("All");
   const [selected, setSelected] = useState<string | null>(openId);
   const [qty, setQty] = useState("1");
   const [unit, setUnit] = useState("");
@@ -58,6 +63,11 @@ export function InvoicesApp({
     () => nextInvoiceNo(invoices.map((i) => i.invoiceNo), "INV"),
     [invoices],
   );
+
+  // Worked out once per render rather than per row: `matchesFilter` builds a
+  // date for every invoice it is asked about, and the list re-renders on every
+  // keystroke in the line form above it.
+  const shown = useMemo(() => invoices.filter((i) => matchesFilter(i, filter)), [invoices, filter]);
 
   const open = invoices.find((i) => i.id === selected) ?? null;
   const openLines = open ? (linesByInvoice[open.id] ?? []) : [];
@@ -195,13 +205,38 @@ export function InvoicesApp({
             </form>
           </section>
 
+          <div className="inv-filters" data-testid="invoice-filters">
+            <div className="seg" role="group" aria-label="Which invoices to show">
+              {INVOICE_FILTERS.map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  aria-pressed={filter === f}
+                  onClick={() => setFilter(f)}
+                  data-testid={`filter-${f.replace(/\W+/g, "-").toLowerCase()}`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+            <span className="inv-count" data-testid="filter-count">
+              {shown.length} of {invoices.length}
+            </span>
+          </div>
+
           {invoices.length === 0 ? (
             <p className="inv-empty" data-testid="invoices-empty">
               No invoices yet. Raise the first one above.
             </p>
           ) : null}
 
-          {invoices.map((inv) => {
+          {shown.length === 0 && invoices.length > 0 ? (
+            <p className="inv-empty" data-testid="filter-empty">
+              Nothing under {filter}.
+            </p>
+          ) : null}
+
+          {shown.map((inv) => {
             const lines = linesByInvoice[inv.id] ?? [];
             const isOpen = selected === inv.id;
             return (
@@ -219,10 +254,14 @@ export function InvoicesApp({
                     <span className="inv-date">{ukDate(inv.invoiceDate)}</span>
                   </button>
                   <span
-                    className={`inv-status is-${inv.status.toLowerCase()}`}
+                    className={`inv-status is-${effectiveStatus(inv).toLowerCase()}`}
                     data-testid={`status-${inv.invoiceNo}`}
+                    // What is stored, for anything that needs to tell the two
+                    // apart. Overdue is never written, and a test proving that
+                    // has to be able to see the difference.
+                    data-stored={inv.status}
                   >
-                    {inv.status}
+                    {effectiveStatus(inv)}
                   </span>
                   <span className="inv-total" data-testid={`total-${inv.invoiceNo}`}>
                     {gbp(inv.invoiceTotal)}
