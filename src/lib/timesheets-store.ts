@@ -119,6 +119,38 @@ export const timesheetStore = {
     return true;
   },
 
+  /** Everything on one date, replaced. The delete runs first — see replaceDay. */
+  async replaceDay(
+    email: string,
+    name: string | null,
+    date: string,
+    activities: EntryInput[],
+  ): Promise<{ ok: true } | { ok: false; message: string }> {
+    const doc = await load();
+    const month = date.slice(0, 7);
+    if (doc.locks.some((l) => l.staffEmail === email && l.claimMonth === month)) {
+      return { ok: false, message: "That month is closed." };
+    }
+
+    doc.entries = doc.entries.filter((e) => !(e.staffEmail === email && e.entryDate === date));
+    for (const a of activities) {
+      doc.entries.push({
+        id: randomUUID(),
+        staffEmail: email,
+        staffName: name,
+        entryDate: date,
+        activityType: a.activityType,
+        project: a.project || null,
+        hoursWorked: a.hoursWorked,
+        workDescription: a.workDescription || null,
+        claimMonth: month,
+        submittedOn: new Date().toISOString(),
+      });
+    }
+    await save(doc);
+    return { ok: true };
+  },
+
   async lock(email: string, month: string): Promise<boolean> {
     const doc = await load();
     if (isLocked(doc, email, month)) return true;

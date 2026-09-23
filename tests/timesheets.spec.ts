@@ -8,6 +8,14 @@ import { expect, resetStores, signInAs, test } from "./harness";
  * fixture file, and a suite that leaves hours behind poisons the next one.
  */
 
+/**
+ * One worker, in order: two blocks below reset the timesheet store, and
+ * `test.describe.serial` orders the tests inside a block without saying
+ * anything about two blocks running beside each other.
+ * `scripts/check-test-isolation.mjs` caught this before a flake did.
+ */
+test.describe.configure({ mode: "serial" });
+
 const STAFF = "timesheet.only@example.test";
 const OTHER = "everything@example.test";
 
@@ -60,10 +68,10 @@ test.describe.serial("timesheets — writing", () => {
     await page.goto("/timesheets");
 
     await page.getByTestId("entry-date").fill("2026-08-05");
-    await page.getByTestId("entry-type").selectOption("Development");
-    await page.getByTestId("entry-hours").fill("3.25");
-    await page.getByTestId("entry-desc").fill("Build pipeline");
-    await page.getByTestId("log-submit").click();
+    await page.getByTestId("entry-type-0").selectOption("Development");
+    await page.getByTestId("entry-hours-0").fill("3.25");
+    await page.getByTestId("entry-desc-0").fill("Build pipeline");
+    await page.getByTestId("submit-day").click();
 
     await expect(page.getByTestId("log-ok")).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId("day-total-2026-08-05")).toHaveText("3.25 h");
@@ -73,12 +81,12 @@ test.describe.serial("timesheets — writing", () => {
     await signInAs(page, STAFF);
     await page.goto("/timesheets");
 
-    await page.getByTestId("entry-type").selectOption("Annual Leave");
-    await expect(page.getByTestId("entry-fixed")).toBeVisible();
-    await expect(page.getByTestId("entry-hours")).toHaveCount(0);
+    await page.getByTestId("entry-type-0").selectOption("Annual Leave");
+    await expect(page.getByTestId("entry-fixed-0")).toBeVisible();
+    await expect(page.getByTestId("entry-hours-0")).toHaveCount(0);
 
     await page.getByTestId("entry-date").fill("2026-08-06");
-    await page.getByTestId("log-submit").click();
+    await page.getByTestId("submit-day").click();
 
     await expect(page.getByTestId("log-ok")).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId("day-total-2026-08-06")).toHaveText("8 h");
@@ -89,16 +97,16 @@ test.describe.serial("timesheets — writing", () => {
     await page.goto("/timesheets");
 
     await page.getByTestId("entry-date").fill("2026-08-07");
-    await page.getByTestId("entry-type").selectOption("Project work");
+    await page.getByTestId("entry-type-0").selectOption("Project work");
 
     // The input carries max="24", so the browser refuses to submit and the
     // server check is never reached. That attribute is a convenience, not the
     // check — drop it and post anyway, which is what anything other than this
     // form would do. The live page has no limit at either end, so a slipped
     // decimal point logs 800 hours and the month's total is quietly nonsense.
-    await page.getByTestId("entry-hours").evaluate((el) => el.removeAttribute("max"));
-    await page.getByTestId("entry-hours").fill("80");
-    await page.getByTestId("log-submit").click();
+    await page.getByTestId("entry-hours-0").evaluate((el) => el.removeAttribute("max"));
+    await page.getByTestId("entry-hours-0").fill("80");
+    await page.getByTestId("submit-day").click();
 
     await expect(page.getByTestId("log-error")).toContainText("24 hours", { timeout: 15000 });
   });
@@ -130,11 +138,152 @@ test.describe.serial("timesheets — writing", () => {
 
     // June is closed in the fixture.
     await page.getByTestId("entry-date").fill("2026-06-10");
-    await page.getByTestId("entry-type").selectOption("Admin");
-    await page.getByTestId("entry-hours").fill("2");
-    await page.getByTestId("log-submit").click();
+    await page.getByTestId("entry-type-0").selectOption("Admin");
+    await page.getByTestId("entry-hours-0").fill("2");
+    await page.getByTestId("submit-day").click();
 
     await expect(page.getByTestId("log-error")).toContainText("closed", { timeout: 15000 });
+  });
+});
+
+test.describe.serial("timesheets — a day is the unit", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetStores(page, "timesheets");
+  });
+
+  test("a day with three activities goes in as one thing", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    await page.getByTestId("entry-date").fill("2026-08-20");
+    await page.getByTestId("entry-type-0").selectOption("Project work");
+    await page.getByTestId("entry-hours-0").fill("4");
+
+    await page.getByTestId("add-activity").click();
+    await page.getByTestId("entry-type-1").selectOption("Meeting");
+    await page.getByTestId("entry-hours-1").fill("1.5");
+
+    await page.getByTestId("add-activity").click();
+    await page.getByTestId("entry-type-2").selectOption("Admin");
+    await page.getByTestId("entry-hours-2").fill("2");
+
+    // The running total is the point of building a day up before submitting it.
+    await expect(page.getByTestId("day-total")).toContainText("7.5 h");
+
+    await page.getByTestId("submit-day").click();
+    await expect(page.getByTestId("log-ok")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("day-total-2026-08-20")).toHaveText("7.5 h");
+
+    // And the form is ready for the next day rather than still holding this one.
+    await expect(page.getByTestId("activity-1")).toHaveCount(0);
+  });
+
+  test("removing an activity takes the right one out", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    await page.getByTestId("entry-type-0").selectOption("Project work");
+    await page.getByTestId("entry-hours-0").fill("4");
+    await page.getByTestId("add-activity").click();
+    await page.getByTestId("entry-type-1").selectOption("Meeting");
+    await page.getByTestId("entry-hours-1").fill("1.5");
+    await page.getByTestId("add-activity").click();
+    await page.getByTestId("entry-type-2").selectOption("Demo");
+    await page.getByTestId("entry-hours-2").fill("3");
+
+    // Drop the middle one. With an index as the React key the rows below would
+    // shift their state up and this would leave Meeting behind instead.
+    await page.getByTestId("drop-activity-1").click();
+
+    await expect(page.getByTestId("entry-type-0")).toHaveValue("Project work");
+    await expect(page.getByTestId("entry-type-1")).toHaveValue("Demo");
+    await expect(page.getByTestId("entry-hours-1")).toHaveValue("3");
+    await expect(page.getByTestId("activity-2")).toHaveCount(0);
+  });
+
+  test("a whole day is edited as a whole day", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    // 15 July has two activities in the fixture.
+    await page.getByTestId("edit-day-2026-07-15").click();
+
+    await expect(page.getByTestId("activity-0")).toBeVisible();
+    await expect(page.getByTestId("activity-1")).toBeVisible();
+    await expect(page.getByTestId("entry-date")).toHaveValue("2026-07-15");
+
+    // Change the shape of the day, not just one row: drop an activity and
+    // change what is left. The old model could do neither.
+    await page.getByTestId("drop-activity-1").click();
+    await page.getByTestId("entry-hours-0").fill("5");
+    await page.getByTestId("submit-day").click();
+
+    await expect(page.getByTestId("log-ok")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("day-total-2026-07-15")).toHaveText("5 h");
+  });
+
+  test("a day already logged is not quietly replaced", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    // Submitting over a day that already has activities would wipe them without
+    // saying so. Editing is how you change one, and this says which day it is.
+    await page.getByTestId("entry-date").fill("2026-07-15");
+    await page.getByTestId("entry-type-0").selectOption("Admin");
+    await page.getByTestId("entry-hours-0").fill("2");
+    await page.getByTestId("submit-day").click();
+
+    await expect(page.getByTestId("log-error")).toContainText("2026-07-15", { timeout: 15000 });
+    // Untouched: the refusal happened before anything was written.
+    await expect(page.getByTestId("day-total-2026-07-15")).toHaveText("8 h");
+  });
+
+  test("a whole day can be deleted", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    await expect(page.getByTestId("day-2026-07-15")).toBeVisible();
+    await page.getByTestId("delete-day-2026-07-15").click();
+    await expect(page.getByTestId("day-2026-07-15")).toHaveCount(0, { timeout: 15000 });
+  });
+
+  test("leave cannot share a day with work", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    await page.getByTestId("entry-date").fill("2026-08-21");
+    await page.getByTestId("entry-type-0").selectOption("Annual Leave");
+    await page.getByTestId("add-activity").click();
+    await page.getByTestId("entry-type-1").selectOption("Project work");
+    await page.getByTestId("entry-hours-1").fill("4");
+    await page.getByTestId("submit-day").click();
+
+    // Annual Leave beside four hours of project work says two contradictory
+    // things about the same date, and which one reaches an invoice depends on
+    // which row is read first.
+    await expect(page.getByTestId("log-error")).toContainText("whole day", { timeout: 15000 });
+  });
+
+  test("a full day still posts its hours, so the rows stay lined up", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    await page.getByTestId("entry-date").fill("2026-08-22");
+    await page.getByTestId("entry-type-0").selectOption("Project work");
+    await page.getByTestId("entry-hours-0").fill("3");
+    await page.getByTestId("add-activity").click();
+    await page.getByTestId("entry-type-1").selectOption("Sick");
+    await page.getByTestId("add-activity").click();
+    await page.getByTestId("entry-type-2").selectOption("Meeting");
+    await page.getByTestId("entry-hours-2").fill("2");
+
+    // Sick renders no hours input. If it posted nothing, the Meeting's 2 would
+    // arrive against Sick and the Meeting would have no hours at all — so the
+    // full-day row posts a hidden 8 to keep the parallel arrays aligned. The
+    // day is refused for a different reason, and that is the proof: the server
+    // saw three activities, not two.
+    await page.getByTestId("submit-day").click();
+    await expect(page.getByTestId("log-error")).toContainText("whole day", { timeout: 15000 });
   });
 });
 

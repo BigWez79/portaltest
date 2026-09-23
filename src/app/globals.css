@@ -4043,3 +4043,76 @@ tr.inactive .toggle.on {
   opacity: 0.5;
   cursor: default;
 }
+
+/* A day, built up before it is submitted. */
+.ts-activities {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  counter-reset: activity;
+}
+
+/* Numbered because a day is a sequence of things somebody did, and the number
+   is what the error message points at when one of them is short. */
+.ts-activity {
+  position: relative;
+  padding: 14px 16px 14px 42px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  counter-increment: activity;
+}
+
+.ts-activity::before {
+  content: counter(activity);
+  position: absolute;
+  left: 14px;
+  top: 16px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-deep);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ts-formactions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ts-app button.ts-drop {
+  align-self: end;
+  font-size: 0.78rem;
+  padding: 8px 12px;
+  width: auto;
+  position: relative;
+}
+
+.ts-day-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.ts-app .ts-day-actions button {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  width: auto;
+  position: relative;
+}
+
+.ts-app button.danger {
+  color: var(--err);
+}

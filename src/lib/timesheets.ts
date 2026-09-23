@@ -131,3 +131,73 @@ export async function lockMonth(email: string, month: string): Promise<boolean> 
   }
   return true;
 }
+
+/* -------------------------------------------------------------------------
+   A day, as one thing
+   ------------------------------------------------------------------------- */
+
+/**
+ * Replace everything logged on one date with what is passed in.
+ *
+ * A DAY IS THE UNIT, not an entry. The live page builds a day up from several
+ * activities and submits it once, then edits or deletes the whole day. The port
+ * logged single entries, which meant a day with three activities took three
+ * actions to correct and the shape of the day — which activities it had at all
+ * — could not be changed.
+ *
+ * Replace rather than merge, because that is what editing a day means: somebody
+ * who removes the third activity and saves expects it gone. A merge would leave
+ * it there and there would be no way to say otherwise.
+ *
+ * Not a transaction. If the delete lands and an insert fails, the day is left
+ * short rather than doubled — the direction that loses work is the one somebody
+ * notices and can redo, and the other direction silently double-counts hours
+ * that get invoiced. When these tables move to Postgres for real this belongs
+ * in a function; until then the ordering is the protection and this comment is
+ * the record of why.
+ */
+export async function replaceDay(
+  email: string,
+  name: string | null,
+  date: string,
+  activities: EntryInput[],
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const key = email.toLowerCase();
+
+  if (fixture()) return (await store()).replaceDay(key, name, date, activities);
+
+  const c = await client();
+  const { error: cleared } = await c
+    .from("timesheet_entries")
+    .delete()
+    .eq("entry_date", date);
+  if (cleared) {
+    console.error("[timesheets] clear day failed", cleared.message);
+    return { ok: false, message: "That day could not be changed. The month may be closed." };
+  }
+
+  if (activities.length === 0) return { ok: true };
+
+  const { error } = await c.from("timesheet_entries").insert(
+    activities.map((a) => ({
+      staff_email: key,
+      staff_name: name,
+      entry_date: date,
+      activity_type: a.activityType,
+      project: a.project || null,
+      hours_worked: a.hoursWorked,
+      work_description: a.workDescription || null,
+    })),
+  );
+  if (error) {
+    console.error("[timesheets] submit day failed", error.message);
+    return { ok: false, message: "That day could not be saved. The month may be closed." };
+  }
+  return { ok: true };
+}
+
+/** Everything logged on one date, in the order it was entered. */
+export async function entriesOnDay(email: string, date: string): Promise<TimesheetEntry[]> {
+  const all = await listEntries(email);
+  return all.filter((e) => e.entryDate === date);
+}

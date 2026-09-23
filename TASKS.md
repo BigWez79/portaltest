@@ -37,24 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. Timesheets — a day is the unit
-The port is not a thinner version of the original, it is a different model, and
-this is the task that fixes that. Today a day with three activities takes three
-actions to correct and the shape of the day cannot be changed at all.
-
-- [ ] `+ Add activity` — build a day up from several rows before submitting
-- [ ] `Submit day` — the whole day at once
-- [ ] `Edit day` — loads every activity for that date back into the form
-- [ ] `Delete day`
-- [ ] Annual Leave and Sick are full days: eight hours, and the hours box locks
-- [ ] Refuse a second submission for a date already logged, naming the date and
-      pointing at `My entries`
-
-**Done when** a three-activity day is submitted once, edited as a unit, and
-deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
-refused; and `npm run verify` passes.
-
-### 2. Timesheets — the day rate and the period
+### 1. Timesheets — the day rate and the period
 - [ ] A day rate on the profile, with `Save day rate`
 - [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
 - [ ] The button label follows the period: `Invoice` for a month, `Statement`
@@ -63,7 +46,7 @@ refused; and `npm run verify` passes.
 **Done when** the switch changes the range and the label, the rate persists,
 and `npm run verify` passes.
 
-### 3. Timesheets — three documents
+### 2. Timesheets — three documents
 `1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
 
 - [ ] `Timesheet_<name>_<period>.pdf` — the full record
@@ -73,7 +56,7 @@ and `npm run verify` passes.
 **Done when** all three come out for a period holding billable and non-billable
 days, the draft is watermarked as a draft, and `npm run verify` passes.
 
-### 4. Timesheets — Issue invoice
+### 3. Timesheets — Issue invoice
 The original hands billable days to the invoicing system with net, VAT and
 gross already worked out. In the port the two apps do not speak.
 
@@ -81,7 +64,7 @@ gross already worked out. In the port the two apps do not speak.
 billable day at the day rate, the timesheet records that it was issued and
 refuses to issue the same period twice, and `npm run verify` passes.
 
-### 5. Monthly Overview is the wrong page
+### 4. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -108,7 +91,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 6. Admin — the three controls that are missing
+### 5. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -118,7 +101,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 7. The runner opens a second pull request for work it already did
+### 6. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -278,6 +261,35 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **Timesheets: a day is the unit** — `overnight/port-gaps`. The port was not a
+  thinner version of the live page, it was a different model, and this is the
+  task that fixes that. A day is built up from several activities and submitted
+  once; then it is edited or deleted as a day. Before this, a day with three
+  activities took three actions to correct and the shape of the day — which
+  activities it had at all — could not be changed.
+
+  `replaceDay` replaces rather than merges, because that is what editing a day
+  means: somebody who removes the third activity and saves expects it gone. It
+  is not a transaction, and the ordering is deliberate — delete first, so a
+  failure leaves the day short rather than doubled. Short is the direction
+  somebody notices and can redo; doubled silently double-counts hours that get
+  invoiced. When this moves to Postgres for real it belongs in a function, and
+  the comment says so.
+
+  Two refusals worth naming. Leave cannot share a day with work: Annual Leave
+  beside four hours of project work says two contradictory things about one
+  date, and which reaches an invoice depends on which row is read first. And
+  submitting over a day that already has activities is refused by name rather
+  than quietly replacing them.
+
+  One detail that would have been a silent corruption: a full-day activity
+  renders no hours input, so it posts a hidden 8 instead. Without it the parallel
+  arrays shift and the next activity's hours land against the wrong one. There
+  is a test whose whole purpose is to prove the server saw three activities and
+  not two.
+
+  npm run verify: 276 passed.
 
 - **Expenses: four screens, and an admin's copy** — `overnight/port-gaps`. The
   live page keeps Log expense, My entries, Monthly claim and Admin apart and the
