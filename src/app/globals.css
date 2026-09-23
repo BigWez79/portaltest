@@ -3928,3 +3928,511 @@ tr.inactive .toggle.on {
     margin: 14mm;
   }
 }
+
+/* Correcting an invoice, and the customer list's row actions. */
+.inv-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.inv-editform {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.inv-edith {
+  margin: 0 0 12px;
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.inv-rowactions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  /* Without this the cell collapses to the width of one button and the two
+     paint over the column beside them. */
+  white-space: nowrap;
+}
+
+.inv-app .inv-rowactions button {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  width: auto;
+  /* .sr-only is position:absolute, and with no positioned ancestor it escapes
+     the table and pushes the document sideways. This is the ancestor. */
+  position: relative;
+}
+
+.inv-app button.danger {
+  color: var(--err);
+}
+
+.inv-app button.danger:hover {
+  background: color-mix(in srgb, var(--err) 8%, transparent);
+}
+
+/* The expenses claim download. */
+.exp-monthbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.exp-app button.exp-download {
+  background: var(--brand-deep);
+  border: 1px solid var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.8rem;
+  width: auto;
+  padding: 8px 14px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+.exp-app button.exp-download:hover {
+  filter: brightness(1.12);
+}
+
+.exp-problem {
+  margin: 8px 0 0;
+  color: var(--err);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* The four expenses screens. */
+.exp-views {
+  margin-bottom: 16px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.exp-app-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.exp-app .exp-app-actions button {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  width: auto;
+  /* .sr-only is position:absolute; without a positioned ancestor it escapes the
+     table and pushes the document sideways. */
+  position: relative;
+}
+
+.exp-inline {
+  display: inline;
+}
+
+.exp-app button.danger {
+  color: var(--err);
+}
+
+.exp-app button[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* A day, built up before it is submitted. */
+.ts-activities {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  counter-reset: activity;
+}
+
+/* Numbered because a day is a sequence of things somebody did, and the number
+   is what the error message points at when one of them is short. */
+.ts-activity {
+  position: relative;
+  padding: 14px 16px 14px 42px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  counter-increment: activity;
+}
+
+.ts-activity::before {
+  content: counter(activity);
+  position: absolute;
+  left: 14px;
+  top: 16px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-deep);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ts-formactions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ts-app button.ts-drop {
+  align-self: end;
+  font-size: 0.78rem;
+  padding: 8px 12px;
+  width: auto;
+  position: relative;
+}
+
+.ts-day-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.ts-app .ts-day-actions button {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  width: auto;
+  position: relative;
+}
+
+.ts-app button.danger {
+  color: var(--err);
+}
+
+/* The period switch and the day rate. */
+.ts-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ts-bar .seg {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ts-rate {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.ts-ratefield {
+  max-width: 150px;
+}
+
+.ts-app button.quiet[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ts-periodcard {
+  padding-bottom: 16px;
+}
+
+/* The three documents a timesheet produces. */
+.ts-docs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 8px;
+}
+
+.ts-app button.ts-doc {
+  background: var(--brand-deep);
+  border: 1px solid var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.82rem;
+  width: auto;
+  padding: 9px 16px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+.ts-app button.ts-doc:hover {
+  filter: brightness(1.12);
+}
+
+.ts-app button.ts-doc[disabled] {
+  opacity: 0.45;
+  cursor: default;
+  filter: none;
+}
+
+.ts-problem {
+  margin: 4px 0 0;
+  color: var(--err);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Turning a closed month into an invoice. */
+.ts-issue {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--good) 6%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--good) 28%, var(--line));
+  border-radius: 12px;
+}
+
+.ts-customer {
+  max-width: 230px;
+}
+
+/* ---------------------------------------------------------------------------
+   Monthly Overview — everybody's month
+
+   A calendar rather than a table of totals, because the question an admin opens
+   this page with is "who was in, and who was away" and the answer to that is a
+   shape rather than a number.
+   --------------------------------------------------------------------------- */
+
+.ov-teamhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ov-app button.ov-print {
+  background: var(--brand-deep);
+  border: 1px solid var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.82rem;
+  width: auto;
+  padding: 9px 16px;
+  border-radius: 9px;
+}
+
+.ov-app button.ov-print:hover {
+  filter: brightness(1.12);
+}
+
+.ov-legend {
+  list-style: none;
+  margin: 12px 0 14px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.ov-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Leave and sickness are the two anybody is looking for. */
+.ov-legend li.is-away {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ov-sw {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex: none;
+}
+
+/* The grid is wider than a phone and that is fine — it scrolls in its own box
+   rather than taking the page sideways with it. */
+.ov-gridscroll {
+  overflow-x: auto;
+}
+
+.ov-grid {
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.ov-grid th,
+.ov-grid td {
+  border-bottom: 1px solid var(--line);
+  padding: 0;
+}
+
+.ov-who {
+  text-align: left;
+  padding: 8px 12px 8px 0 !important;
+  white-space: nowrap;
+  font-weight: 600;
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  z-index: 1;
+}
+
+.ov-dayhead {
+  width: 22px;
+  padding: 6px 0 !important;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.1;
+}
+
+.ov-dow {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+.ov-dnum {
+  display: block;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-cell {
+  width: 22px;
+  height: 46px;
+  vertical-align: bottom;
+  padding: 0 2px !important;
+}
+
+/* The bar grows from the bottom, and its segments are the activities in
+   proportion — so a day that was half meetings reads as half that colour. */
+.ov-bar {
+  display: flex;
+  flex-direction: column-reverse;
+  width: 100%;
+  min-height: 3px;
+  border-radius: 3px 3px 0 0;
+  overflow: hidden;
+}
+
+.ov-seg {
+  display: block;
+  flex-basis: 0;
+  min-height: 2px;
+}
+
+.ov-grid .ov-num {
+  padding: 8px 0 8px 12px !important;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ov-activity-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+}
+
+.ov-at {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+}
+
+.ov-at b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-at.is-grand {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Printing the overview: the grid and nothing else. Colours are the content
+   here, so they are forced through rather than left to the browser's default
+   of dropping backgrounds. */
+@media print {
+  .ov-teamcard,
+  .ov-teamcard * {
+    visibility: visible;
+  }
+
+  .ov-teamcard {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    border: 0;
+    padding: 0;
+  }
+
+  .ov-app button.ov-print {
+    display: none;
+  }
+
+  .ov-gridscroll {
+    overflow: visible;
+  }
+
+  .ov-bar,
+  .ov-seg,
+  .ov-sw {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+}
+
+/* Resend and Remove on the staff table. */
+.row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.row-actions button {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  width: auto;
+  /* .sr-only is position:absolute; without a positioned ancestor it escapes the
+     table and takes the document sideways with it. */
+  position: relative;
+}
+
+.row-actions button.danger {
+  color: var(--err);
+}
+
+.inline-form {
+  display: inline;
+}

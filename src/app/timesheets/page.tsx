@@ -1,7 +1,9 @@
 import { AppShell } from "@/components/AppShell";
 import { TimesheetsApp } from "@/components/timesheets/TimesheetsApp";
 import { requireApp } from "@/lib/guard";
-import { listEntries, lockedMonths } from "@/lib/timesheets";
+import { listCustomers } from "@/lib/invoices";
+import { getProfile } from "@/lib/profile";
+import { issuedPeriods, listEntries, lockedMonths } from "@/lib/timesheets";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Timesheets — Power Suite" };
@@ -22,14 +24,35 @@ export default async function TimesheetsPage() {
   // 404s for anyone without the flag, including signed-out visitors.
   const access = await requireApp("timesheet");
 
-  const [entries, locked] = await Promise.all([
+  const [entries, locked, profile, issued] = await Promise.all([
     listEntries(access.email),
     lockedMonths(access.email),
+    getProfile(access.email),
+    issuedPeriods(access.email),
   ]);
+
+  // Issuing writes an invoice, so it needs that flag as well as this one. A
+  // person with timesheets alone is sent no customers and gets no control —
+  // the action checks both regardless (rule 5).
+  const customers = access.apps.invoices ? await listCustomers() : [];
 
   return (
     <AppShell access={access} current="timesheet" title="Timesheets" wide>
-      <TimesheetsApp entries={entries} locked={locked} />
+      <TimesheetsApp
+        entries={entries}
+        locked={locked}
+        dayRate={profile.dayRate}
+        person={{ name: access.displayName || null, email: access.email }}
+        seller={{
+          businessName: profile.businessName,
+          tagline: profile.tagline,
+          logo: profile.logo,
+        }}
+        vatRate={profile.vatRegistered ? 20 : 0}
+        customers={customers}
+        issued={issued}
+        canInvoice={access.apps.invoices}
+      />
     </AppShell>
   );
 }

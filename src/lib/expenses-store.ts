@@ -96,6 +96,12 @@ export const expenseStore = {
       .sort((a, b) => b.expenseDate.localeCompare(a.expenseDate));
   },
 
+  /** Everybody's, for an admin. The caller checks that; this does not. */
+  async listAll(): Promise<Expense[]> {
+    const doc = await load();
+    return [...doc.expenses].sort((a, b) => b.expenseDate.localeCompare(a.expenseDate));
+  },
+
   async rates(): Promise<MileageRates> {
     return (await load()).rates;
   },

@@ -383,16 +383,19 @@ fi
 # Rule 12 — what would have to be true for this to skip a task wrongly?
 #   Only an open, non-draft pull request that removed a heading without doing
 #   the work. Drafts are excluded for exactly that reason: exit 69 opens one
-#   when verify failed, and that task does need doing again.
+#   when verify failed, and that task does need doing again. What happens to
+#   that draft afterwards is `supersede_drafts`, further down: the run that
+#   finishes the task closes it, so the queue does not fill with drafts nobody
+#   reads. Two pull requests for one task was #35/#36 and #38/#39.
 #   Every other way this can be wrong — gh unreachable, a branch not fetched, a
 #   pull request that forgot to move the heading — leaves the list SHORT, and a
 #   short list is the old behaviour: the task gets picked up again. It fails
 #   towards repeating work, never towards skipping it in silence.
 # --------------------------------------------------------------------------
-# "### 2. Rename the product to Power Suite" -> "Rename the product to Power Suite"
-task_titles() {
-  grep '^### ' | sed 's/^### *//; s/^[0-9][0-9]*\. *//'
-}
+# task_titles, headings_only_in_first and headings_in_both come from here, so
+# scripts/check-supersede.sh can exercise the real ones rather than a copy.
+# shellcheck source=deploy/task-headings.sh
+. "$REPO/deploy/task-headings.sh"
 
 claimed_headings() {
   local branches branch main_h pr_h
@@ -418,9 +421,7 @@ claimed_headings() {
     pr_h="$(git show "origin/$branch:TASKS.md" 2>/dev/null | task_titles || true)"
     [ -n "$pr_h" ] || continue
     # Titles on main that this branch no longer has.
-    printf '%s\n' "$main_h" | while IFS= read -r h; do
-      printf '%s\n' "$pr_h" | grep -qxF "$h" || printf '%s\n' "$h"
-    done
+    headings_only_in_first "$main_h" "$pr_h"
   done <<EOF
 $branches
 EOF
@@ -553,11 +554,73 @@ BODY_FILE="$LOG_DIR/pr-body-$STAMP.md"
   printf '\nNo migration was applied. If one was written it is waiting on a person.\n'
 } >"$BODY_FILE"
 
+
+# --------------------------------------------------------------------------
+# Close the draft this run has just superseded.
+#
+# Drafts are excluded from claiming a task on purpose: exit 69 opens one when
+# verify failed, and that task does need doing again. The cost was #35/#36 and
+# #38/#39 — the task is redone, a second pull request opens, and the failed
+# draft stays open forever. Two pull requests for one task, and a queue of
+# drafts nobody closes.
+#
+# So the draft is not made to claim the task; it is closed once somebody has
+# finished it. A draft for a DIFFERENT task is left alone.
+#
+# Rule 12 — what would have to be true for this to close a draft that was still
+# wanted? The draft would have to have removed the same heading from TASKS.md as
+# this run did, while being about something else. Removing a heading is how a
+# branch says "I did this task", so a draft that removed it and was still wanted
+# is a draft that lied about what it did. Everything else here fails safe: no
+# gh, no match, or a branch that cannot be fetched all leave the draft open,
+# which is the behaviour this replaces.
+# --------------------------------------------------------------------------
+supersede_drafts() {
+  local new_pr="$1" mine main_h pr_h overlap
+  command -v gh >/dev/null 2>&1 || return 0
+
+  main_h="$(git show origin/main:TASKS.md 2>/dev/null | task_titles || true)"
+  [ -n "$main_h" ] || return 0
+
+  # What this run claims: headings on main that its own branch no longer has.
+  mine="$(git show "$BRANCH:TASKS.md" 2>/dev/null | task_titles || true)"
+  [ -n "$mine" ] || return 0
+  mine="$(headings_only_in_first "$main_h" "$mine")"
+  [ -n "$mine" ] || return 0
+
+  gh pr list --state open --limit 50 --json number,headRefName,isDraft \
+    --jq '.[] | select(.isDraft) | "\(.number) \(.headRefName)"' 2>/dev/null |
+  while read -r number branch; do
+    [ -n "$number" ] || continue
+    [ "$branch" = "$BRANCH" ] && continue
+    case "$branch" in overnight/*) ;; *) continue ;; esac
+    git fetch --quiet origin "$branch" >/dev/null 2>&1 || continue
+
+    pr_h="$(git show "origin/$branch:TASKS.md" 2>/dev/null | task_titles || true)"
+    [ -n "$pr_h" ] || continue
+
+    overlap="$(headings_in_both "$(headings_only_in_first "$main_h" "$pr_h")" "$mine")"
+    [ -n "$overlap" ] || continue
+
+    log "closing draft #$number — superseded by $new_pr"
+    gh pr close "$number" --comment "Superseded by $new_pr, which finished this task and passed verify.
+
+This draft was opened by an earlier run whose verify failed. It is closed rather than left open so the next run does not have to read past it. The branch is not deleted; the commits are still there if anything on it is worth keeping." >/dev/null 2>&1 ||
+      log "could not close draft #$number — leaving it open"
+  done
+}
+
 if [ "$VERIFY_RC" -eq 0 ]; then
   log "verify passed — opening a pull request"
-  gh pr create --base main --head "$BRANCH" \
-    --title "overnight: $STAMP" --body-file "$BODY_FILE" \
+  NEW_PR="$(gh pr create --base main --head "$BRANCH" \
+    --title "overnight: $STAMP" --body-file "$BODY_FILE")" \
     || fatal 78 "gh pr create failed; the branch is pushed, open it by hand"
+  log "opened $NEW_PR"
+
+  # Only after the new one exists. Closing first and then failing to open would
+  # throw away the draft and leave nothing in its place.
+  supersede_drafts "$NEW_PR"
+
   git checkout main >/dev/null 2>&1 || true
   log "=== done ==="
   exit 0

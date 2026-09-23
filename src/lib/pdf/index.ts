@@ -83,6 +83,17 @@ export function monthName(ym: string): string {
 export const safeFilePart = (s: string | null | undefined) =>
   String(s ?? "").replace(/[^a-z0-9]/gi, "_") || "untitled";
 
+/**
+ * The period part of a filename: `2026-07`, or `FY2026-27`.
+ *
+ * In the name because a folder of these is how somebody finds last July's, and
+ * a file called `Timesheet_A_Person.pdf` four times over is not a folder
+ * anybody can use.
+ */
+export function periodFileTag(period: "month" | "year", key: string): string {
+  return period === "month" ? key : `FY${key}-${String((Number(key) + 1) % 100).padStart(2, "0")}`;
+}
+
 /* -------------------------------------------------------------------------
    The document
    ------------------------------------------------------------------------- */

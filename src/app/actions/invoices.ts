@@ -7,13 +7,17 @@ import {
   addCustomer,
   addLine,
   createInvoice,
+  deleteCustomer,
   deleteDraft,
+  deleteInvoice,
   listInvoices,
   listLines,
   normaliseRate,
   removeLine,
   setStatus,
   syncTotals,
+  updateCustomer,
+  updateInvoiceHeader,
   type InvoiceStatus,
 } from "@/lib/invoices";
 import { getProfile } from "@/lib/profile";
@@ -249,4 +253,124 @@ export async function discardDraft(
 
   revalidatePath("/invoices");
   return { status: "ok", message: `${invoice.invoiceNo} discarded.` };
+}
+
+export async function editInvoice(
+  _previous: InvoiceState,
+  formData: FormData,
+): Promise<InvoiceState> {
+  let access;
+  try {
+    access = await requireInvoices();
+  } catch {
+    return { status: "error", message: "You are not allowed to change invoices." };
+  }
+
+  const invoiceId = String(formData.get("invoiceId") ?? "");
+  const invoiceNo = String(formData.get("invoiceNo") ?? "").trim();
+  const customerId = String(formData.get("customerId") ?? "");
+  const invoiceDate = String(formData.get("invoiceDate") ?? "").trim();
+
+  if (!INVOICE_NO.test(invoiceNo)) {
+    return { status: "error", message: "An invoice number is letters, numbers and dashes." };
+  }
+  if (!customerId) return { status: "error", message: "Choose a customer." };
+  if (!DATE.test(invoiceDate)) return { status: "error", message: "Choose an invoice date." };
+
+  // Yours, and still open. Both are re-checked here rather than relied on from
+  // the screen: the button is only rendered for an invoice that qualifies, and
+  // rendering a button is not what stops a post (rule 5).
+  const mine = await listInvoices(access.email);
+  const invoice = mine.find((i) => i.id === invoiceId);
+  if (!invoice) return { status: "error", message: "That invoice is not yours." };
+  if (invoice.status === "Paid") {
+    return { status: "error", message: "A paid invoice can no longer be changed." };
+  }
+
+  const result = await updateInvoiceHeader(invoiceId, {
+    invoiceNo,
+    customerId,
+    invoiceDate,
+    project: String(formData.get("project") ?? "").trim(),
+    taxRate: normaliseRate(formData.get("taxRate")),
+  });
+  if (!result.ok) return { status: "error", message: result.message };
+
+  revalidatePath("/invoices");
+  return { status: "ok", message: `${invoiceNo} updated.` };
+}
+
+export async function removeInvoice(
+  _previous: InvoiceState,
+  formData: FormData,
+): Promise<InvoiceState> {
+  let access;
+  try {
+    access = await requireInvoices();
+  } catch {
+    return { status: "error", message: "You are not allowed to change invoices." };
+  }
+
+  const invoiceId = String(formData.get("invoiceId") ?? "");
+  const mine = await listInvoices(access.email);
+  const invoice = mine.find((i) => i.id === invoiceId);
+  if (!invoice) return { status: "error", message: "That invoice is not yours." };
+
+  const result = await deleteInvoice(invoiceId);
+  if (!result.ok) return { status: "error", message: result.message };
+
+  revalidatePath("/invoices");
+  return { status: "ok", message: `${invoice.invoiceNo} deleted.` };
+}
+
+export async function editCustomer(
+  _previous: InvoiceState,
+  formData: FormData,
+): Promise<InvoiceState> {
+  try {
+    await requireInvoices();
+  } catch {
+    return { status: "error", message: "You are not allowed to change customers." };
+  }
+
+  const id = String(formData.get("customerId") ?? "");
+  const companyName = String(formData.get("companyName") ?? "").trim();
+  if (!id) return { status: "error", message: "Choose a customer." };
+  if (!companyName) return { status: "error", message: "A customer needs a name." };
+
+  const ok = await updateCustomer(id, {
+    companyName,
+    contactName: String(formData.get("contactName") ?? "").trim(),
+    address1: String(formData.get("address1") ?? "").trim(),
+    address2: String(formData.get("address2") ?? "").trim(),
+    town: String(formData.get("town") ?? "").trim(),
+    postcode: String(formData.get("postcode") ?? "").trim(),
+    phone: String(formData.get("phone") ?? "").trim(),
+    email: String(formData.get("email") ?? "").trim(),
+  });
+  if (!ok) return { status: "error", message: "That customer could not be saved." };
+
+  revalidatePath("/invoices");
+  return { status: "ok", message: `${companyName} updated.` };
+}
+
+export async function removeCustomer(
+  _previous: InvoiceState,
+  formData: FormData,
+): Promise<InvoiceState> {
+  let access;
+  try {
+    access = await requireInvoices();
+  } catch {
+    return { status: "error", message: "You are not allowed to change customers." };
+  }
+
+  const id = String(formData.get("customerId") ?? "");
+  if (!id) return { status: "error", message: "Choose a customer." };
+
+  const result = await deleteCustomer(id, access.email);
+  if (!result.ok) return { status: "error", message: result.message };
+
+  revalidatePath("/invoices");
+  return { status: "ok", message: "Customer removed." };
 }

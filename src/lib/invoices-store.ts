@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  splitInvoiceNo,
   toCustomer,
   toInvoice,
   toLine,
@@ -88,6 +89,12 @@ export const invoiceStore = {
     return doc.invoices
       .filter((i) => i.sellerEmail === email)
       .sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
+  },
+
+  /** Everybody's, for an admin. The caller checks that; this does not. */
+  async allInvoices(): Promise<Invoice[]> {
+    const doc = await load();
+    return [...doc.invoices].sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
   },
 
   async linesFor(invoiceId: string): Promise<InvoiceLine[]> {
@@ -217,6 +224,70 @@ export const invoiceStore = {
     if (!inv) return false;
     inv.status = status;
     inv.paidDate = paidDate;
+    await save(doc);
+    return true;
+  },
+
+  async updateHeader(invoiceId: string, input: InvoiceInput): Promise<boolean> {
+    const doc = await load();
+    const inv = find(doc, invoiceId);
+    if (!inv) return false;
+    // A number already used by this seller on another invoice is the one
+    // collision worth refusing here; the database has a unique index saying so.
+    const clash = doc.invoices.some(
+      (i) =>
+        i.id !== invoiceId &&
+        i.sellerEmail === inv.sellerEmail &&
+        i.invoiceNo === input.invoiceNo,
+    );
+    if (clash) return false;
+
+    const { prefix, seq } = splitInvoiceNo(input.invoiceNo);
+    inv.invoiceNo = input.invoiceNo;
+    inv.issuerPrefix = prefix;
+    inv.invoiceSeq = seq;
+    inv.customerId = input.customerId;
+    inv.invoiceDate = input.invoiceDate;
+    inv.project = input.project || null;
+    inv.taxRate = input.taxRate;
+    await save(doc);
+    return true;
+  },
+
+  async setLineAmounts(lineId: string, tax: number, total: number): Promise<boolean> {
+    const doc = await load();
+    const line = doc.lines.find((l) => l.id === lineId);
+    if (!line) return false;
+    line.tax = tax;
+    line.lineTotal = total;
+    await save(doc);
+    return true;
+  },
+
+  async deleteInvoice(invoiceId: string): Promise<boolean> {
+    const doc = await load();
+    const inv = find(doc, invoiceId);
+    if (!inv || inv.status === "Paid") return false;
+    doc.invoices = doc.invoices.filter((i) => i.id !== invoiceId);
+    doc.lines = doc.lines.filter((l) => l.invoiceId !== invoiceId);
+    await save(doc);
+    return true;
+  },
+
+  async updateCustomer(id: string, input: CustomerInput): Promise<boolean> {
+    const doc = await load();
+    const at = doc.customers.findIndex((c) => c.id === id);
+    if (at === -1) return false;
+    doc.customers[at] = { ...doc.customers[at], ...input };
+    await save(doc);
+    return true;
+  },
+
+  async deleteCustomer(id: string): Promise<boolean> {
+    const doc = await load();
+    const before = doc.customers.length;
+    doc.customers = doc.customers.filter((c) => c.id !== id);
+    if (doc.customers.length === before) return false;
     await save(doc);
     return true;
   },

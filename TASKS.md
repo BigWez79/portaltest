@@ -25,6 +25,9 @@ parked in BLOCKED.md until their repositories have been read.
 
 ## Next up — functionality the port dropped
 
+Everything read against the twelve originals is built. What is left of this
+section is in Done below; the sections after this one are the queue again.
+
 Read against the twelve original pages in `BigWez79/portal`, copies supplied
 2026-09-23, control by control. Each port kept the data and the rules and lost
 the documents: to the person using these screens the original *is* a way of
@@ -36,150 +39,6 @@ grouping is the unit; the checklist inside each is what "done" means.
 Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
-
-### 1. Correcting an invoice, and the number on it
-Raised is not final. The original lets a header be corrected and an invoice
-deleted, and it numbers them properly.
-
-- [ ] Edit an invoice's header after it is raised
-- [ ] Delete an invoice
-- [ ] `PREFIX-0000001` — the issuer prefix from My Profile, seven digits, the
-      sequence being the highest already used for that prefix plus one
-- [ ] The "next number" hint on the new-invoice form
-- [ ] Customer address lines 1 and 2 — the port has town and postcode only, so
-      an invoice cannot print a full address
-- [ ] Edit and delete a customer
-
-**Done when** the next number after `PA-0000009` is `PA-0000010`, a corrected
-invoice keeps its number, a full address reaches the document, and
-`npm run verify` passes.
-
-### 2. The expenses claim
-`f303a141-expenses.html` has `Download claim (PDF)` and the port has nothing.
-
-- [ ] Title `EXPENSES CLAIM`, logo, claim month, generated date
-- [ ] The person's name and email
-- [ ] Mileage table — Date, Route, Miles, Amount
-- [ ] Everything else — Date, Type, Description, Receipt, Amount
-- [ ] Mileage subtotal, other subtotal, and `Total to claim (GBP)`
-- [ ] The declaration: "I confirm these expenses were incurred wholly and
-      necessarily for business."
-
-**Done when** a month holding one mileage claim and one receipted claim
-produces both tables, both subtotals and a total equal to their sum, and
-`npm run verify` passes.
-
-### 3. Expenses — the two screens, and an admin's copy
-The original keeps `My entries` and `Monthly claim` apart; the port merged
-them, which is why a month's claim is hard to see.
-
-- [ ] Split `My entries` from `Monthly claim`
-- [ ] Admin: `Download their claim (PDF)`, with a person picker and a month
-      picker
-
-**Done when** the two views are separate, an admin can produce somebody else's
-claim, a non-admin calling that action is refused (rule 5), and
-`npm run verify` passes.
-
-### 4. Timesheets — a day is the unit
-The port is not a thinner version of the original, it is a different model, and
-this is the task that fixes that. Today a day with three activities takes three
-actions to correct and the shape of the day cannot be changed at all.
-
-- [ ] `+ Add activity` — build a day up from several rows before submitting
-- [ ] `Submit day` — the whole day at once
-- [ ] `Edit day` — loads every activity for that date back into the form
-- [ ] `Delete day`
-- [ ] Annual Leave and Sick are full days: eight hours, and the hours box locks
-- [ ] Refuse a second submission for a date already logged, naming the date and
-      pointing at `My entries`
-
-**Done when** a three-activity day is submitted once, edited as a unit, and
-deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
-refused; and `npm run verify` passes.
-
-### 5. Timesheets — the day rate and the period
-- [ ] A day rate on the profile, with `Save day rate`
-- [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
-- [ ] The button label follows the period: `Invoice` for a month, `Statement`
-      for a year
-
-**Done when** the switch changes the range and the label, the rate persists,
-and `npm run verify` passes.
-
-### 6. Timesheets — three documents
-`1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
-
-- [ ] `Timesheet_<name>_<period>.pdf` — the full record
-- [ ] `Invoice_<name>_<period>.pdf`, and `Invoice_DRAFT_` before it is issued
-- [ ] `Statement_<name>_<period>.pdf` — the annual statement
-
-**Done when** all three come out for a period holding billable and non-billable
-days, the draft is watermarked as a draft, and `npm run verify` passes.
-
-### 7. Timesheets — Issue invoice
-The original hands billable days to the invoicing system with net, VAT and
-gross already worked out. In the port the two apps do not speak.
-
-**Done when** issuing from a month creates a real invoice carrying one line per
-billable day at the day rate, the timesheet records that it was issued and
-refuses to issue the same period twice, and `npm run verify` passes.
-
-### 8. Monthly Overview is the wrong page
-This is the one I got most wrong, so it is written plainly: the original is an
-**administrators-only whole-team calendar**, and what was built is a personal
-hours summary. Not a thinner version — a different screen.
-
-`50eeaf69-overview.html:123` — "This overview is only available to
-administrators."
-
-- [ ] The grid: every person down the side, every **working day** across the
-      top, Monday to Friday only
-- [ ] Eleven activity colours, with Annual Leave orange and Sick red so absence
-      is visible at a glance
-- [ ] A legend
-- [ ] Stacked bars per day, scaled to the busiest single day in the month
-- [ ] Per-activity totals across all staff, and a grand total
-- [ ] `Print / PDF`
-
-**Held question inside this task:** the original is admin-only; the port shows
-a personal view to everybody. Keeping both is probably right — the personal
-view is useful and costs nothing — but that is a decision, not a default. Build
-the grid for admins and leave the personal view where it is, and say so in the
-pull request.
-
-**Done when** a month with three people and a mix of activities renders one row
-per person, weekends absent, absence in its own colours, totals that sum to the
-grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
-
-### 9. Admin — the three controls that are missing
-- [ ] `Resend` an invitation
-- [ ] `Remove` somebody
-- [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
-- [ ] Everybody's invoices, read-only
-
-**Done when** each control re-checks the caller (rule 5), a non-admin calling
-any of them is refused, removal is recorded in the audit trail, and
-`npm run verify` passes.
-
-### 10. The runner opens a second pull request for work it already did
-`overnight.sh:403` excludes draft pull requests from claiming a task. That is
-deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
-behind when verify failed, and that task does need doing again.
-
-The cost is what happened with #35/#36 and #38/#39 — the task is redone, a
-second pull request opens, and the failed draft stays open forever. Two pull
-requests for one task, and a queue of drafts nobody closes.
-
-The fix is not to let drafts claim tasks; that would strand a task behind a
-draft that is never cleaned up. It is to close the superseded draft when a
-later run finishes the same task, saying in the comment which pull request
-replaced it.
-
-**Done when** a run that completes a task an open draft attempted closes that
-draft with a comment naming the new pull request, a draft for a *different*
-task is left alone, and rule 12 is answered in the comment: what would have to
-be true for this to close a draft that was still wanted.
 
 ## Next up — Power Suite hygiene
 
@@ -322,6 +181,288 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **The runner stops opening a second pull request for work it already did** —
+  `overnight/port-gaps`. Drafts are still excluded from claiming a task, which
+  is right: exit 69 opens one when verify failed, and that task does need doing
+  again. What was missing was what happens to the draft afterwards. The run that
+  finishes the task now closes it, naming the pull request that replaced it and
+  leaving the branch alone in case anything on it is worth keeping. That is
+  #35/#36 and #38/#39 — two pull requests for one task, and a queue of drafts
+  nobody reads.
+
+  `deploy/task-headings.sh` holds the heading arithmetic, sourced by the runner
+  and by `scripts/check-supersede.sh`. The check exercises the real functions
+  rather than a copy of them: a check that reimplements what it checks keeps
+  passing after somebody changes the original, which rule 12 says is not a
+  check. It covers a draft on the same task, a draft on a different one, a draft
+  that claimed nothing, and a run that finished two tasks. The `gh` and `git`
+  calls around it are not covered, and that is written down rather than implied.
+
+  Rule 12 on the change itself: it would close a draft that was still wanted
+  only if that draft had removed the same heading from TASKS.md while being
+  about something else — which is a draft that lied about what it did. Every
+  other way it can be wrong (no gh, no match, a branch that cannot be fetched)
+  leaves the draft open, which is the behaviour it replaces.
+
+  npm run verify: 300 passed.
+
+- **Everybody's invoices, for an admin** — `overnight/port-gaps`. An admin could
+  already read every expenses claim and every timesheet, and produce somebody
+  else's claim as a PDF. Invoices were the one table with no screen for it, and
+  the policy in 0005 had allowed it all along.
+
+  Read-only, showing whose each invoice is and its **effective** status, so an
+  admin chasing money sees Overdue rather than a stale Sent. `listAllInvoices`
+  is the same query as `listInvoices` with a different name, so a caller has to
+  say out loud that it expects other people's documents — the same shape as
+  `listAllExpenses`. A non-admin is sent an empty list rather than a filtered
+  one, and the tab is absent from the DOM rather than hidden (rule 3).
+
+  npm run verify: 300 passed.
+
+- **Admin: Resend and Remove** — `overnight/port-gaps`. Resend exists for the
+  failure `inviteStaff` already reports and cannot fix — the staff row was
+  written and the email did not go. Without it an admin's only move is to delete
+  the person and start again, throwing away their flags and their audit history.
+  It is offered only beside somebody invited who has never signed in; next to
+  somebody who signs in daily it is a button that does nothing they need.
+
+  Remove refuses anybody who has left records behind, and says what they are:
+  deleting a person whose name is on an invoice leaves that document pointing at
+  nobody. Deactivation is the right answer almost every time, and the message
+  says so. An admin cannot remove themselves — they would be locked out of the
+  screen they need to undo it, and a last admin could never be granted it back.
+
+  The audit row outlives the staff row on purpose. Who removed whom is exactly
+  the change worth being able to look up afterwards.
+
+  The mileage rates and "Download their claim" landed with the expenses work.
+  "Everybody's invoices" is not built: see the note in the queue.
+
+  One test written and then deleted rather than kept. A non-admin posting to
+  these actions cannot be driven from this suite — they get a 404 on /admin so
+  never hold the form, and posting to the route by hand reaches the page rather
+  than a server action. The test would have passed with the guard removed, which
+  rule 12 says is not a test. The note where it was says what is covered instead.
+
+  npm run verify: 298 passed.
+
+- **Monthly Overview: everybody's month** — `overnight/port-gaps`. The one I had
+  most wrong. The live page is an administrators-only whole-team calendar and
+  what the port built was a personal hours summary — a different screen, not a
+  thinner one. The calendar is back: one row per person, one column per working
+  day, a stacked bar per day split by what was done.
+
+  Weekends are left out rather than drawn empty. A month is twenty-odd working
+  days and thirty-odd columns; the eight that are always blank cost a fifth of
+  the width and say nothing.
+
+  Every bar is measured against the busiest single day anybody had, so two
+  people's columns can be compared by eye. Scaling each person to their own
+  maximum would make a four-hour day look like a full one.
+
+  The eleven colours are the live page's exactly, so somebody holding a printout
+  from the old suite does not have to work out whether they mean the same thing.
+  The two that matter are Annual Leave orange and Sick red — absence is what an
+  admin opens this page to find, and there is a test asserting that orange is
+  still orange rather than merely that a bar exists.
+
+  Print is landscape with colours forced through, because here the colour is the
+  content rather than decoration.
+
+  The decision named in the task: the original is admin-only and the personal
+  summary is kept as well, for everybody. It is useful and costs nothing. The
+  team grid is absent from the DOM for a non-admin, not hidden (rule 3).
+
+  npm run verify: 294 passed.
+
+- **Timesheets: Issue invoice** — `overnight/port-gaps`. A closed month becomes a
+  real invoice in the other app, one line per billable day carrying the date,
+  because an invoice reading "3 days" gives a customer nothing to check against
+  their own records. The number, the prefix, the seller block, the bank details
+  and the VAT treatment all come from My Profile.
+
+  Only a **closed** month. Closing is how a month is declared final; billing an
+  open one means invoicing a figure that can still change, and the customer has
+  the document by the time it does.
+
+  0011 records which periods have been billed, and the primary key is what stops
+  a second press raising a second invoice for the same work. The record is
+  written *after* the invoice exists — the other order would mark a period
+  billed with no document behind it, and it could then never be billed at all.
+  The foreign key cascades: delete the invoice and the period is free again,
+  rather than leaving a row pointing at a document nobody can open.
+
+  Issuing needs **both** flags, checked in the action and not only in what gets
+  rendered (rule 5). The live suite had one login for everything and never had
+  to answer this.
+
+  One real bug found by its own test: the fixture store's `normalise` rebuilt
+  the document on every read and did not carry `issues` through, so the record
+  was written, saved, and gone by the time anything asked whether the month had
+  been billed. It looked like the notice not rendering.
+
+  npm run verify: 288 passed.
+
+- **Timesheets: three documents** — `overnight/port-gaps`. Three, because they
+  answer three questions for three audiences. The timesheet is the record — what
+  was done, on which day, with the activities on it rather than a total. The
+  invoice is the bill — one line per billable day, because "21 days" gives a
+  customer nothing to check against. The statement is the year, by month,
+  because a year of days is not read row by row.
+
+  An open month invoices as a **draft**, and says so in words rather than as a
+  watermark: a watermark is the first thing lost to greyscale printing or a
+  screenshot, and that warning has to survive being forwarded to whoever pays
+  it. Closing a month is how it gets billed, so anything before that is a figure
+  that can still change.
+
+  The filename carries the period — `Timesheet_A_Person_2026-07.pdf`,
+  `Statement_A_Person_FY2026-27.pdf` — because a folder of four files called the
+  same thing is not a folder anybody can use.
+
+  Three goes at the test isolation before it was right, and all three were the
+  same mistake in different clothes: a test that writes to a store another spec
+  owns. First the day rate was saved through the UI, which writes profiles.
+  Then it moved to a shared fixture person, whose profile the other spec was
+  also writing. The fix was a seeded day rate on a person only this spec reads,
+  and a fixture person of this spec's own for the no-rate case. The check caught
+  none of these — it sees resets, not writes — which is written down beside it.
+
+  npm run verify: 284 passed.
+
+- **Timesheets: the day rate and the period** — `overnight/port-gaps`. A Month /
+  Financial year switch, and the financial year turns over on **6 April** — not
+  1 April and not 1 January. 5 April 2027 is in 2026-27, 6 April starts the
+  next, and the test drives both sides of that boundary because it is the only
+  part anybody gets wrong and getting it wrong puts a week of somebody's work in
+  the wrong statement.
+
+  The day rate lives on the profile (0010) rather than in a second copy inside
+  Timesheets. The live suite keeps its own profile inside `timesheet.html` —
+  its own save, its own logo upload — because each page was a separate file with
+  nothing to share. Here that would be two answers to "what do you charge" with
+  nothing saying which one an invoice used. One column, two ways in: My Profile,
+  and "Save day rate" on Timesheets where somebody is standing when they think
+  about it.
+
+  That action reads the profile, changes one field and writes it back. Writing
+  only the rate would blank every other field, which is somebody's bank details
+  — so there is a test that saves a rate and then checks the sort code is still
+  there.
+
+  Those two tests live in `profile.spec.ts`, not `timesheets.spec.ts`, because
+  they write to the profiles store which that spec owns and resets. Two specs
+  sharing one fixture file interleave however serial either of them is, and
+  `check-test-isolation.mjs` cannot see this case — it catches two specs
+  *resetting* a store, not one writing to another's. The note is left where the
+  tests would have been.
+
+  npm run verify: 280 passed.
+
+- **Timesheets: a day is the unit** — `overnight/port-gaps`. The port was not a
+  thinner version of the live page, it was a different model, and this is the
+  task that fixes that. A day is built up from several activities and submitted
+  once; then it is edited or deleted as a day. Before this, a day with three
+  activities took three actions to correct and the shape of the day — which
+  activities it had at all — could not be changed.
+
+  `replaceDay` replaces rather than merges, because that is what editing a day
+  means: somebody who removes the third activity and saves expects it gone. It
+  is not a transaction, and the ordering is deliberate — delete first, so a
+  failure leaves the day short rather than doubled. Short is the direction
+  somebody notices and can redo; doubled silently double-counts hours that get
+  invoiced. When this moves to Postgres for real it belongs in a function, and
+  the comment says so.
+
+  Two refusals worth naming. Leave cannot share a day with work: Annual Leave
+  beside four hours of project work says two contradictory things about one
+  date, and which reaches an invoice depends on which row is read first. And
+  submitting over a day that already has activities is refused by name rather
+  than quietly replacing them.
+
+  One detail that would have been a silent corruption: a full-day activity
+  renders no hours input, so it posts a hidden 8 instead. Without it the parallel
+  arrays shift and the next activity's hours land against the wrong one. There
+  is a test whose whole purpose is to prove the server saw three activities and
+  not two.
+
+  npm run verify: 276 passed.
+
+- **Expenses: four screens, and an admin's copy** — `overnight/port-gaps`. The
+  live page keeps Log expense, My entries, Monthly claim and Admin apart and the
+  port had merged them, which is why a month's total was hard to find. They are
+  four again. Logging one, looking back over what you have logged, and putting a
+  month in are three jobs done at three different moments.
+
+  Editing from My entries takes you to the form with the expense loaded, rather
+  than leaving somebody on a list while the form they need is elsewhere.
+
+  An admin can produce anybody's claim — the same document that person would
+  download, with their name on it rather than the admin's. The months offered
+  are read off that person's own rows, because a claim for a month somebody has
+  nothing in is an empty document and offering it is a dead end.
+
+  `listAllExpenses` is a separate function from `listExpenses` even though the
+  query is identical, so a caller has to say out loud that it expects other
+  people's data. The guard is still the policy (rule 11), not the name — but in
+  fixture mode there is no policy, so the caller's `isAdmin` check is the only
+  thing standing there, and that is written down beside it. A non-admin is sent
+  an empty list rather than a shorter one: there is nothing for the browser to
+  filter, and no Admin screen in the DOM at all (rule 3).
+
+  npm run verify: 269 passed.
+
+- **The expenses claim** — `overnight/port-gaps`. Two tables, not one, which is
+  the shape of the document rather than a layout choice: mileage is a route and
+  a distance priced at a rate, everything else is a receipt for an amount. One
+  table would mean a Miles column empty on most rows and a Receipt column
+  meaningless on the rest. Each is subtotalled before the total because the two
+  numbers get checked against different things — one against the rate and the
+  distance, the other against a pile of receipts.
+
+  First document on the shared toolkit, and it earned its place: the A4 setup,
+  the logo header from My Profile, the money and date formatters and the table
+  defaults all came from there.
+
+  `pdfText` in the harness is the part worth keeping. Asserting a download
+  happened proves a file arrived and nothing about what is in it — a claim
+  missing its mileage table, or totalling wrong, downloads just as happily as a
+  correct one. It reads the content streams back and the test asserts both
+  tables, both subtotals, the total being their sum, and the declaration. What
+  it cannot see is position, font, colour, or anything drawn as a line or an
+  image, and that is written down where the helper is.
+
+  npm run verify: 264 passed.
+
+- **Correcting an invoice, and the number on it** — `overnight/port-gaps`. An
+  invoice's header can be changed after it is raised, and changing the VAT rate
+  re-prices every line from it: a header rate that disagreed with the tax on the
+  lines would be a document that does not add up, which is the one thing an
+  invoice must never be. The due date follows the date.
+
+  Numbering now comes from My Profile's issuer prefix, worked out on the server
+  because it depends on every invoice this person has and the browser only holds
+  the ones it was sent. A prefix nobody has used starts at seven digits, which
+  is what the live page does — `PA-0000001`. One already in use keeps its own
+  width, so somebody who started at `INV-0001` does not suddenly get seven.
+
+  Two departures, both deliberate and both easy to reverse. A **paid** invoice
+  cannot be deleted: the customer holds it, money moved against it, and the gap
+  would be silent — nothing on any screen says a number was used once and is now
+  missing. Draft and Sent still go, which is what somebody actually reaches for.
+  And a **customer on an invoice** cannot be removed: `Bill To` is read from the
+  customer row at render time rather than stamped like the seller's half, so
+  removing them would blank the address on every document they were ever sent.
+  The message says how many invoices are in the way.
+
+  The paid-invoice check is exercised by posting past the screen with the paid
+  invoice's id, because the page renders no delete button for one — without that
+  the check would never run in the suite and could be deleted tomorrow with
+  everything still green.
+
+  npm run verify: 262 passed.
 
 - **The invoice filters, and a check for the bug that keeps finding me** —
   `overnight/suite-theme`. All / Outstanding / Due in 7 days / Overdue / Paid,

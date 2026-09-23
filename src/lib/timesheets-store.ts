@@ -2,7 +2,12 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { toEntry, type EntryInput, type TimesheetEntry } from "./timesheets-calc";
+import {
+  toEntry,
+  type EntryInput,
+  type TimesheetEntry,
+  type TimesheetIssue,
+} from "./timesheets-calc";
 
 /**
  * Test-only timesheet store, so the suite can exercise the write path without a
@@ -18,7 +23,19 @@ import { toEntry, type EntryInput, type TimesheetEntry } from "./timesheets-calc
  * a closed month be edited would prove nothing about the table that refuses it.
  */
 
-type Doc = { entries: TimesheetEntry[]; locks: { staffEmail: string; claimMonth: string }[] };
+type StoredIssue = {
+  staffEmail: string;
+  claimMonth: string;
+  invoiceId: string;
+  issuedAt: string;
+};
+
+type Doc = {
+  entries: TimesheetEntry[];
+  locks: { staffEmail: string; claimMonth: string }[];
+  /** Optional: the seed predates 0011 and a missing list means none issued. */
+  issues?: StoredIssue[];
+};
 
 const SEED = path.join(process.cwd(), "tests", "fixtures", "timesheets.json");
 const WORKING = path.join(process.cwd(), ".tmp", "timesheets.json");
@@ -36,6 +53,15 @@ function normalise(raw: unknown): Doc {
     locks: ((d.locks as Doc["locks"]) ?? []).map((l) => ({
       staffEmail: String(l.staffEmail).toLowerCase(),
       claimMonth: String(l.claimMonth),
+    })),
+    // Carried through every read. Leaving it out here silently dropped the
+    // record on the next load: the issue was written, saved, and gone by the
+    // time anything asked whether the month had been billed.
+    issues: ((d.issues as StoredIssue[]) ?? []).map((i) => ({
+      staffEmail: String(i.staffEmail).toLowerCase(),
+      claimMonth: String(i.claimMonth),
+      invoiceId: String(i.invoiceId),
+      issuedAt: String(i.issuedAt),
     })),
   };
 }
@@ -119,10 +145,62 @@ export const timesheetStore = {
     return true;
   },
 
+  /** Everything on one date, replaced. The delete runs first — see replaceDay. */
+  async replaceDay(
+    email: string,
+    name: string | null,
+    date: string,
+    activities: EntryInput[],
+  ): Promise<{ ok: true } | { ok: false; message: string }> {
+    const doc = await load();
+    const month = date.slice(0, 7);
+    if (doc.locks.some((l) => l.staffEmail === email && l.claimMonth === month)) {
+      return { ok: false, message: "That month is closed." };
+    }
+
+    doc.entries = doc.entries.filter((e) => !(e.staffEmail === email && e.entryDate === date));
+    for (const a of activities) {
+      doc.entries.push({
+        id: randomUUID(),
+        staffEmail: email,
+        staffName: name,
+        entryDate: date,
+        activityType: a.activityType,
+        project: a.project || null,
+        hoursWorked: a.hoursWorked,
+        workDescription: a.workDescription || null,
+        claimMonth: month,
+        submittedOn: new Date().toISOString(),
+      });
+    }
+    await save(doc);
+    return { ok: true };
+  },
+
   async lock(email: string, month: string): Promise<boolean> {
     const doc = await load();
     if (isLocked(doc, email, month)) return true;
     doc.locks.push({ staffEmail: email, claimMonth: month });
+    await save(doc);
+    return true;
+  },
+
+  async issuesFor(email: string): Promise<TimesheetIssue[]> {
+    const doc = await load();
+    return (doc.issues ?? [])
+      .filter((i) => i.staffEmail === email)
+      .map(({ claimMonth, invoiceId, issuedAt }) => ({ claimMonth, invoiceId, issuedAt }));
+  },
+
+  async recordIssue(email: string, claimMonth: string, invoiceId: string): Promise<boolean> {
+    const doc = await load();
+    doc.issues = doc.issues ?? [];
+    // The primary key in 0011 is what actually stops a period being billed
+    // twice; this is the same rule where there is no database to enforce it.
+    if (doc.issues.some((i) => i.staffEmail === email && i.claimMonth === claimMonth)) {
+      return false;
+    }
+    doc.issues.push({ staffEmail: email, claimMonth, invoiceId, issuedAt: new Date().toISOString() });
     await save(doc);
     return true;
   },

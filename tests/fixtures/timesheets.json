@@ -82,6 +82,17 @@
       "hours_worked": 8,
       "work_description": "",
       "submitted_on": "2026-07-10T08:00:00.000Z"
+    },
+    {
+      "id": "70000009-0000-4000-8000-000000000009",
+      "staff_email": "timesheet.norate@example.test",
+      "staff_name": "Norah Norate",
+      "entry_date": "2026-07-09",
+      "activity_type": "Project work",
+      "project": "Norate pilot",
+      "hours_worked": 7,
+      "work_description": "A day with no rate against it",
+      "submitted_on": "2026-07-15T17:02:00.000Z"
     }
   ]
 }

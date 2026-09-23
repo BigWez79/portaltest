@@ -218,3 +218,42 @@ export async function expectExactlyTiles(page: Page, expected: readonly string[]
     }
   }
 }
+
+/**
+ * The text runs inside a PDF this suite produced.
+ *
+ * Asserting that a download happened proves a file arrived and nothing about
+ * what is in it — a claim missing its mileage table, or totalling wrong, would
+ * download just as happily. jsPDF writes uncompressed or flate-compressed
+ * content streams with the text in `(...)` literals, which is enough to read
+ * back what was drawn without pulling in a PDF parser for the privilege.
+ *
+ * What this cannot see: position, font, colour, or anything drawn as a line or
+ * an image. It is for checking that the right numbers and the right headings
+ * are on the page, which is what these documents get wrong.
+ */
+export async function pdfText(file: string): Promise<string> {
+  const { readFile } = await import("node:fs/promises");
+  const zlib = await import("node:zlib");
+  const data = await readFile(file);
+
+  const runs: string[] = [];
+  const stream = /stream\r?\n/g;
+  let m: RegExpExecArray | null;
+  while ((m = stream.exec(data.toString("latin1"))) !== null) {
+    const start = m.index + m[0].length;
+    const end = data.toString("latin1").indexOf("endstream", start);
+    if (end === -1) continue;
+    const raw = data.subarray(start, end);
+    let text: string;
+    try {
+      text = zlib.inflateSync(raw).toString("latin1");
+    } catch {
+      text = raw.toString("latin1");
+    }
+    for (const lit of text.match(/\((?:[^()\\]|\\.)*\)/g) ?? []) {
+      runs.push(lit.slice(1, -1).replace(/\\([()\\])/g, "$1"));
+    }
+  }
+  return runs.join(" | ");
+}

@@ -211,6 +211,19 @@ export function ProfileForm({ profile, email }: { profile: Profile; email: strin
             </label>
 
             <label className="field app-field">
+              <span className="field-label">Day rate (£)</span>
+              <input
+                type="number"
+                name="dayRate"
+                step="0.01"
+                min="0"
+                placeholder="not set"
+                defaultValue={profile.dayRate ?? ""}
+                data-testid="day-rate"
+              />
+            </label>
+
+            <label className="field app-field">
               <span className="field-label">Payment terms (days)</span>
               <input
                 type="number"

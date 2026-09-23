@@ -386,6 +386,172 @@ test.describe.serial("invoices — due in 7 days", () => {
   });
 });
 
+test.describe.serial("invoices — correcting one", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetStores(page, "invoices");
+  });
+
+  test("a sent invoice's header can be corrected, and the lines follow the rate", async ({
+    page,
+  }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    // £1,500 net at 20% = £300 VAT.
+    await expect(page.getByTestId("vat-INV-0001")).toHaveText("£300.00");
+
+    await page.getByTestId("edit-INV-0001").click();
+    await page.getByTestId("edit-rate").fill("10");
+    await page.getByTestId("edit-project").fill("Quarterly audit, revised");
+    await page.getByTestId("edit-submit").click();
+
+    // Every line re-priced from the new rate, and the header follows. A header
+    // rate that disagreed with the lines would be a document that does not add
+    // up, which is the one thing an invoice must never be.
+    await expect(page.getByTestId("vat-INV-0001")).toHaveText("£150.00", { timeout: 15000 });
+    await expect(page.getByTestId("grand-INV-0001")).toHaveText("£1,650.00");
+    await expect(page.getByTestId("invoice-document")).toContainText("Quarterly audit, revised");
+    await expect(page.getByTestId("doc-total")).toHaveText("£1,650.00");
+  });
+
+  test("changing the date moves the due date with it", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+    await expect(page.getByTestId("doc-due")).toHaveText("18 July 2026");
+
+    await page.getByTestId("edit-INV-0001").click();
+    await page.getByTestId("edit-date").fill("2026-08-01");
+    await page.getByTestId("edit-submit").click();
+
+    // 1 August plus the 14 days stamped on it.
+    await expect(page.getByTestId("doc-due")).toHaveText("15 August 2026", { timeout: 15000 });
+  });
+
+  test("a number already used is refused rather than written twice", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    await page.getByTestId("edit-INV-0001").click();
+    await page.getByTestId("edit-no").fill("INV-0002");
+    await page.getByTestId("edit-submit").click();
+
+    await expect(page.getByTestId("edit-error")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("invoice-INV-0001")).toBeVisible();
+  });
+
+  test("a sent invoice can be deleted; a paid one cannot", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // INV-0002 is paid. It offers no delete at all — the customer holds it, the
+    // money moved against it, and the gap it would leave is silent.
+    await page.getByTestId("open-INV-0002").click();
+    await expect(page.getByTestId("delete-INV-0002")).toHaveCount(0);
+    await expect(page.getByTestId("edit-INV-0002")).toHaveCount(0);
+    await page.getByTestId("open-INV-0002").click();
+
+    await page.getByTestId("open-INV-0001").click();
+    await page.getByTestId("delete-INV-0001").click();
+    await expect(page.getByTestId("invoice-INV-0001")).toHaveCount(0, { timeout: 15000 });
+  });
+
+  test("the server refuses to delete a paid invoice even when asked directly", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // A paid invoice renders no delete button, so the only way to reach the
+    // server's own check is to post past the screen — which is exactly what
+    // anything other than this page would do (rule 5). Without this the check
+    // in deleteInvoice would never run in the suite at all, and could be
+    // deleted tomorrow with everything still green.
+    const paidId = await page.getByTestId("invoice-INV-0002").getAttribute("data-id");
+    expect(paidId, "the paid invoice's id").toBeTruthy();
+
+    await page.getByTestId("open-INV-0001").click();
+    await page.getByTestId("delete-INV-0001").evaluate((button, id) => {
+      const form = button.closest("form")!;
+      (form.querySelector("input[name=invoiceId]") as HTMLInputElement).value = id as string;
+    }, paidId);
+    await page.getByTestId("delete-INV-0001").click();
+
+    await expect(page.getByTestId("delete-error")).toContainText("paid", { timeout: 15000 });
+    await expect(page.getByTestId("invoice-INV-0002")).toBeVisible();
+  });
+});
+
+test.describe.serial("invoices — the customer list", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetStores(page, "invoices");
+  });
+
+  test("a customer can be corrected, and the change reaches the document", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("tab-customers").click();
+
+    const id = "c0000001-0000-4000-8000-000000000001";
+    await page.getByTestId(`cust-edit-${id}`).click();
+    await page.getByTestId("cust-a1").fill("1 New Wharf");
+    await page.getByTestId("cust-save").click();
+    await expect(page.getByTestId("cust-ok")).toBeVisible({ timeout: 15000 });
+
+    // Bill To is read from the customer row at render time rather than stamped,
+    // so a correction reaches every document that names them.
+    await page.getByTestId("tab-invoices").click();
+    await page.getByTestId("open-INV-0001").click();
+    await expect(page.getByTestId("invoice-document")).toContainText("1 New Wharf");
+  });
+
+  test("a customer on an invoice cannot be removed, and says why", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("tab-customers").click();
+
+    await page.getByTestId("cust-remove-c0000001-0000-4000-8000-000000000001").click();
+    await expect(page.getByTestId("cust-remove-error")).toContainText("invoice", {
+      timeout: 15000,
+    });
+    await expect(page.getByTestId("customer-c0000001-0000-4000-8000-000000000001")).toBeVisible();
+  });
+});
+
+test.describe("invoices — everybody's, for an admin", () => {
+  test("an admin sees every invoice, whose it is, and what it is really worth", async ({
+    page,
+  }) => {
+    await signInAs(page, OTHER); // everything@ is an admin
+    await page.goto("/invoices");
+    await page.getByTestId("tab-everybody").click();
+
+    const panel = page.getByTestId("everybody-panel");
+    await expect(panel).toBeVisible();
+
+    // Somebody else's, which is the entire point — an admin could already read
+    // every claim and every timesheet, and invoices were the one table with no
+    // screen for it.
+    await expect(panel).toContainText("Invoices Only Ltd");
+    await expect(panel).toContainText("INV-0001");
+
+    // The effective status, so an admin chasing money sees Overdue rather than
+    // a stale Sent.
+    await expect(panel).toContainText("Overdue");
+  });
+
+  test("a non-admin has no such view, and none of the rows", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // Absent from the DOM, not hidden (rule 3). And the page was sent an empty
+    // list rather than a filtered one — there is nothing here to filter.
+    await expect(page.getByTestId("tab-everybody")).toHaveCount(0);
+    await expect(page.getByTestId("everybody-panel")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("Ada Everything");
+  });
+});
+
 test.describe("invoices — the guard", () => {
   test.use({ tolerate: ["status of 404"] });
 

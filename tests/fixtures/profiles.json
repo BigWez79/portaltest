@@ -32,7 +32,27 @@
       "payment_terms_days": 14,
       "contact_email": null,
       "contact_phone": null,
-      "tagline": null
+      "tagline": null,
+      "day_rate": 350
+    },
+    {
+      "staff_email": "timesheet.only@example.test",
+      "business_name": "Tessa Timesheets",
+      "business_type": "Sole trader",
+      "business_address": "9 Clock Row, Nottingham NG1 4BB",
+      "company_number": null,
+      "vat_registered": false,
+      "vat_number": null,
+      "account_name": "T Timesheets",
+      "sort_code": "309912",
+      "account_no": "55667788",
+      "issuer_prefix": "TS",
+      "payment_terms_days": 14,
+      "contact_email": null,
+      "contact_phone": null,
+      "tagline": null,
+      "logo": null,
+      "day_rate": 400
     }
   ]
 }

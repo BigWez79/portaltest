@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { downloadClaimPdf, type ClaimPerson } from "./claim-pdf";
+import type { PdfSeller } from "@/lib/pdf";
 import {
   lockClaimMonth,
   removeExpense,
@@ -29,22 +31,38 @@ const monthName = (m: string) =>
     timeZone: "UTC",
   });
 
+type View = "log" | "entries" | "claim" | "admin";
+
+const ukDate = (d: string) =>
+  d ? new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { timeZone: "UTC" }) : "";
+
 export function ExpensesApp({
   rows,
   rates,
   locked,
   isAdmin,
+  person,
+  seller,
+  everybody,
 }: {
   rows: Expense[];
   rates: MileageRates;
   locked: string[];
   isAdmin: boolean;
+  person: ClaimPerson;
+  seller: PdfSeller;
+  /** Everybody's claims — empty unless the caller is an admin. */
+  everybody: Expense[];
 }) {
   const [form, formAction, saving] = useActionState(submitExpense, idle);
   const [removeState, removeAction] = useActionState(removeExpense, idle);
   const [lockState, lockAction] = useActionState(lockClaimMonth, idle);
   const [rateState, rateAction, savingRates] = useActionState(updateRates, idle);
 
+  const [claimProblem, setClaimProblem] = useState<string | null>(null);
+  const [view, setView] = useState<View>("log");
+  const [who, setWho] = useState("");
+  const [whichMonth, setWhichMonth] = useState("");
   const [type, setType] = useState<ExpenseType>("Mileage");
   const [miles, setMiles] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -81,6 +99,25 @@ export function ExpensesApp({
 
   const isLocked = (month: string) => locked.includes(month);
 
+  // Who an admin can produce a claim for, and which months that person has.
+  // Both read off the rows rather than the staff list: a claim for somebody
+  // with no expenses is an empty document, and offering it is a dead end.
+  const people = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const r of everybody) {
+      if (!seen.has(r.staffEmail)) seen.set(r.staffEmail, r.staffName || r.staffEmail);
+    }
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [everybody]);
+
+  const theirMonths = useMemo(
+    () =>
+      [...new Set(everybody.filter((r) => r.staffEmail === who).map((r) => r.claimMonth))].sort(
+        (a, b) => b.localeCompare(a),
+      ),
+    [everybody, who],
+  );
+
   function startEdit(row: Expense) {
     setEditing(row);
     setType(row.expenseType);
@@ -97,7 +134,48 @@ export function ExpensesApp({
 
   return (
     <div className="exp-app" data-testid="expenses-app">
-      <section className="exp-card">
+      {/* Four screens, as on the live page. Logging an expense, looking over
+          what you have logged, and putting a month in are three different jobs
+          done at three different moments — one screen holding all of them is
+          why the month's total was hard to find. */}
+      <div className="seg exp-views" role="group" aria-label="Expenses">
+        <button
+          type="button"
+          aria-pressed={view === "log"}
+          onClick={() => setView("log")}
+          data-testid="view-log"
+        >
+          Log expense
+        </button>
+        <button
+          type="button"
+          aria-pressed={view === "entries"}
+          onClick={() => setView("entries")}
+          data-testid="view-entries"
+        >
+          My entries
+        </button>
+        <button
+          type="button"
+          aria-pressed={view === "claim"}
+          onClick={() => setView("claim")}
+          data-testid="view-claim"
+        >
+          Monthly claim
+        </button>
+        {isAdmin ? (
+          <button
+            type="button"
+            aria-pressed={view === "admin"}
+            onClick={() => setView("admin")}
+            data-testid="view-admin"
+          >
+            Admin
+          </button>
+        ) : null}
+      </div>
+
+      <section className="exp-card" hidden={view !== "log" && !editing}>
         <h2 className="exp-h">{editing ? "Edit expense" : "Add an expense"}</h2>
 
         <form action={formAction} className="exp-form" data-testid="expense-form">
@@ -270,13 +348,84 @@ export function ExpensesApp({
         </div>
       ) : null}
 
-      {months.length === 0 ? (
+      {view === "entries" ? (
+        <section className="exp-card" data-testid="entries-card">
+          <h2 className="exp-h">
+            My entries <span className="tag">newest first</span>
+          </h2>
+          {rows.length === 0 ? (
+            <p className="exp-empty" data-testid="entries-empty">
+              Nothing logged yet.
+            </p>
+          ) : (
+            <div className="exp-scroll">
+              <table className="exp-table">
+                <caption className="sr-only">Everything you have logged</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Detail</th>
+                    <th scope="col" className="exp-num">Amount</th>
+                    <th scope="col"><span className="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} data-testid={`entry-${r.id}`}>
+                      <td>{ukDate(r.expenseDate)}</td>
+                      <td>{r.expenseType}</td>
+                      <td>
+                        {r.expenseType === "Mileage"
+                          ? `${r.miles ?? 0} miles, ${r.fromLocation ?? "?"} to ${r.toLocation ?? "?"}`
+                          : (r.reason ?? "—")}
+                      </td>
+                      <td className="exp-num">{gbp(r.amount)}</td>
+                      <td className="exp-app-actions">
+                        {isLocked(r.claimMonth) ? (
+                          <span className="exp-quiet">Submitted</span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="quiet"
+                              onClick={() => {
+                                startEdit(r);
+                                setView("log");
+                              }}
+                              data-testid={`entry-edit-${r.id}`}
+                            >
+                              Edit<span className="sr-only"> {r.expenseType} on {r.expenseDate}</span>
+                            </button>
+                            <form action={removeAction} className="exp-inline">
+                              <input type="hidden" name="id" value={r.id} />
+                              <button
+                                type="submit"
+                                className="quiet danger"
+                                data-testid={`entry-delete-${r.id}`}
+                              >
+                                Delete<span className="sr-only"> {r.expenseType} on {r.expenseDate}</span>
+                              </button>
+                            </form>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {view === "claim" && months.length === 0 ? (
         <p className="exp-empty" data-testid="expenses-empty">
           Nothing claimed yet. Add your first expense above.
         </p>
       ) : null}
 
-      {months.map(([month, list]) => {
+      {(view === "claim" ? months : []).map(([month, list]) => {
         const total = list.reduce((sum, r) => sum + r.amount, 0);
         const shut = isLocked(month);
         return (
@@ -290,10 +439,30 @@ export function ExpensesApp({
                   </span>
                 ) : null}
               </h2>
-              <div className="exp-total" data-testid={`total-${month}`}>
-                {gbp(total)}
+              <div className="exp-monthbar">
+                <button
+                  type="button"
+                  className="exp-download"
+                  onClick={() =>
+                    downloadClaimPdf({ month, rows: list, person, seller }).catch(() =>
+                      setClaimProblem(month),
+                    )
+                  }
+                  data-testid={`claim-${month}`}
+                >
+                  Download claim (PDF)
+                </button>
+                <div className="exp-total" data-testid={`total-${month}`}>
+                  {gbp(total)}
+                </div>
               </div>
             </div>
+
+            {claimProblem === month ? (
+              <p className="exp-problem" role="status" data-testid={`claim-problem-${month}`}>
+                That claim could not be produced. Reload the page and try again.
+              </p>
+            ) : null}
 
             <div className="exp-scroll">
               <table className="exp-table">
@@ -365,7 +534,78 @@ export function ExpensesApp({
         );
       })}
 
-      {isAdmin ? (
+      {isAdmin && view === "admin" ? (
+        <section className="exp-card" data-testid="admin-claim-card">
+          <h2 className="exp-h">
+            Somebody else&rsquo;s claim <span className="tag">admins only</span>
+          </h2>
+          <p className="exp-quiet">
+            The same document they would download themselves. Produced here so a
+            claim can be checked or re-sent without asking them for it.
+          </p>
+
+          <div className="exp-rates">
+            <label className="field">
+              <span className="field-label">Person</span>
+              <select
+                value={who}
+                onChange={(e) => {
+                  setWho(e.target.value);
+                  setWhichMonth("");
+                }}
+                data-testid="their-person"
+              >
+                <option value="">Choose…</option>
+                {people.map(([email, name]) => (
+                  <option key={email} value={email}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="field">
+              <span className="field-label">Month</span>
+              <select
+                value={whichMonth}
+                onChange={(e) => setWhichMonth(e.target.value)}
+                disabled={!who}
+                data-testid="their-month"
+              >
+                <option value="">Choose…</option>
+                {theirMonths.map((m) => (
+                  <option key={m} value={m}>
+                    {monthName(m)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              type="button"
+              className="exp-download"
+              disabled={!who || !whichMonth}
+              onClick={() => {
+                const list = everybody.filter(
+                  (r) => r.staffEmail === who && r.claimMonth === whichMonth,
+                );
+                const name = list[0]?.staffName ?? null;
+                downloadClaimPdf({
+                  month: whichMonth,
+                  rows: list,
+                  person: { name, email: who },
+                  seller,
+                }).catch(() => setClaimProblem(whichMonth));
+              }}
+              data-testid="their-claim"
+            >
+              Download their claim (PDF)
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {isAdmin && view === "admin" ? (
         <section className="exp-card" data-testid="rates-card">
           <h2 className="exp-h">Mileage rates</h2>
           <form action={rateAction} className="exp-rates">

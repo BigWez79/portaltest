@@ -61,6 +61,103 @@ test.describe("overview", () => {
   });
 });
 
+test.describe("overview — everybody's month", () => {
+  const ADMIN = "everything@example.test";
+
+  test("an admin sees the team as a calendar, not a list of totals", async ({ page }) => {
+    await signInAs(page, ADMIN);
+    await page.goto("/overview");
+
+    await expect(page.getByTestId("team-grid")).toBeVisible();
+
+    // One row per person who logged anything, and a bar on the days they did.
+    await expect(page.getByTestId("grid-overview.only@example.test")).toBeVisible();
+    await expect(page.getByTestId("grid-everything@example.test")).toBeVisible();
+  });
+
+  test("weekends are left out rather than shown empty", async ({ page }) => {
+    await signInAs(page, ADMIN);
+    await page.goto("/overview");
+
+    // July 2026 has 23 working days. The eight-odd blank weekend columns would
+    // cost a fifth of the width and say nothing.
+    const headers = page.locator(".ov-dayhead");
+    await expect(headers).toHaveCount(23);
+
+    const days = await page.locator(".ov-dayhead .ov-dnum").allTextContents();
+    // 4 and 5 July 2026 are a Saturday and a Sunday.
+    expect(days).not.toContain("4");
+    expect(days).not.toContain("5");
+    expect(days).toContain("3");
+    expect(days).toContain("6");
+  });
+
+  test("absence is its own colour, so it stands out from every shade of work", async ({ page }) => {
+    await signInAs(page, ADMIN);
+    await page.goto("/overview");
+
+    // overview.only@ has a day of Annual Leave in the fixture. Orange is not a
+    // decoration here — it is the thing an admin opened the page to find.
+    const away = page.locator('[data-activity="Annual Leave"]').first();
+    await expect(away).toBeVisible();
+    await expect(away).toHaveCSS("background-color", "rgb(242, 147, 60)");
+  });
+
+  test("the legend names every activity, and the totals add up to the grand total", async ({
+    page,
+  }) => {
+    await signInAs(page, ADMIN);
+    await page.goto("/overview");
+
+    await expect(page.getByTestId("legend").locator("li")).toHaveCount(11);
+
+    // A chart whose parts do not sum to its total is a chart nobody can trust.
+    const parts = await page.locator("[data-testid^=at-]").allTextContents();
+    const sum = parts.reduce((n, t) => n + Number(/([\d.]+) h/.exec(t)?.[1] ?? 0), 0);
+    const grand = Number(
+      /([\d.]+) h/.exec((await page.getByTestId("grand-total").textContent()) ?? "")?.[1] ?? -1,
+    );
+    expect(Math.round(sum * 100) / 100).toBe(grand);
+  });
+
+  test("a non-admin gets no team grid at all", async ({ page }) => {
+    await signInAs(page, "overview.only@example.test");
+    await page.goto("/overview");
+
+    // Absent from the DOM, not hidden (rule 3). The personal summary stays.
+    await expect(page.getByTestId("team-grid")).toHaveCount(0);
+    await expect(page.getByTestId("print-overview")).toHaveCount(0);
+    await expect(page.getByTestId("overview-app")).toBeVisible();
+  });
+
+  test("printing gives the grid and nothing else", async ({ page }) => {
+    await signInAs(page, ADMIN);
+    await page.goto("/overview");
+    await expect(page.getByTestId("team-grid")).toBeVisible();
+
+    await page.emulateMedia({ media: "print" });
+    const shown = await page.evaluate(() => {
+      const vis = (sel: string) => {
+        const el = document.querySelector(sel);
+        return el ? getComputedStyle(el).visibility === "visible" : null;
+      };
+      return {
+        grid: vis("[data-testid=team-grid]"),
+        picker: vis("[data-testid=month-picker]"),
+        button: document.querySelector("[data-testid=print-overview]")
+          ? getComputedStyle(document.querySelector("[data-testid=print-overview]")!).display
+          : null,
+      };
+    });
+
+    expect(shown.grid, "the grid prints").toBe(true);
+    expect(shown.picker, "the month picker does not").toBe(false);
+    expect(shown.button, "nor does the print button itself").toBe("none");
+
+    await page.emulateMedia({ media: "screen" });
+  });
+});
+
 test.describe("overview — the guard", () => {
   test.use({ tolerate: ["status of 404"] });
 

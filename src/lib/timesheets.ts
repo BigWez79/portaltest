@@ -1,6 +1,11 @@
 import "server-only";
 import { staffSource } from "./env";
-import { toEntry, type EntryInput, type TimesheetEntry } from "./timesheets-calc";
+import {
+  toEntry,
+  type EntryInput,
+  type TimesheetEntry,
+  type TimesheetIssue,
+} from "./timesheets-calc";
 
 /**
  * Timesheets — the hours a person logged, and which months are closed.
@@ -127,6 +132,130 @@ export async function lockMonth(email: string, month: string): Promise<boolean> 
     .insert({ staff_email: key, claim_month: month });
   if (error) {
     console.error("[timesheets] lock failed", error.message);
+    return false;
+  }
+  return true;
+}
+
+/* -------------------------------------------------------------------------
+   A day, as one thing
+   ------------------------------------------------------------------------- */
+
+/**
+ * Replace everything logged on one date with what is passed in.
+ *
+ * A DAY IS THE UNIT, not an entry. The live page builds a day up from several
+ * activities and submits it once, then edits or deletes the whole day. The port
+ * logged single entries, which meant a day with three activities took three
+ * actions to correct and the shape of the day — which activities it had at all
+ * — could not be changed.
+ *
+ * Replace rather than merge, because that is what editing a day means: somebody
+ * who removes the third activity and saves expects it gone. A merge would leave
+ * it there and there would be no way to say otherwise.
+ *
+ * Not a transaction. If the delete lands and an insert fails, the day is left
+ * short rather than doubled — the direction that loses work is the one somebody
+ * notices and can redo, and the other direction silently double-counts hours
+ * that get invoiced. When these tables move to Postgres for real this belongs
+ * in a function; until then the ordering is the protection and this comment is
+ * the record of why.
+ */
+export async function replaceDay(
+  email: string,
+  name: string | null,
+  date: string,
+  activities: EntryInput[],
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const key = email.toLowerCase();
+
+  if (fixture()) return (await store()).replaceDay(key, name, date, activities);
+
+  const c = await client();
+  const { error: cleared } = await c
+    .from("timesheet_entries")
+    .delete()
+    .eq("entry_date", date);
+  if (cleared) {
+    console.error("[timesheets] clear day failed", cleared.message);
+    return { ok: false, message: "That day could not be changed. The month may be closed." };
+  }
+
+  if (activities.length === 0) return { ok: true };
+
+  const { error } = await c.from("timesheet_entries").insert(
+    activities.map((a) => ({
+      staff_email: key,
+      staff_name: name,
+      entry_date: date,
+      activity_type: a.activityType,
+      project: a.project || null,
+      hours_worked: a.hoursWorked,
+      work_description: a.workDescription || null,
+    })),
+  );
+  if (error) {
+    console.error("[timesheets] submit day failed", error.message);
+    return { ok: false, message: "That day could not be saved. The month may be closed." };
+  }
+  return { ok: true };
+}
+
+/** Everything logged on one date, in the order it was entered. */
+export async function entriesOnDay(email: string, date: string): Promise<TimesheetEntry[]> {
+  const all = await listEntries(email);
+  return all.filter((e) => e.entryDate === date);
+}
+
+/* -------------------------------------------------------------------------
+   Periods already billed
+   ------------------------------------------------------------------------- */
+
+export async function issuedPeriods(email: string): Promise<TimesheetIssue[]> {
+  const key = email.toLowerCase();
+  if (!key) return [];
+  if (fixture()) return (await store()).issuesFor(key);
+
+  const { supabaseServer } = await import("./supabase/server");
+  const client = await supabaseServer();
+  const { data, error } = await client
+    .from("timesheet_issues")
+    .select("claim_month, invoice_id, issued_at");
+  if (error) {
+    console.error("[timesheets] issues failed", error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => ({
+    claimMonth: String((r as Record<string, unknown>).claim_month),
+    invoiceId: String((r as Record<string, unknown>).invoice_id),
+    issuedAt: String((r as Record<string, unknown>).issued_at),
+  }));
+}
+
+/**
+ * Record that a period became an invoice.
+ *
+ * Written *after* the invoice exists, and the primary key is what stops the
+ * same period being billed twice. Two presses of the button racing each other
+ * both find nothing recorded; the second insert is what loses, and it loses
+ * against the database rather than against a check the application did a
+ * moment earlier.
+ */
+export async function recordIssue(
+  email: string,
+  claimMonth: string,
+  invoiceId: string,
+): Promise<boolean> {
+  const key = email.toLowerCase();
+  if (fixture()) return (await store()).recordIssue(key, claimMonth, invoiceId);
+
+  const { supabaseServer } = await import("./supabase/server");
+  const client = await supabaseServer();
+  const { error } = await client
+    .from("timesheet_issues")
+    .insert({ staff_email: key, claim_month: claimMonth, invoice_id: invoiceId });
+  if (error) {
+    console.error("[timesheets] record issue failed", error.message);
     return false;
   }
   return true;

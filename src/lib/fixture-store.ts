@@ -75,6 +75,14 @@ export const fixtureStore = {
     return row;
   },
 
+  async remove(email: string): Promise<boolean> {
+    const rows = await load();
+    const left = rows.filter((r) => r.email.toLowerCase() !== email.toLowerCase());
+    if (left.length === rows.length) return false;
+    await save(left);
+    return true;
+  },
+
   /** Called by the test harness between runs. */
   async reset(): Promise<void> {
     const seed = JSON.parse(await readFile(SEED, "utf8")) as StaffRow[];

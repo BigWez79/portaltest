@@ -5,8 +5,12 @@ import { InvoiceDocument } from "./InvoiceDocument";
 import {
   addInvoiceLine,
   discardDraft,
+  editCustomer,
+  editInvoice,
   markInvoice,
   raiseInvoice,
+  removeCustomer,
+  removeInvoice,
   removeInvoiceLine,
   saveCustomer,
   type InvoiceState,
@@ -34,11 +38,19 @@ export function InvoicesApp({
   invoices,
   customers,
   linesByInvoice,
+  suggestedNo,
+  everybody,
+  isAdmin,
   openId,
 }: {
   invoices: Invoice[];
   customers: Customer[];
   linesByInvoice: Record<string, InvoiceLine[]>;
+  /** The next number in this seller's own sequence, worked out on the server. */
+  suggestedNo: string;
+  /** Everybody's invoices — empty unless the caller is an admin. */
+  everybody: Invoice[];
+  isAdmin: boolean;
   openId: string | null;
 }) {
   const [raise, raiseAction, raising] = useActionState(raiseInvoice, idle);
@@ -47,9 +59,15 @@ export function InvoicesApp({
   const [mark, markAction] = useActionState(markInvoice, idle);
   const [discard, discardAction] = useActionState(discardDraft, idle);
   const [cust, custAction, savingCustomer] = useActionState(saveCustomer, idle);
+  const [edit, editAction, editing] = useActionState(editInvoice, idle);
+  const [wipe, wipeAction] = useActionState(removeInvoice, idle);
+  const [custEdit, custEditAction] = useActionState(editCustomer, idle);
+  const [custWipe, custWipeAction] = useActionState(removeCustomer, idle);
 
-  const [tab, setTab] = useState<"invoices" | "customers">("invoices");
+  const [tab, setTab] = useState<"invoices" | "customers" | "everybody">("invoices");
   const [filter, setFilter] = useState<InvoiceFilter>("All");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(openId);
   const [qty, setQty] = useState("1");
   const [unit, setUnit] = useState("");
@@ -59,15 +77,13 @@ export function InvoicesApp({
     return (id: string) => m.get(id) ?? "—";
   }, [customers]);
 
-  const suggestion = useMemo(
-    () => nextInvoiceNo(invoices.map((i) => i.invoiceNo), "INV"),
-    [invoices],
-  );
 
   // Worked out once per render rather than per row: `matchesFilter` builds a
   // date for every invoice it is asked about, and the list re-renders on every
   // keystroke in the line form above it.
   const shown = useMemo(() => invoices.filter((i) => matchesFilter(i, filter)), [invoices, filter]);
+  const being = customers.find((c) => c.id === editingCustomer) ?? null;
+  const custState = being ? custEdit : cust;
 
   const open = invoices.find((i) => i.id === selected) ?? null;
   const openLines = open ? (linesByInvoice[open.id] ?? []) : [];
@@ -126,7 +142,69 @@ export function InvoicesApp({
         >
           Customers
         </button>
+        {isAdmin ? (
+          <button
+            type="button"
+            aria-pressed={tab === "everybody"}
+            onClick={() => setTab("everybody")}
+            data-testid="tab-everybody"
+          >
+            Everybody
+          </button>
+        ) : null}
       </div>
+
+      {tab === "everybody" ? (
+        <section className="inv-card" data-testid="everybody-panel">
+          <h2 className="inv-h">
+            Everybody&rsquo;s invoices <span className="tag">admins only, read only</span>
+          </h2>
+          <p className="inv-quiet">
+            An admin could already read every expenses claim and every timesheet.
+            This is the same policy applied to the one table that had no screen
+            for it. Nothing here can be changed from this view.
+          </p>
+
+          <div className="inv-scroll">
+            <table className="inv-table">
+              <caption className="sr-only">Every invoice raised by anybody</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Number</th>
+                  <th scope="col">Raised by</th>
+                  <th scope="col">Customer</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" className="inv-num">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {everybody.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="inv-noline">
+                      Nobody has raised an invoice yet.
+                    </td>
+                  </tr>
+                ) : null}
+                {everybody.map((inv) => (
+                  <tr key={inv.id} data-testid={`all-${inv.id}`}>
+                    <td>{inv.invoiceNo}</td>
+                    <td>{inv.sellerName ?? inv.sellerEmail}</td>
+                    <td>{customerName(inv.customerId)}</td>
+                    <td>{ukDate(inv.invoiceDate)}</td>
+                    <td>
+                      <span className={`inv-status is-${effectiveStatus(inv).toLowerCase()}`}>
+                        {effectiveStatus(inv)}
+                      </span>
+                    </td>
+                    <td className="inv-num">{gbp(inv.invoiceTotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       {tab === "invoices" ? (
         <>
@@ -143,9 +221,12 @@ export function InvoicesApp({
                     type="text"
                     name="invoiceNo"
                     required
-                    defaultValue={suggestion}
+                    defaultValue={suggestedNo}
                     data-testid="invoice-no"
                   />
+                  <span className="inv-hint" data-testid="invoice-no-hint">
+                    Next in your sequence: {suggestedNo}. The prefix comes from My Profile.
+                  </span>
                 </label>
                 <label className="field app-field">
                   <span className="field-label">Customer</span>
@@ -240,7 +321,12 @@ export function InvoicesApp({
             const lines = linesByInvoice[inv.id] ?? [];
             const isOpen = selected === inv.id;
             return (
-              <section className="inv-card" key={inv.id} data-testid={`invoice-${inv.invoiceNo}`}>
+              <section
+                className="inv-card"
+                key={inv.id}
+                data-testid={`invoice-${inv.invoiceNo}`}
+                data-id={inv.id}
+              >
                 <div className="inv-head">
                   <button
                     type="button"
@@ -454,7 +540,124 @@ export function InvoicesApp({
                           </button>
                         </form>
                       ) : null}
+
+                      {inv.status !== "Paid" ? (
+                        <button
+                          type="button"
+                          className="quiet"
+                          onClick={() => setEditingId(editingId === inv.id ? null : inv.id)}
+                          aria-expanded={editingId === inv.id}
+                          data-testid={`edit-${inv.invoiceNo}`}
+                        >
+                          {editingId === inv.id ? "Cancel edit" : "Edit"}
+                        </button>
+                      ) : null}
+
+                      {inv.status !== "Paid" && inv.status !== "Draft" ? (
+                        <form action={wipeAction} className="inv-inline">
+                          <input type="hidden" name="invoiceId" value={inv.id} />
+                          <button
+                            type="submit"
+                            className="quiet danger"
+                            data-testid={`delete-${inv.invoiceNo}`}
+                          >
+                            Delete
+                          </button>
+                        </form>
+                      ) : null}
                     </div>
+
+                    {editingId === inv.id ? (
+                      <form
+                        action={editAction}
+                        className="inv-form inv-editform"
+                        data-testid={`editform-${inv.invoiceNo}`}
+                      >
+                        <input type="hidden" name="invoiceId" value={inv.id} />
+                        <h4 className="inv-edith">Correct this invoice</h4>
+                        <div className="inv-grid">
+                          <label className="field app-field">
+                            <span className="field-label">Number</span>
+                            <input
+                              type="text"
+                              name="invoiceNo"
+                              required
+                              defaultValue={inv.invoiceNo}
+                              data-testid="edit-no"
+                            />
+                          </label>
+                          <label className="field app-field">
+                            <span className="field-label">Customer</span>
+                            <select
+                              name="customerId"
+                              required
+                              defaultValue={inv.customerId}
+                              data-testid="edit-customer"
+                            >
+                              {customers.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.companyName}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="field app-field">
+                            <span className="field-label">Date</span>
+                            <input
+                              type="date"
+                              name="invoiceDate"
+                              required
+                              defaultValue={inv.invoiceDate}
+                              data-testid="edit-date"
+                            />
+                          </label>
+                          <label className="field app-field">
+                            <span className="field-label">VAT rate (%)</span>
+                            <input
+                              type="number"
+                              name="taxRate"
+                              step="0.01"
+                              min="0"
+                              defaultValue={inv.taxRate}
+                              data-testid="edit-rate"
+                            />
+                          </label>
+                          <label className="field app-field inv-wide">
+                            <span className="field-label">Project</span>
+                            <input
+                              type="text"
+                              name="project"
+                              defaultValue={inv.project ?? ""}
+                              data-testid="edit-project"
+                            />
+                          </label>
+                        </div>
+                        <p className="inv-hint">
+                          Changing the VAT rate re-prices every line on this invoice — a rate on the
+                          header that disagrees with the tax on the lines is a document that does not
+                          add up.
+                        </p>
+                        <button
+                          type="submit"
+                          className="primary"
+                          disabled={editing}
+                          data-testid="edit-submit"
+                        >
+                          {editing ? "Saving…" : "Save changes"}
+                        </button>
+                      </form>
+                    ) : null}
+
+                    {edit.status === "error" ? (
+                      <div className="msg" role="alert" data-testid="edit-error">
+                        {edit.message}
+                      </div>
+                    ) : null}
+                    {wipe.status === "error" ? (
+                      <div className="msg" role="alert" data-testid="delete-error">
+                        {wipe.message}
+                      </div>
+                    ) : null}
 
                     {mark.status === "ok" ? (
                       <div className="msg ok" role="status" data-testid="mark-ok">
@@ -497,12 +700,13 @@ export function InvoicesApp({
                   <th scope="col">Contact</th>
                   <th scope="col">Town</th>
                   <th scope="col">Email</th>
+                  <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
                 {customers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="inv-noline">
+                    <td colSpan={5} className="inv-noline">
                       No customers yet.
                     </td>
                   </tr>
@@ -513,62 +717,106 @@ export function InvoicesApp({
                     <td>{c.contactName ?? "—"}</td>
                     <td>{c.town ?? "—"}</td>
                     <td>{c.email ?? "—"}</td>
+                    <td className="inv-rowactions">
+                      <button
+                        type="button"
+                        className="quiet"
+                        onClick={() =>
+                          setEditingCustomer(editingCustomer === c.id ? null : c.id)
+                        }
+                        data-testid={`cust-edit-${c.id}`}
+                      >
+                        Edit<span className="sr-only"> {c.companyName}</span>
+                      </button>
+                      <form action={custWipeAction} className="inv-inline">
+                        <input type="hidden" name="customerId" value={c.id} />
+                        <button
+                          type="submit"
+                          className="quiet danger"
+                          data-testid={`cust-remove-${c.id}`}
+                        >
+                          Remove<span className="sr-only"> {c.companyName}</span>
+                        </button>
+                      </form>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <form action={custAction} className="inv-form" data-testid="customer-form">
+          {custWipe.status === "error" ? (
+            <div className="msg" role="alert" data-testid="cust-remove-error">
+              {custWipe.message}
+            </div>
+          ) : null}
+
+          <form
+            action={being ? custEditAction : custAction}
+            className="inv-form"
+            // Remounts when the customer being edited changes, so every box
+            // takes its new defaultValue. Without it, switching from one
+            // customer to another keeps the first one's address on screen while
+            // the hidden id points at the second.
+            key={being?.id ?? "new"}
+            data-testid="customer-form"
+          >
+            {being ? <input type="hidden" name="customerId" value={being.id} /> : null}
+            <h3 className="inv-edith">
+              {being ? `Edit ${being.companyName}` : "Add a customer"}
+            </h3>
             <div className="inv-grid">
               <label className="field app-field inv-wide">
                 <span className="field-label">Company name</span>
-                <input type="text" name="companyName" required data-testid="cust-name" />
+                <input type="text" name="companyName" required defaultValue={being?.companyName ?? ""} data-testid="cust-name" />
               </label>
               <label className="field app-field">
                 <span className="field-label">Contact</span>
-                <input type="text" name="contactName" data-testid="cust-contact" />
+                <input type="text" name="contactName" defaultValue={being?.contactName ?? ""} data-testid="cust-contact" />
               </label>
               <label className="field app-field">
                 <span className="field-label">Email</span>
-                <input type="email" name="email" data-testid="cust-email" />
+                <input type="email" name="email" defaultValue={being?.email ?? ""} data-testid="cust-email" />
               </label>
               <label className="field app-field">
                 <span className="field-label">Address line 1</span>
-                <input type="text" name="address1" data-testid="cust-a1" />
+                <input type="text" name="address1" defaultValue={being?.address1 ?? ""} data-testid="cust-a1" />
               </label>
               <label className="field app-field">
                 <span className="field-label">Address line 2</span>
-                <input type="text" name="address2" />
+                <input type="text" name="address2" defaultValue={being?.address2 ?? ""} />
               </label>
               <label className="field app-field">
                 <span className="field-label">Town</span>
-                <input type="text" name="town" data-testid="cust-town" />
+                <input type="text" name="town" defaultValue={being?.town ?? ""} data-testid="cust-town" />
               </label>
               <label className="field app-field">
                 <span className="field-label">Postcode</span>
-                <input type="text" name="postcode" data-testid="cust-postcode" />
+                <input type="text" name="postcode" defaultValue={being?.postcode ?? ""} data-testid="cust-postcode" />
               </label>
               <label className="field app-field">
                 <span className="field-label">Phone</span>
-                <input type="text" name="phone" />
+                <input type="text" name="phone" defaultValue={being?.phone ?? ""} />
               </label>
             </div>
 
-            {cust.status === "error" ? (
+            {/* One form, two actions, so the message has to come from whichever
+                one it was posted to — reading only `cust` left an edit looking
+                like it had silently done nothing. */}
+            {custState.status === "error" ? (
               <div className="msg" role="alert" data-testid="cust-error">
-                {cust.message}
+                {custState.message}
               </div>
             ) : null}
-            {cust.status === "ok" ? (
+            {custState.status === "ok" ? (
               <div className="msg ok" role="status" data-testid="cust-ok">
-                {cust.message}
+                {custState.message}
               </div>
             ) : null}
 
             <div>
               <button type="submit" className="primary" disabled={savingCustomer} data-testid="cust-save">
-                {savingCustomer ? "Saving…" : "Add customer"}
+                {savingCustomer ? "Saving…" : being ? "Save customer" : "Add customer"}
               </button>
             </div>
           </form>
