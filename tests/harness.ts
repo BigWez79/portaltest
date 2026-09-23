@@ -123,9 +123,21 @@ export async function linkLedger(
 }
 
 /** Restores the fixture staff list. Only for tests that write. */
-export async function resetStaff(page: Page) {
-  const res = await onceMore(() => page.request.post("/api/test/session?reset=1"));
-  expect(res.ok(), "the fixture store should be resettable").toBeTruthy();
+/**
+ * Restore the fixture stores a spec writes to: "staff", "audit", "expenses",
+ * "invoices", "timesheets", "profiles", or "all".
+ *
+ * Name only what you write to. The suite is fully parallel against a single
+ * server, so these files are shared between workers — resetting all of them to
+ * restore the one you touched also puts back whatever another worker was
+ * partway through, and that spec fails somewhere unrelated. An unknown name is
+ * a 400 rather than a reset that quietly did nothing.
+ */
+export async function resetStores(page: Page, ...stores: string[]) {
+  const res = await onceMore(() =>
+    page.request.post(`/api/test/session?reset=${stores.join(",")}`),
+  );
+  expect(res.ok(), `these stores should be resettable: ${stores.join(", ")}`).toBeTruthy();
 }
 
 /**

@@ -16,7 +16,7 @@ import { EMPTY_PROFILE, toProfile, type Profile, type ProfileInput } from "./pro
 export * from "./profile-calc";
 
 const COLUMNS =
-  "staff_email, business_name, business_type, business_address, company_number, vat_registered, vat_number, account_name, sort_code, account_no, issuer_prefix, payment_terms_days, contact_email, contact_phone, tagline";
+  "staff_email, business_name, business_type, business_address, company_number, vat_registered, vat_number, account_name, sort_code, account_no, issuer_prefix, payment_terms_days, contact_email, contact_phone, tagline, logo";
 
 const fixture = () => staffSource() === "fixture";
 
@@ -74,6 +74,7 @@ export async function saveProfile(email: string, input: ProfileInput): Promise<b
       contact_email: input.contactEmail,
       contact_phone: input.contactPhone,
       tagline: input.tagline,
+      logo: input.logo,
     },
     { onConflict: "staff_email" },
   );

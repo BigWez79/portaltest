@@ -23,6 +23,88 @@ is queued once the legacy-profile question in `docs/PORTING-APPS.md` has been
 read from the data rather than guessed at. Invoices, Timesheets and Expenses are
 parked in BLOCKED.md until their repositories have been read.
 
+## Next up — functionality the port dropped
+
+Read against the 12 original pages in `BigWez79/portal` (copies supplied
+2026-09-23). Each port kept the data and the rules and lost the documents: the
+originals are, to the person using them, mostly a way of producing a PDF. None
+of this is new work anybody asked for — it is work that already existed and
+stopped existing when the page moved.
+
+The order below is the order to build in. It is not arbitrary: the logo is
+first because three documents print it, and building those first means
+rebuilding them.
+
+### 1. The logo on My Profile
+`05d8d49d-myprofile.html:306` holds a logo the original stores as base64 and
+`4c00479c-invoices.html:477` prints in the invoice header. There is no column
+for it here, no control on the form, and so no logo on any document.
+
+Original behaviour, which is worth keeping exactly: pick a file, scale it to
+300px wide on a canvas, `toDataURL('image/png')`, and refuse anything still
+over 120,000 characters after the resize with "That image is too detailed even
+after resizing — try a simpler/smaller logo." That last part is the useful bit
+— it fails at the point somebody can do something about it, rather than at the
+point a 4MB row hits the database.
+
+**Done when** a logo can be chosen, previewed, saved and removed; a resized PNG
+is stored; an oversized one is refused with that message; and the column exists
+in a migration with a length check behind it rather than only the browser's.
+
+### 2. Invoices — the document
+No print, no PDF. `4c00479c-invoices.html` builds a full A4 invoice with the
+seller block, logo, line table, totals, bank details and payment terms.
+
+Also missing, and all from the same file: the due date (raised date + the
+profile's payment terms), the Outstanding / Overdue / Due-in-7-days filters,
+and editing an invoice's header after it has been raised.
+
+**Done when** an invoice prints to PDF with the seller's details and logo on
+it, the due date is derived rather than typed, and the three filters work.
+
+### 3. Expenses — the claim PDF
+`expenses.html` has "Download claim" for a person and "Download their claim"
+for an admin — two `autoTable`s, mileage and receipted, each subtotalled.
+The port has neither, and it also merged two screens the original keeps apart:
+"My entries" and "Monthly claim".
+
+**Done when** both PDFs come out with both subtotals, and the two views are
+separate again.
+
+### 4. Timesheets — three documents and the day
+The biggest gap by some distance, and the one to be honest about: the port is
+not a thinner version of the original, it is a different model.
+
+The original treats **a day** as the unit. You add activities to a day
+("+ Add activity"), then "Submit day" once. After that it is "Edit day" or
+"Delete day". The port logs single entries and lets you remove one — which
+means a day with three activities takes three actions to correct and there is
+no way to fix the shape of the day itself.
+
+It also produces three PDFs, not one:
+- `1b38c30f-timesheet.html:1278` — the timesheet
+- `:1399` — an invoice from the timesheet, draft or final
+- `:1581` — an annual statement
+
+and carries a day rate, a Month / Financial-year switch, and "Issue invoice",
+which hands billable days to Invoices with net, VAT and gross already worked
+out.
+
+**Done when** a day is the unit of editing, the day rate is stored, the period
+switch works, all three documents come out, and "Issue invoice" raises a real
+invoice rather than describing one.
+
+### 5. Overview — print
+`50eeaf69-overview.html` prints. The port does not.
+
+### 6. Admin — three controls
+"Download their claim (PDF)", "Resend" an invite, and "Run report". None ported.
+
+### Not a gap
+`44c9daa5-taxbreakdown.html` has no document — Reset is the only control, and
+the port matches it. `margin.html` matches. `404.html`, `index.html`,
+`permissions.html` and `robots.txt` are the shell, not apps.
+
 ## Next up — Power Suite hygiene
 
 ### 2. Delete the import script at cutover

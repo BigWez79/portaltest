@@ -82,7 +82,11 @@ test.describe("hardening", () => {
     expect(csp["frame-ancestors"]).toEqual(["'none'"]);
     expect(csp["connect-src"]).toEqual(["'self'"]);
     expect(csp["font-src"]).toEqual(["'self'"]);
-    expect(csp["img-src"]).toEqual(["'self'"]);
+    // `data:` is allowed for one named reason — the profile logo, which is a
+    // data URL by the time it is stored — and the assertion is written as the
+    // exact set so adding a second source is a decision somebody has to come
+    // here and make, rather than something that slips in.
+    expect(csp["img-src"]).toEqual(["'self'", "data:"]);
 
     // The point of the whole exercise. A CSP that allows inline script is a
     // header that is present, asserted, and stopping nothing — Next writes

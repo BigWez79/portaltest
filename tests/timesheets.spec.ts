@@ -1,4 +1,4 @@
-import { expect, resetStaff, signInAs, test } from "./harness";
+import { expect, resetStores, signInAs, test } from "./harness";
 
 /**
  * Timesheets — the largest file on the live suite and the one people open
@@ -52,7 +52,7 @@ test.describe("timesheets — reading your own", () => {
 
 test.describe.serial("timesheets — writing", () => {
   test.beforeEach(async ({ page }) => {
-    await resetStaff(page);
+    await resetStores(page, "timesheets");
   });
 
   test("hours can be logged and appear on their day", async ({ page }) => {

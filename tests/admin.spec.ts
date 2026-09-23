@@ -3,7 +3,7 @@ import {
   axeScan,
   expect,
   expectExactlyTiles,
-  resetStaff,
+  resetStores,
   signInAs,
   signOutCompletely,
   test,
@@ -82,16 +82,22 @@ async function setToggle(page: Page, email: string, flag: string, on: boolean) {
  * that toggles somebody another spec asserts on will, often enough to be
  * maddening, hand that spec the wrong answer. Serial ordering inside this file
  * does nothing about a spec running beside it.
+ *
+ * The other half of that was the reset. This block used to restore every
+ * fixture store, and so did every other spec that writes — so a profile test
+ * finishing at the wrong moment would put the staff list back underneath this
+ * one, between the toggle and the assertion, and the tile it had just removed
+ * would be there again. Each spec now names the stores it actually writes to.
  */
 test.describe.serial("admin screen — changing access", () => {
   test.beforeEach(async ({ page }) => {
-    await resetStaff(page);
+    await resetStores(page, "staff", "audit");
     await signInAs(page, "everything@example.test");
   });
 
   test.afterAll(async ({ browser }) => {
     const page = await browser.newPage();
-    await page.request.post("/api/test/session?reset=1");
+    await page.request.post("/api/test/session?reset=staff,audit");
     await page.close();
   });
 

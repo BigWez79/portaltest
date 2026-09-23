@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/current-user";
 import {
   BUSINESS_TYPES,
+  checkLogo,
   normaliseAccountNo,
   normaliseSortCode,
   saveProfile,
@@ -68,6 +69,13 @@ export async function updateProfile(
     return { status: "error", message: "An account number is eight digits." };
   }
 
+  // The form posts the logo as a data URL in a hidden field, which means the
+  // value arriving here is whatever somebody chose to post — the file picker
+  // and the canvas are a convenience, not a gate (rule 5).
+  const logo = String(formData.get("logo") ?? "").trim() || null;
+  const logoProblem = checkLogo(logo);
+  if (logoProblem) return { status: "error", message: logoProblem };
+
   const terms = Number(formData.get("paymentTermsDays"));
   if (!Number.isFinite(terms) || terms < 0 || terms > 365) {
     return { status: "error", message: "Payment terms are a number of days, up to 365." };
@@ -88,6 +96,7 @@ export async function updateProfile(
     contactEmail: text(formData.get("contactEmail")),
     contactPhone: text(formData.get("contactPhone")),
     tagline: text(formData.get("tagline")),
+    logo,
   });
 
   if (!ok) return { status: "error", message: "That could not be saved." };

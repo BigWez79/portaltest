@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updateProfile, type ProfileState } from "@/app/actions/profile";
+import { LogoField } from "./LogoField";
 import {
   BUSINESS_TYPES,
   formatSortCode,
@@ -108,6 +109,8 @@ export function ProfileForm({ profile, email }: { profile: Profile; email: strin
                 data-testid="tagline"
               />
             </label>
+
+            <LogoField initial={profile.logo} />
           </div>
         </section>
 

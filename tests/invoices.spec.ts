@@ -1,4 +1,4 @@
-import { expect, resetStaff, signInAs, test } from "./harness";
+import { expect, resetStores, signInAs, test } from "./harness";
 
 /**
  * Invoices — the heaviest port, and the only app producing a document somebody
@@ -71,7 +71,7 @@ test.describe("invoices — reading your own", () => {
 
 test.describe.serial("invoices — writing", () => {
   test.beforeEach(async ({ page }) => {
-    await resetStaff(page);
+    await resetStores(page, "invoices");
   });
 
   test("an invoice can be raised and starts as a draft", async ({ page }) => {
