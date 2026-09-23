@@ -37,34 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. Monthly Overview is the wrong page
-This is the one I got most wrong, so it is written plainly: the original is an
-**administrators-only whole-team calendar**, and what was built is a personal
-hours summary. Not a thinner version — a different screen.
-
-`50eeaf69-overview.html:123` — "This overview is only available to
-administrators."
-
-- [ ] The grid: every person down the side, every **working day** across the
-      top, Monday to Friday only
-- [ ] Eleven activity colours, with Annual Leave orange and Sick red so absence
-      is visible at a glance
-- [ ] A legend
-- [ ] Stacked bars per day, scaled to the busiest single day in the month
-- [ ] Per-activity totals across all staff, and a grand total
-- [ ] `Print / PDF`
-
-**Held question inside this task:** the original is admin-only; the port shows
-a personal view to everybody. Keeping both is probably right — the personal
-view is useful and costs nothing — but that is a decision, not a default. Build
-the grid for admins and leave the personal view where it is, and say so in the
-pull request.
-
-**Done when** a month with three people and a mix of activities renders one row
-per person, weekends absent, absence in its own colours, totals that sum to the
-grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
-
-### 2. Admin — the three controls that are missing
+### 1. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -74,7 +47,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 3. The runner opens a second pull request for work it already did
+### 2. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -234,6 +207,35 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **Monthly Overview: everybody's month** — `overnight/port-gaps`. The one I had
+  most wrong. The live page is an administrators-only whole-team calendar and
+  what the port built was a personal hours summary — a different screen, not a
+  thinner one. The calendar is back: one row per person, one column per working
+  day, a stacked bar per day split by what was done.
+
+  Weekends are left out rather than drawn empty. A month is twenty-odd working
+  days and thirty-odd columns; the eight that are always blank cost a fifth of
+  the width and say nothing.
+
+  Every bar is measured against the busiest single day anybody had, so two
+  people's columns can be compared by eye. Scaling each person to their own
+  maximum would make a four-hour day look like a full one.
+
+  The eleven colours are the live page's exactly, so somebody holding a printout
+  from the old suite does not have to work out whether they mean the same thing.
+  The two that matter are Annual Leave orange and Sick red — absence is what an
+  admin opens this page to find, and there is a test asserting that orange is
+  still orange rather than merely that a bar exists.
+
+  Print is landscape with colours forced through, because here the colour is the
+  content rather than decoration.
+
+  The decision named in the task: the original is admin-only and the personal
+  summary is kept as well, for everybody. It is useful and costs nothing. The
+  team grid is absent from the DOM for a non-admin, not hidden (rule 3).
+
+  npm run verify: 294 passed.
 
 - **Timesheets: Issue invoice** — `overnight/port-gaps`. A closed month becomes a
   real invoice in the other app, one line per billable day carrying the date,

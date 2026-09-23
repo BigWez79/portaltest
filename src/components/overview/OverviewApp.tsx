@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TeamGrid } from "./TeamGrid";
 import {
   billableHours,
   isFullDay,
@@ -172,6 +173,29 @@ export function OverviewApp({
               </table>
             </div>
           </section>
+
+          {isAdmin ? (
+            <section className="ov-card ov-teamcard" data-testid="team">
+              <div className="ov-teamhead">
+                <h2 className="ov-h">
+                  Everybody&rsquo;s month <span className="tag">admins only</span>
+                </h2>
+                <button
+                  type="button"
+                  className="ov-print"
+                  onClick={() => window.print()}
+                  data-testid="print-overview"
+                >
+                  Print / PDF
+                </button>
+              </div>
+              <p className="ov-quiet">
+                Working days only. Each bar is one day, split by what was done and
+                measured against the busiest day anybody had.
+              </p>
+              <TeamGrid entries={entries} month={month} />
+            </section>
+          ) : null}
 
           {isAdmin ? (
             <section className="ov-card" data-testid="everybody">
