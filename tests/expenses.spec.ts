@@ -1,4 +1,4 @@
-import { expect, resetStores, signInAs, test } from "./harness";
+import { expect, pdfText, resetStores, signInAs, test } from "./harness";
 
 /**
  * Expenses — the first ported app that writes.
@@ -132,6 +132,74 @@ test.describe.serial("expenses — writing", () => {
     await page.getByTestId("expense-type").selectOption("Mileage");
     await page.getByTestId("expense-miles").fill("10");
     await expect(page.getByTestId("mileage-preview")).toContainText("£8.00");
+  });
+});
+
+test.describe("expenses — the claim document", () => {
+  test("the claim carries both tables, both subtotals, and a total that is their sum", async ({
+    page,
+  }) => {
+    await signInAs(page, "expenses.only@example.test");
+    await page.goto("/expenses");
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByTestId("claim-2026-07").click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(
+      /^PowerAnalytix-expenses-2026-07-[A-Za-z0-9_]+\.pdf$/,
+    );
+
+    // Reading the file rather than trusting that one arrived. A claim missing
+    // its mileage table, or totalling wrong, downloads just as happily as a
+    // correct one — so the assertion has to be about what is on the page.
+    const file = await download.path();
+    expect(file).toBeTruthy();
+    const text = await pdfText(file!);
+
+    expect(text).toContain("EXPENSES CLAIM");
+    expect(text).toContain("July 2026");
+    expect(text).toContain("expenses.only@example.test");
+
+    // Mileage is a route and a distance; everything else is a receipt for an
+    // amount. Two tables, because one would mean a Miles column empty on most
+    // rows and a Receipt column meaningless on the rest.
+    expect(text, "the mileage table").toContain("Leicester to Birmingham");
+    expect(text).toContain("120.5");
+    expect(text, "the receipted table").toContain("Overnight before early start");
+
+    // The two subtotals get checked against different things — one against the
+    // rate and the distance, the other against a pile of receipts — so both
+    // have to be on the document, and the total has to be their sum.
+    expect(text).toContain("Mileage subtotal:");
+    expect(text).toContain("£66.28");
+    expect(text).toContain("Other subtotal:");
+    expect(text).toContain("£89.00");
+    expect(text).toContain("£155.28");
+
+    expect(text, "the declaration").toContain("wholly and necessarily for business");
+  });
+
+  test("nothing off this origin is fetched to build it", async ({ page }) => {
+    const offsite: string[] = [];
+    await page.route("**", (route) => {
+      const url = route.request().url();
+      if (!url.startsWith("http://127.0.0.1") && !url.startsWith("http://localhost")) {
+        offsite.push(url);
+        return route.abort();
+      }
+      return route.continue();
+    });
+
+    await signInAs(page, "expenses.only@example.test");
+    await page.goto("/expenses");
+    await Promise.all([page.waitForEvent("download"), page.getByTestId("claim-2026-07").click()]);
+
+    // jsPDF is bundled, not pulled from cdnjs. A signed-in page fetching
+    // executable code from a third party is what this whole port exists to
+    // stop, and a claim is built from somebody's travel and their receipts.
+    expect(offsite, "nothing off-site").toEqual([]);
   });
 });
 

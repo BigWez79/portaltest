@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { downloadClaimPdf, type ClaimPerson } from "./claim-pdf";
+import type { PdfSeller } from "@/lib/pdf";
 import {
   lockClaimMonth,
   removeExpense,
@@ -34,17 +36,22 @@ export function ExpensesApp({
   rates,
   locked,
   isAdmin,
+  person,
+  seller,
 }: {
   rows: Expense[];
   rates: MileageRates;
   locked: string[];
   isAdmin: boolean;
+  person: ClaimPerson;
+  seller: PdfSeller;
 }) {
   const [form, formAction, saving] = useActionState(submitExpense, idle);
   const [removeState, removeAction] = useActionState(removeExpense, idle);
   const [lockState, lockAction] = useActionState(lockClaimMonth, idle);
   const [rateState, rateAction, savingRates] = useActionState(updateRates, idle);
 
+  const [claimProblem, setClaimProblem] = useState<string | null>(null);
   const [type, setType] = useState<ExpenseType>("Mileage");
   const [miles, setMiles] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -290,10 +297,30 @@ export function ExpensesApp({
                   </span>
                 ) : null}
               </h2>
-              <div className="exp-total" data-testid={`total-${month}`}>
-                {gbp(total)}
+              <div className="exp-monthbar">
+                <button
+                  type="button"
+                  className="exp-download"
+                  onClick={() =>
+                    downloadClaimPdf({ month, rows: list, person, seller }).catch(() =>
+                      setClaimProblem(month),
+                    )
+                  }
+                  data-testid={`claim-${month}`}
+                >
+                  Download claim (PDF)
+                </button>
+                <div className="exp-total" data-testid={`total-${month}`}>
+                  {gbp(total)}
+                </div>
               </div>
             </div>
+
+            {claimProblem === month ? (
+              <p className="exp-problem" role="status" data-testid={`claim-problem-${month}`}>
+                That claim could not be produced. Reload the page and try again.
+              </p>
+            ) : null}
 
             <div className="exp-scroll">
               <table className="exp-table">

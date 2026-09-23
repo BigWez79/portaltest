@@ -37,22 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. The expenses claim
-`f303a141-expenses.html` has `Download claim (PDF)` and the port has nothing.
-
-- [ ] Title `EXPENSES CLAIM`, logo, claim month, generated date
-- [ ] The person's name and email
-- [ ] Mileage table — Date, Route, Miles, Amount
-- [ ] Everything else — Date, Type, Description, Receipt, Amount
-- [ ] Mileage subtotal, other subtotal, and `Total to claim (GBP)`
-- [ ] The declaration: "I confirm these expenses were incurred wholly and
-      necessarily for business."
-
-**Done when** a month holding one mileage claim and one receipted claim
-produces both tables, both subtotals and a total equal to their sum, and
-`npm run verify` passes.
-
-### 2. Expenses — the two screens, and an admin's copy
+### 1. Expenses — the two screens, and an admin's copy
 The original keeps `My entries` and `Monthly claim` apart; the port merged
 them, which is why a month's claim is hard to see.
 
@@ -64,7 +49,7 @@ them, which is why a month's claim is hard to see.
 claim, a non-admin calling that action is refused (rule 5), and
 `npm run verify` passes.
 
-### 3. Timesheets — a day is the unit
+### 2. Timesheets — a day is the unit
 The port is not a thinner version of the original, it is a different model, and
 this is the task that fixes that. Today a day with three activities takes three
 actions to correct and the shape of the day cannot be changed at all.
@@ -81,7 +66,7 @@ actions to correct and the shape of the day cannot be changed at all.
 deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
 refused; and `npm run verify` passes.
 
-### 4. Timesheets — the day rate and the period
+### 3. Timesheets — the day rate and the period
 - [ ] A day rate on the profile, with `Save day rate`
 - [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
 - [ ] The button label follows the period: `Invoice` for a month, `Statement`
@@ -90,7 +75,7 @@ refused; and `npm run verify` passes.
 **Done when** the switch changes the range and the label, the rate persists,
 and `npm run verify` passes.
 
-### 5. Timesheets — three documents
+### 4. Timesheets — three documents
 `1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
 
 - [ ] `Timesheet_<name>_<period>.pdf` — the full record
@@ -100,7 +85,7 @@ and `npm run verify` passes.
 **Done when** all three come out for a period holding billable and non-billable
 days, the draft is watermarked as a draft, and `npm run verify` passes.
 
-### 6. Timesheets — Issue invoice
+### 5. Timesheets — Issue invoice
 The original hands billable days to the invoicing system with net, VAT and
 gross already worked out. In the port the two apps do not speak.
 
@@ -108,7 +93,7 @@ gross already worked out. In the port the two apps do not speak.
 billable day at the day rate, the timesheet records that it was issued and
 refuses to issue the same period twice, and `npm run verify` passes.
 
-### 7. Monthly Overview is the wrong page
+### 6. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -135,7 +120,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 8. Admin — the three controls that are missing
+### 7. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -145,7 +130,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 9. The runner opens a second pull request for work it already did
+### 8. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -305,6 +290,28 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **The expenses claim** — `overnight/port-gaps`. Two tables, not one, which is
+  the shape of the document rather than a layout choice: mileage is a route and
+  a distance priced at a rate, everything else is a receipt for an amount. One
+  table would mean a Miles column empty on most rows and a Receipt column
+  meaningless on the rest. Each is subtotalled before the total because the two
+  numbers get checked against different things — one against the rate and the
+  distance, the other against a pile of receipts.
+
+  First document on the shared toolkit, and it earned its place: the A4 setup,
+  the logo header from My Profile, the money and date formatters and the table
+  defaults all came from there.
+
+  `pdfText` in the harness is the part worth keeping. Asserting a download
+  happened proves a file arrived and nothing about what is in it — a claim
+  missing its mileage table, or totalling wrong, downloads just as happily as a
+  correct one. It reads the content streams back and the test asserts both
+  tables, both subtotals, the total being their sum, and the declaration. What
+  it cannot see is position, font, colour, or anything drawn as a line or an
+  image, and that is written down where the helper is.
+
+  npm run verify: 264 passed.
 
 - **Correcting an invoice, and the number on it** — `overnight/port-gaps`. An
   invoice's header can be changed after it is raised, and changing the VAT rate

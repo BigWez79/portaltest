@@ -3976,3 +3976,34 @@ tr.inactive .toggle.on {
 .inv-app button.danger:hover {
   background: color-mix(in srgb, var(--err) 8%, transparent);
 }
+
+/* The expenses claim download. */
+.exp-monthbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.exp-app button.exp-download {
+  background: var(--brand-deep);
+  border: 1px solid var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.8rem;
+  width: auto;
+  padding: 8px 14px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+.exp-app button.exp-download:hover {
+  filter: brightness(1.12);
+}
+
+.exp-problem {
+  margin: 8px 0 0;
+  color: var(--err);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
