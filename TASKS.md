@@ -37,15 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. Timesheets — Issue invoice
-The original hands billable days to the invoicing system with net, VAT and
-gross already worked out. In the port the two apps do not speak.
-
-**Done when** issuing from a month creates a real invoice carrying one line per
-billable day at the day rate, the timesheet records that it was issued and
-refuses to issue the same period twice, and `npm run verify` passes.
-
-### 2. Monthly Overview is the wrong page
+### 1. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -72,7 +64,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 3. Admin — the three controls that are missing
+### 2. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -82,7 +74,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 4. The runner opens a second pull request for work it already did
+### 3. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -242,6 +234,34 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **Timesheets: Issue invoice** — `overnight/port-gaps`. A closed month becomes a
+  real invoice in the other app, one line per billable day carrying the date,
+  because an invoice reading "3 days" gives a customer nothing to check against
+  their own records. The number, the prefix, the seller block, the bank details
+  and the VAT treatment all come from My Profile.
+
+  Only a **closed** month. Closing is how a month is declared final; billing an
+  open one means invoicing a figure that can still change, and the customer has
+  the document by the time it does.
+
+  0011 records which periods have been billed, and the primary key is what stops
+  a second press raising a second invoice for the same work. The record is
+  written *after* the invoice exists — the other order would mark a period
+  billed with no document behind it, and it could then never be billed at all.
+  The foreign key cascades: delete the invoice and the period is free again,
+  rather than leaving a row pointing at a document nobody can open.
+
+  Issuing needs **both** flags, checked in the action and not only in what gets
+  rendered (rule 5). The live suite had one login for everything and never had
+  to answer this.
+
+  One real bug found by its own test: the fixture store's `normalise` rebuilt
+  the document on every read and did not carry `issues` through, so the record
+  was written, saved, and gone by the time anything asked whether the month had
+  been billed. It looked like the notice not rendering.
+
+  npm run verify: 288 passed.
 
 - **Timesheets: three documents** — `overnight/port-gaps`. Three, because they
   answer three questions for three audiences. The timesheet is the record — what

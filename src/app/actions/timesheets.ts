@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getProfile, saveProfile } from "@/lib/profile";
+import { addLine, createInvoice, listInvoices, nextInvoiceNo, DEFAULT_TAX_RATE } from "@/lib/invoices";
 import { getCurrentUser } from "@/lib/current-user";
 import { resolveAccess } from "@/lib/staff";
 import {
@@ -10,11 +11,15 @@ import {
   entriesOnDay,
   hoursFor,
   isFullDay,
+  issuedPeriods,
   listEntries,
   lockMonth,
+  lockedMonths,
+  recordIssue,
   removeEntry,
   replaceDay,
   type EntryInput,
+  type TimesheetEntry,
 } from "@/lib/timesheets";
 
 export type TimesheetState = { status: "idle" | "ok" | "error"; message?: string };
@@ -299,4 +304,131 @@ export async function saveDayRate(
   revalidatePath("/timesheets");
   revalidatePath("/profile");
   return { status: "ok", message: dayRate == null ? "Day rate cleared." : "Day rate saved." };
+}
+
+/**
+ * Turn a closed month into a real invoice.
+ *
+ * TWO APPS, TWO FLAGS. Issuing reads a timesheet and writes an invoice, so the
+ * caller needs both — a person with timesheets alone gets no button and, more
+ * to the point, no action either (rule 5). The live page had one login for
+ * everything and never had to answer this.
+ *
+ * Only a closed month. Closing is how a month is declared final; billing one
+ * that is still open means invoicing a figure that can still change, and the
+ * customer has already got the document by the time it does.
+ */
+export async function issueTimesheetInvoice(
+  _previous: TimesheetState,
+  formData: FormData,
+): Promise<TimesheetState> {
+  let access;
+  try {
+    access = await requireTimesheets();
+  } catch {
+    return { status: "error", message: "You are not allowed to issue invoices." };
+  }
+  if (!access.apps.invoices) {
+    return { status: "error", message: "Issuing an invoice needs access to Invoices." };
+  }
+
+  const month = String(formData.get("month") ?? "").trim();
+  if (!/^\d{4}-\d{2}$/.test(month)) return { status: "error", message: "Choose a month." };
+
+  const customerId = String(formData.get("customerId") ?? "");
+  if (!customerId) return { status: "error", message: "Choose who to invoice." };
+
+  const closed = await lockedMonths(access.email);
+  if (!closed.includes(month)) {
+    return { status: "error", message: `Close ${month} first. A month is billed once it is final.` };
+  }
+
+  const already = await issuedPeriods(access.email);
+  if (already.some((i) => i.claimMonth === month)) {
+    return { status: "error", message: `${month} has already been invoiced.` };
+  }
+
+  const profile = await getProfile(access.email);
+  if (profile.dayRate == null) {
+    return { status: "error", message: "Set a day rate before invoicing a month." };
+  }
+
+  const entries = await listEntries(access.email);
+  const inMonth = entries.filter((e) => e.claimMonth === month);
+  const days = billableDays(inMonth);
+  if (days.length === 0) {
+    return { status: "error", message: `Nothing billable in ${month}.` };
+  }
+
+  const existing = await listInvoices(access.email);
+  const invoiceNo = nextInvoiceNo(
+    existing.map((i) => i.invoiceNo),
+    profile.issuerPrefix || "PA",
+  );
+
+  const created = await createInvoice(
+    access.email,
+    {
+      invoiceNo,
+      customerId,
+      invoiceDate: new Date().toISOString().slice(0, 10),
+      project: `Timesheet ${month}`,
+      taxRate: profile.vatRegistered ? DEFAULT_TAX_RATE : 0,
+    },
+    {
+      name: profile.businessName || access.displayName || null,
+      address: profile.businessAddress,
+      vat: profile.vatRegistered ? profile.vatNumber : null,
+      companyNo: profile.companyNumber,
+      bankName: profile.accountName,
+      sortCode: profile.sortCode,
+      accountNo: profile.accountNo,
+      tagline: profile.tagline,
+      logo: profile.logo,
+      paymentTermsDays: profile.paymentTermsDays,
+    },
+  );
+  if (!created.ok) return { status: "error", message: created.message };
+
+  // One line per day, not one line saying "21 days". A customer checking an
+  // invoice against their own records needs the dates.
+  let position = 0;
+  for (const [date, what] of days) {
+    const added = await addLine(
+      created.id,
+      {
+        itemNo: date,
+        description: what,
+        qty: 1,
+        unitPrice: profile.dayRate,
+      },
+      profile.vatRegistered ? DEFAULT_TAX_RATE : 0,
+      position++,
+    );
+    if (!added) {
+      return { status: "error", message: `${invoiceNo} was raised but a line failed. Check it.` };
+    }
+  }
+
+  // Last, and after the invoice exists: if this failed first, the period would
+  // be marked billed with no document behind it and could never be billed.
+  await recordIssue(access.email, month, created.id);
+
+  revalidatePath("/timesheets");
+  revalidatePath("/invoices");
+  return { status: "ok", message: `${invoiceNo} raised for ${month} — ${days.length} days.` };
+}
+
+/** The billable days in a set of entries, with what was done on each. */
+function billableDays(entries: TimesheetEntry[]): [string, string][] {
+  const byDay = new Map<string, Set<string>>();
+  for (const e of entries) {
+    if (isFullDay(e.activityType)) continue;
+    if (e.hoursWorked <= 0) continue;
+    if (!byDay.has(e.entryDate)) byDay.set(e.entryDate, new Set());
+    byDay.get(e.entryDate)!.add(e.project || e.activityType);
+  }
+  return [...byDay.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, what]) => [date, [...what].join(", ")]);
 }

@@ -32,7 +32,8 @@
       "payment_terms_days": 14,
       "contact_email": null,
       "contact_phone": null,
-      "tagline": null
+      "tagline": null,
+      "day_rate": 350
     },
     {
       "staff_email": "timesheet.only@example.test",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import type { Customer } from "@/lib/invoices-calc";
 import type { PdfSeller } from "@/lib/pdf";
 import {
   downloadStatementPdf,
@@ -10,6 +11,7 @@ import {
 import {
   closeMonth,
   deleteDay,
+  issueTimesheetInvoice,
   saveDayRate,
   deleteHours,
   submitDay,
@@ -27,6 +29,7 @@ import {
   periodLabel,
   periodsFor,
   type Period,
+  type TimesheetIssue,
   type TimesheetEntry,
 } from "@/lib/timesheets-calc";
 
@@ -60,6 +63,9 @@ export function TimesheetsApp({
   person,
   seller,
   vatRate,
+  customers,
+  issued,
+  canInvoice,
 }: {
   entries: TimesheetEntry[];
   locked: string[];
@@ -68,12 +74,17 @@ export function TimesheetsApp({
   seller: PdfSeller;
   /** 20 when the profile says VAT registered, 0 when it does not. */
   vatRate: number;
+  /** Empty unless this person can also reach Invoices. */
+  customers: Customer[];
+  issued: TimesheetIssue[];
+  canInvoice: boolean;
 }) {
   const [day, dayAction, saving] = useActionState(submitDay, idle);
   const [del, delAction] = useActionState(deleteHours, idle);
   const [wipeDay, wipeDayAction] = useActionState(deleteDay, idle);
   const [close, closeAction] = useActionState(closeMonth, idle);
   const [rate, rateAction, savingRate] = useActionState(saveDayRate, idle);
+  const [issue, issueAction, issuing] = useActionState(issueTimesheetInvoice, idle);
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [activities, setActivities] = useState<Draft[]>(() => [blankActivity()]);
@@ -117,6 +128,7 @@ export function TimesheetsApp({
 
   const months = useMemo(() => groupByMonth(entries), [entries]);
   const isLocked = (m: string) => locked.includes(m);
+  const alreadyIssued = (m: string) => issued.some((i) => i.claimMonth === m);
 
   const thisMonth = months[0];
 
@@ -185,6 +197,16 @@ export function TimesheetsApp({
         </form>
       </div>
 
+      {issue.status === "ok" ? (
+        <div className="msg ok" role="status" data-testid="issue-ok">
+          {issue.message}
+        </div>
+      ) : null}
+      {issue.status === "error" ? (
+        <div className="msg" role="alert" data-testid="issue-error">
+          {issue.message}
+        </div>
+      ) : null}
       {rate.status === "ok" ? (
         <div className="msg ok" role="status" data-testid="rate-ok">
           {rate.message}
@@ -560,6 +582,45 @@ export function TimesheetsApp({
                 </div>
               </div>
             ))}
+
+            {shut && canInvoice ? (
+              alreadyIssued(m.month) ? (
+                <p className="ts-quiet" data-testid={`issued-${m.month}`}>
+                  Invoiced. A month is billed once — raise a second invoice from
+                  Invoices if something needs adding.
+                </p>
+              ) : (
+                <form action={issueAction} className="ts-issue" data-testid={`issue-form-${m.month}`}>
+                  <input type="hidden" name="month" value={m.month} />
+                  <label className="field app-field ts-customer">
+                    <span className="field-label">Invoice to</span>
+                    <select name="customerId" required data-testid={`issue-customer-${m.month}`}>
+                      <option value="">Choose…</option>
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.companyName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    className="btn-good"
+                    disabled={issuing || dayRate == null}
+                    data-testid={`issue-${m.month}`}
+                  >
+                    {issuing ? "Raising…" : "Issue invoice"}
+                  </button>
+                  {dayRate == null ? (
+                    <span className="ts-quiet">Set a day rate first.</span>
+                  ) : (
+                    <span className="ts-quiet">
+                      {daysWorked(m.days.flatMap((d) => d.entries))} days at £{dayRate}
+                    </span>
+                  )}
+                </form>
+              )
+            ) : null}
 
             {shut ? null : (
               <form action={closeAction} className="ts-close">

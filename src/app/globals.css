@@ -4188,3 +4188,20 @@ tr.inactive .toggle.on {
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+/* Turning a closed month into an invoice. */
+.ts-issue {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--good) 6%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--good) 28%, var(--line));
+  border-radius: 12px;
+}
+
+.ts-customer {
+  max-width: 230px;
+}

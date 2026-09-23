@@ -1,6 +1,11 @@
 import "server-only";
 import { staffSource } from "./env";
-import { toEntry, type EntryInput, type TimesheetEntry } from "./timesheets-calc";
+import {
+  toEntry,
+  type EntryInput,
+  type TimesheetEntry,
+  type TimesheetIssue,
+} from "./timesheets-calc";
 
 /**
  * Timesheets — the hours a person logged, and which months are closed.
@@ -200,4 +205,58 @@ export async function replaceDay(
 export async function entriesOnDay(email: string, date: string): Promise<TimesheetEntry[]> {
   const all = await listEntries(email);
   return all.filter((e) => e.entryDate === date);
+}
+
+/* -------------------------------------------------------------------------
+   Periods already billed
+   ------------------------------------------------------------------------- */
+
+export async function issuedPeriods(email: string): Promise<TimesheetIssue[]> {
+  const key = email.toLowerCase();
+  if (!key) return [];
+  if (fixture()) return (await store()).issuesFor(key);
+
+  const { supabaseServer } = await import("./supabase/server");
+  const client = await supabaseServer();
+  const { data, error } = await client
+    .from("timesheet_issues")
+    .select("claim_month, invoice_id, issued_at");
+  if (error) {
+    console.error("[timesheets] issues failed", error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => ({
+    claimMonth: String((r as Record<string, unknown>).claim_month),
+    invoiceId: String((r as Record<string, unknown>).invoice_id),
+    issuedAt: String((r as Record<string, unknown>).issued_at),
+  }));
+}
+
+/**
+ * Record that a period became an invoice.
+ *
+ * Written *after* the invoice exists, and the primary key is what stops the
+ * same period being billed twice. Two presses of the button racing each other
+ * both find nothing recorded; the second insert is what loses, and it loses
+ * against the database rather than against a check the application did a
+ * moment earlier.
+ */
+export async function recordIssue(
+  email: string,
+  claimMonth: string,
+  invoiceId: string,
+): Promise<boolean> {
+  const key = email.toLowerCase();
+  if (fixture()) return (await store()).recordIssue(key, claimMonth, invoiceId);
+
+  const { supabaseServer } = await import("./supabase/server");
+  const client = await supabaseServer();
+  const { error } = await client
+    .from("timesheet_issues")
+    .insert({ staff_email: key, claim_month: claimMonth, invoice_id: invoiceId });
+  if (error) {
+    console.error("[timesheets] record issue failed", error.message);
+    return false;
+  }
+  return true;
 }

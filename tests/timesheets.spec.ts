@@ -435,6 +435,92 @@ test.describe.serial("timesheets — the three documents", () => {
   });
 });
 
+test.describe.serial("timesheets — issuing an invoice", () => {
+  /*
+   * Only the timesheet store is reset here, though issuing writes an invoice
+   * too. invoices.spec.ts owns that one, and two specs resetting a single
+   * fixture file interleave however serial either of them is —
+   * check-test-isolation.mjs refuses the build if they both do.
+   *
+   * These tests do not need a clean invoice list. They raise a new invoice
+   * whose number comes from whatever is already there, and assert on the one
+   * they raised rather than on how many exist.
+   */
+  test.beforeEach(async ({ page }) => {
+    await resetStores(page, "timesheets");
+  });
+
+  test("a closed month becomes an invoice, one line per billable day", async ({ page }) => {
+    // everything@ has both flags. A timesheet becoming an invoice needs both.
+    await signInAs(page, "everything@example.test");
+    await page.goto("/timesheets");
+
+    // Only a closed month can be billed, so close it first.
+    await page.getByTestId("close-2026-07").click();
+    await expect(page.getByTestId("close-ok")).toBeVisible({ timeout: 15000 });
+
+    await page.getByTestId("issue-customer-2026-07").selectOption({ index: 1 });
+    await page.getByTestId("issue-2026-07").click();
+    await expect(page.getByTestId("issue-ok")).toContainText("raised", { timeout: 15000 });
+
+    // And it is a real invoice in the other app, not a message saying so. The
+    // number carries this person's own prefix from My Profile.
+    await page.goto("/invoices");
+    const raised = page.locator("[data-testid^=invoice-EVR-]").first();
+    await expect(raised).toBeVisible();
+
+    // One line per billable day, carrying the date — an invoice reading
+    // "3 days" gives a customer nothing to check against their own records.
+    await raised.getByRole("button", { name: /EVR-/ }).click();
+    const doc = page.getByTestId("invoice-document");
+    await expect(doc).toContainText("Timesheet 2026-07");
+    await expect(doc).toContainText("2026-07-15");
+  });
+
+  test("an open month cannot be billed", async ({ page }) => {
+    await signInAs(page, "everything@example.test");
+    await page.goto("/timesheets");
+
+    // July is open. Billing it would invoice a figure that can still change,
+    // and the customer has the document by the time it does.
+    await expect(page.getByTestId("issue-form-2026-07")).toHaveCount(0);
+  });
+
+  test("the same month cannot be billed twice", async ({ page }) => {
+    await signInAs(page, "everything@example.test");
+    await page.goto("/timesheets");
+
+    await page.getByTestId("close-2026-07").click();
+    await expect(page.getByTestId("close-ok")).toBeVisible({ timeout: 15000 });
+
+    await page.getByTestId("issue-customer-2026-07").selectOption({ index: 1 });
+    await page.getByTestId("issue-2026-07").click();
+    await expect(page.getByTestId("issue-ok")).toBeVisible({ timeout: 15000 });
+
+    // Reloaded rather than trusting the re-render: the claim is that the fact
+    // was recorded, not that the screen updated.
+    await page.reload();
+
+    // The control is gone, and the screen says why rather than going quiet.
+    await expect(page.getByTestId("issued-2026-07")).toBeVisible();
+    await expect(page.getByTestId("issue-form-2026-07")).toHaveCount(0);
+  });
+
+  test("somebody with timesheets but not invoices is offered nothing to press", async ({
+    page,
+  }) => {
+    await signInAs(page, STAFF); // timesheet.only@ has no invoices flag
+    await page.goto("/timesheets");
+
+    await page.getByTestId("close-2026-07").click();
+    await expect(page.getByTestId("close-ok")).toBeVisible({ timeout: 15000 });
+
+    // Absent, not disabled. And the action re-checks the flag regardless,
+    // because rendering a control is not what stops a post (rule 5).
+    await expect(page.getByTestId("issue-form-2026-07")).toHaveCount(0);
+  });
+});
+
 test.describe("timesheets — the guard", () => {
   test.use({ tolerate: ["status of 404"] });
 

@@ -151,6 +151,9 @@ export type EntryInput = {
 
 export type Period = "month" | "year";
 
+/** A period that has already been turned into an invoice. */
+export type TimesheetIssue = { claimMonth: string; invoiceId: string; issuedAt: string };
+
 /**
  * The UK financial year a date falls in, as the year it starts.
  *
