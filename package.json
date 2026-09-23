@@ -15,9 +15,10 @@
     "test:e2e:ui": "playwright test --ui",
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
     "clean": "rm -rf .next",
-    "verify": "npm run clean && npm run typecheck && npm run build && npm run check:secrets && npm run check:tests && npm run test:e2e",
+    "verify": "npm run clean && npm run typecheck && npm run build && npm run check:secrets && npm run check:tests && npm run check:supersede && npm run test:e2e",
     "import:staff": "tsx scripts/import-staff.ts",
-    "check:tests": "node scripts/check-test-isolation.mjs"
+    "check:tests": "node scripts/check-test-isolation.mjs",
+    "check:supersede": "bash scripts/check-supersede.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

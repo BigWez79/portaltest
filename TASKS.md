@@ -25,6 +25,9 @@ parked in BLOCKED.md until their repositories have been read.
 
 ## Next up — functionality the port dropped
 
+Everything read against the twelve originals is built. What is left of this
+section is in Done below; the sections after this one are the queue again.
+
 Read against the twelve original pages in `BigWez79/portal`, copies supplied
 2026-09-23, control by control. Each port kept the data and the rules and lost
 the documents: to the person using these screens the original *is* a way of
@@ -36,25 +39,6 @@ grouping is the unit; the checklist inside each is what "done" means.
 Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
-
-### 1. The runner opens a second pull request for work it already did
-`overnight.sh:403` excludes draft pull requests from claiming a task. That is
-deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
-behind when verify failed, and that task does need doing again.
-
-The cost is what happened with #35/#36 and #38/#39 — the task is redone, a
-second pull request opens, and the failed draft stays open forever. Two pull
-requests for one task, and a queue of drafts nobody closes.
-
-The fix is not to let drafts claim tasks; that would strand a task behind a
-draft that is never cleaned up. It is to close the superseded draft when a
-later run finishes the same task, saying in the comment which pull request
-replaced it.
-
-**Done when** a run that completes a task an open draft attempted closes that
-draft with a comment naming the new pull request, a draft for a *different*
-task is left alone, and rule 12 is answered in the comment: what would have to
-be true for this to close a draft that was still wanted.
 
 ## Next up — Power Suite hygiene
 
@@ -197,6 +181,31 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **The runner stops opening a second pull request for work it already did** —
+  `overnight/port-gaps`. Drafts are still excluded from claiming a task, which
+  is right: exit 69 opens one when verify failed, and that task does need doing
+  again. What was missing was what happens to the draft afterwards. The run that
+  finishes the task now closes it, naming the pull request that replaced it and
+  leaving the branch alone in case anything on it is worth keeping. That is
+  #35/#36 and #38/#39 — two pull requests for one task, and a queue of drafts
+  nobody reads.
+
+  `deploy/task-headings.sh` holds the heading arithmetic, sourced by the runner
+  and by `scripts/check-supersede.sh`. The check exercises the real functions
+  rather than a copy of them: a check that reimplements what it checks keeps
+  passing after somebody changes the original, which rule 12 says is not a
+  check. It covers a draft on the same task, a draft on a different one, a draft
+  that claimed nothing, and a run that finished two tasks. The `gh` and `git`
+  calls around it are not covered, and that is written down rather than implied.
+
+  Rule 12 on the change itself: it would close a draft that was still wanted
+  only if that draft had removed the same heading from TASKS.md while being
+  about something else — which is a draft that lied about what it did. Every
+  other way it can be wrong (no gh, no match, a branch that cannot be fetched)
+  leaves the draft open, which is the behaviour it replaces.
+
+  npm run verify: 300 passed.
 
 - **Everybody's invoices, for an admin** — `overnight/port-gaps`. An admin could
   already read every expenses claim and every timesheet, and produce somebody
