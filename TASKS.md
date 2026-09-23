@@ -23,6 +23,164 @@ is queued once the legacy-profile question in `docs/PORTING-APPS.md` has been
 read from the data rather than guessed at. Invoices, Timesheets and Expenses are
 parked in BLOCKED.md until their repositories have been read.
 
+## Next up — functionality the port dropped
+
+Read against the twelve original pages in `BigWez79/portal`, copies supplied
+2026-09-23, control by control. Each port kept the data and the rules and lost
+the documents: to the person using these screens the original *is* a way of
+producing a PDF, and that is the part that did not come across.
+
+Forty-one changes, grouped below into tasks that are each one run's work. The
+grouping is the unit; the checklist inside each is what "done" means.
+
+Build in the order written. It is not arbitrary — the toolkit is first because
+five documents need it, and the invoice document is before the invoice's
+filters because the document is what somebody is actually missing.
+
+### 1. Correcting an invoice, and the number on it
+Raised is not final. The original lets a header be corrected and an invoice
+deleted, and it numbers them properly.
+
+- [ ] Edit an invoice's header after it is raised
+- [ ] Delete an invoice
+- [ ] `PREFIX-0000001` — the issuer prefix from My Profile, seven digits, the
+      sequence being the highest already used for that prefix plus one
+- [ ] The "next number" hint on the new-invoice form
+- [ ] Customer address lines 1 and 2 — the port has town and postcode only, so
+      an invoice cannot print a full address
+- [ ] Edit and delete a customer
+
+**Done when** the next number after `PA-0000009` is `PA-0000010`, a corrected
+invoice keeps its number, a full address reaches the document, and
+`npm run verify` passes.
+
+### 2. The expenses claim
+`f303a141-expenses.html` has `Download claim (PDF)` and the port has nothing.
+
+- [ ] Title `EXPENSES CLAIM`, logo, claim month, generated date
+- [ ] The person's name and email
+- [ ] Mileage table — Date, Route, Miles, Amount
+- [ ] Everything else — Date, Type, Description, Receipt, Amount
+- [ ] Mileage subtotal, other subtotal, and `Total to claim (GBP)`
+- [ ] The declaration: "I confirm these expenses were incurred wholly and
+      necessarily for business."
+
+**Done when** a month holding one mileage claim and one receipted claim
+produces both tables, both subtotals and a total equal to their sum, and
+`npm run verify` passes.
+
+### 3. Expenses — the two screens, and an admin's copy
+The original keeps `My entries` and `Monthly claim` apart; the port merged
+them, which is why a month's claim is hard to see.
+
+- [ ] Split `My entries` from `Monthly claim`
+- [ ] Admin: `Download their claim (PDF)`, with a person picker and a month
+      picker
+
+**Done when** the two views are separate, an admin can produce somebody else's
+claim, a non-admin calling that action is refused (rule 5), and
+`npm run verify` passes.
+
+### 4. Timesheets — a day is the unit
+The port is not a thinner version of the original, it is a different model, and
+this is the task that fixes that. Today a day with three activities takes three
+actions to correct and the shape of the day cannot be changed at all.
+
+- [ ] `+ Add activity` — build a day up from several rows before submitting
+- [ ] `Submit day` — the whole day at once
+- [ ] `Edit day` — loads every activity for that date back into the form
+- [ ] `Delete day`
+- [ ] Annual Leave and Sick are full days: eight hours, and the hours box locks
+- [ ] Refuse a second submission for a date already logged, naming the date and
+      pointing at `My entries`
+
+**Done when** a three-activity day is submitted once, edited as a unit, and
+deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
+refused; and `npm run verify` passes.
+
+### 5. Timesheets — the day rate and the period
+- [ ] A day rate on the profile, with `Save day rate`
+- [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
+- [ ] The button label follows the period: `Invoice` for a month, `Statement`
+      for a year
+
+**Done when** the switch changes the range and the label, the rate persists,
+and `npm run verify` passes.
+
+### 6. Timesheets — three documents
+`1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
+
+- [ ] `Timesheet_<name>_<period>.pdf` — the full record
+- [ ] `Invoice_<name>_<period>.pdf`, and `Invoice_DRAFT_` before it is issued
+- [ ] `Statement_<name>_<period>.pdf` — the annual statement
+
+**Done when** all three come out for a period holding billable and non-billable
+days, the draft is watermarked as a draft, and `npm run verify` passes.
+
+### 7. Timesheets — Issue invoice
+The original hands billable days to the invoicing system with net, VAT and
+gross already worked out. In the port the two apps do not speak.
+
+**Done when** issuing from a month creates a real invoice carrying one line per
+billable day at the day rate, the timesheet records that it was issued and
+refuses to issue the same period twice, and `npm run verify` passes.
+
+### 8. Monthly Overview is the wrong page
+This is the one I got most wrong, so it is written plainly: the original is an
+**administrators-only whole-team calendar**, and what was built is a personal
+hours summary. Not a thinner version — a different screen.
+
+`50eeaf69-overview.html:123` — "This overview is only available to
+administrators."
+
+- [ ] The grid: every person down the side, every **working day** across the
+      top, Monday to Friday only
+- [ ] Eleven activity colours, with Annual Leave orange and Sick red so absence
+      is visible at a glance
+- [ ] A legend
+- [ ] Stacked bars per day, scaled to the busiest single day in the month
+- [ ] Per-activity totals across all staff, and a grand total
+- [ ] `Print / PDF`
+
+**Held question inside this task:** the original is admin-only; the port shows
+a personal view to everybody. Keeping both is probably right — the personal
+view is useful and costs nothing — but that is a decision, not a default. Build
+the grid for admins and leave the personal view where it is, and say so in the
+pull request.
+
+**Done when** a month with three people and a mix of activities renders one row
+per person, weekends absent, absence in its own colours, totals that sum to the
+grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
+
+### 9. Admin — the three controls that are missing
+- [ ] `Resend` an invitation
+- [ ] `Remove` somebody
+- [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
+- [ ] Everybody's invoices, read-only
+
+**Done when** each control re-checks the caller (rule 5), a non-admin calling
+any of them is refused, removal is recorded in the audit trail, and
+`npm run verify` passes.
+
+### 10. The runner opens a second pull request for work it already did
+`overnight.sh:403` excludes draft pull requests from claiming a task. That is
+deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
+behind when verify failed, and that task does need doing again.
+
+The cost is what happened with #35/#36 and #38/#39 — the task is redone, a
+second pull request opens, and the failed draft stays open forever. Two pull
+requests for one task, and a queue of drafts nobody closes.
+
+The fix is not to let drafts claim tasks; that would strand a task behind a
+draft that is never cleaned up. It is to close the superseded draft when a
+later run finishes the same task, saying in the comment which pull request
+replaced it.
+
+**Done when** a run that completes a task an open draft attempted closes that
+draft with a comment naming the new pull request, a draft for a *different*
+task is left alone, and rule 12 is answered in the comment: what would have to
+be true for this to close a draft that was still wanted.
+
 ## Next up — Power Suite hygiene
 
 ### 2. Delete the import script at cutover
@@ -107,6 +265,32 @@ shape again.
 in the suite logs a CSP violation — the harness already fails a test whose page
 logged a console error, so the suite passing at all is the check; and
 `npm run verify` passes.
+### 4. A 404 and a crash that look like the product
+There is no `not-found.tsx` and no `error.tsx` anywhere in `src/`. Both cases
+render Next's own page today.
+
+That matters more here than it usually would. Rule 4 says a route 404s for
+anybody without its flag, and that 404 is not an edge case — it is the designed
+answer to somebody trying `/invoices` to see what happens. What they get is an
+unstyled Next page, which tells them two things we would rather not say: that
+they reached something real, and what it is built with.
+
+Add `src/app/not-found.tsx`, `src/app/error.tsx`, and `global-error.tsx` — the
+last one catches a failure in the root layout, which `error.tsx` cannot. They
+should look like the rest of the suite and say nothing about what was missing or
+why: no path, no flag name, no stack, no "you do not have access to this".
+
+`error.tsx` is a client component and takes `{ error, reset }`. Log the digest,
+show the person nothing but a way back to the portal.
+
+Note for the test: the harness fails any test whose page logged a console error,
+so exercising `error.tsx` needs `test.use({ tolerate: [...] })` in the same
+spirit as the 404 tests already do — declare it, do not turn the check off.
+
+**Done when** a signed-in request to a route the person has no flag for renders
+the suite's own 404 rather than Next's; a test asserts the body names no route,
+no flag and no framework; the 404 renders at 390 and 1440 with screenshots
+attached; and `npm run verify` passes.
 
 ---
 
@@ -139,6 +323,163 @@ logged a console error, so the suite passing at all is the check; and
 
 ## Done
 
+- **The invoice filters, and a check for the bug that keeps finding me** —
+  `overnight/suite-theme`. All / Outstanding / Due in 7 days / Overdue / Paid,
+  and the list now shows what an invoice actually is rather than what was last
+  written to it: an invoice sent in July with 14-day terms reads Overdue, while
+  `data-stored` still says Sent, because nothing wrote anything.
+
+  The "due in 7 days" test dates its invoice relative to today rather than
+  taking a fixture date. A hard-coded date would pass this week and quietly
+  stop testing anything the week after — the filter is about the gap between
+  two dates, so the test has to be as well.
+
+  `scripts/check-test-isolation.mjs` is the real content of this one. Twice in
+  an hour I shipped the same bug: two `test.describe.serial` blocks in one file
+  both resetting the same fixture store. `serial` orders the tests inside a
+  block and says nothing about two blocks running beside each other, so one
+  block's reset lands between another's save and its reload — and it surfaces
+  somewhere unrelated. Once as a sort-code bug in My Profile, once as an admin
+  tile that would not disappear. The check reads the specs, fails on a file with
+  two serial blocks that resets a store without being file-serial, and fails on
+  two specs resetting the same store. It found a third case in `admin.spec.ts`
+  on its first run. It is in `npm run verify`.
+
+  Rule 12, on the check itself: it would pass wrongly if a spec reset a store by
+  posting to the seeder rather than calling `resetStores`. So it looks for that
+  too and reports it as unreadable rather than ignoring it — it can say "I
+  cannot tell", and it does, loudly.
+
+  npm run verify: 255 passed.
+
+- **The invoice document** — `overnight/suite-theme`. The largest single thing
+  the port had dropped: the suite could raise an invoice and had no way to send
+  one. `InvoiceDocument.tsx` is the page a customer receives — seller block with
+  the logo, VAT INVOICE or INVOICE by whether a VAT number is actually on it,
+  From / Bill To / Details, the project line, the items table, payment details
+  with the sort code grouped, the terms sentence, the totals stack, and the VAT
+  registration number along the bottom.
+
+  Printed rather than drawn with jsPDF, which is what the live page does and is
+  the right tool: this is typography, and the browser sets it better than
+  coordinates would, keeps the text selectable, and reflows for other paper. The
+  print rules are asserted by emulating print media and asking the browser what
+  is visible — every other assertion in that file runs on screen and would pass
+  just as happily if the rules were scoped to a selector nothing carries.
+
+  My Profile now feeds the seller stamp; the comment saying "null until then"
+  was written before it was ported. And 0009 stamps the payment terms onto the
+  invoice rather than reading them live, which is a deliberate departure from
+  the original: `invoices.html` works the due date out from whatever the
+  settings say now, so changing your terms from 14 days to 30 silently moves
+  the due date on every invoice you have ever raised, and one that was three
+  days overdue this morning is not overdue this afternoon. Nothing was sent to
+  the customer that says so.
+
+  Overdue is derived, never written — right the morning after it falls due with
+  nothing scheduled, and so wrong for nobody if that schedule ever stopped.
+
+  Two corrections to the gap list while building it. Customer address lines
+  were already there, in the type and the form — what is missing is only that
+  the customer table displays the town alone. And the toolkit from the last
+  task serves four documents rather than five, because this one does not use it.
+
+  Found and fixed a test bug of my own making: `test.describe.serial` orders the
+  tests inside one block and says nothing about two blocks running beside each
+  other. This file had two that both reset the profile store and wrote the same
+  fixture person, and the logo block's reset landed between the sort-code test's
+  save and its reload. It failed as a sort-code bug. The file is serial now.
+
+  npm run verify: 252 passed, up from 246.
+
+- **One way to make a PDF** — `overnight/suite-theme`. `src/lib/pdf/` now holds
+  the part five documents share: loading jsPDF and autotable dynamically,
+  setting up A4 in either unit, the suite's colours, the seller header with the
+  logo from My Profile, the money and date formatters the live pages use, and
+  reading back where the last table ended. Margin's report moved onto it and
+  produces the same document — `tests/margin.spec.ts` asserts the filename and
+  that nothing is fetched off-site, and still passes.
+
+  Two things deliberately not standardised. Margin keeps points while the new
+  documents use millimetres, because Margin is already correct and converting
+  every coordinate would gain nothing a reader sees. And it keeps its own money
+  formatter: `gbp` rounds to whole pounds and groups thousands because these are
+  planning figures, where `money` prints exact pence because an invoice is an
+  amount somebody transfers. One formatter would make an invoice say £1,234.
+
+  The toolkit's own surface — the header, the formatters — is exercised by the
+  invoice document rather than by a page built to test it. A fixture page would
+  pass while the real caller was broken, which rule 12 says is not a check.
+
+- **Ported Tax Breakdown** — `overnight/auto-2026-09-12-0300`. The second app
+  folded in, and the last one that touches no data. Most of the work was step 1
+  of the port checklist: `taxbreakdown.html` carries ten references to MSAL,
+  `msal-browser@3` from jsdelivr, a hard-coded Entra client id and tenant id, and
+  a Sign out button of its own — in front of a calculator whose only scope is
+  `User.Read` and which never calls Graph. None of it came across; `requireApp`
+  and the magic link do that job, and a public page stopped advertising an app
+  registration id. The sums are in `src/lib/tax-model.ts` with no DOM near them,
+  and `tests/tax-breakdown.spec.ts` pins them against **four** worked examples
+  read off the live page itself, run headless with every http(s) request aborted
+  — between them the small profits rate, the marginal relief band, the main
+  rate, a loss, the personal allowance tapering to nil, other PAYE income
+  stacked under this company's salary, both AMAP mileage bands, and the
+  Employment Allowance on and off. The figures the editing test drives were read
+  the same way rather than worked out by hand. On the numbers: the statutory
+  rates came across exactly as they are — 19%/25% with marginal relief of 3/200,
+  the £12,570 allowance and its taper, 10.75/35.75/39.35% on dividends, NI at
+  8%/2% and 15%, AMAP at 45p/25p — and only the default *inputs* became
+  placeholders. Two judgement calls are written down in the model rather than
+  made quietly: the £12,570 default salary is the personal allowance itself and
+  stayed, and so did the mileage rates. `paTaxBreakdownInputs_v1` keeps its key
+  and its exact JSON shape, so a browser that has used the live page keeps its
+  figures. One deliberate piece of ugliness survived: the live page prints `£-0`
+  for a negated zero, and so does this, because a port that quietly improves its
+  output has stopped agreeing with the page it replaces. A test asserts the page
+  fetches nothing off-site and that `msal`, both Entra identifiers and the two
+  Microsoft hostnames appear nowhere in what this origin serves — and that it
+  scanned the HTML and the JavaScript, rather than passing on an empty scan. One
+  thing fixed on the way: the two-context deactivation check in `admin.spec.ts`
+  ran out of its 30s budget once four more full-page screenshots were competing
+  for the same server, so it now has 60s — the same assertions, a slower
+  failure. No migration; nothing waiting on a person. 149 checks.
+- **Accessibility pass on the admin table** — `overnight/auto-2026-09-13-0300`.
+  axe now runs against the sign-in card, the tiles and the staff screen at 390
+  and 1440, with the screenshot attached to each, and nothing is excluded and no
+  rule is switched off. It found six things. Five were contrast: the "off" pill's
+  label at 2.42:1, "invited, not signed in" at 4.42:1, a deactivated person's
+  name and address at 2.58:1, and the faded "on" pills on a deactivated row at
+  1.87:1. That last one is why opacity is gone from the table — the only value
+  that passes is 0.88, at which nothing looks faded, so the pill is drained and
+  its label left dark instead. The sixth was that the page every stranger reaches
+  had no level-one heading at all: the sign-in card's "Power Suite" was a div and
+  is now the `h1` it already looked like. Colours moved only where axe named
+  them, and one dead rule went with them — `.toggle.off[disabled]` failed at
+  1.81:1 and styles a state that cannot occur, since the only disabled toggles
+  are your own Admin and your own Active and neither is off for anybody who can
+  load the screen.
+  Then the three things axe cannot see. The column headings were abbreviated with
+  `display: none` below 720px, so a screen reader announced "Marg" for every
+  toggle in that column; the full word is now visually hidden rather than removed
+  and is what is announced at both widths, while what is drawn stays short — and
+  the test measures the boxes rather than reading innerText, because at 390 both
+  spellings are in the markup and that is the whole trick. A toggle's name now
+  says the person the way the row header does — "Invoices for Nora Noflags", not
+  their address — and a disabled one says why, since a disabled button is not
+  focusable and never shows its `title` to a keyboard. Tab walks a row left to
+  right across all seven and off the end onto the next person, which is asserted
+  rather than assumed.
+  One scan lives in `admin.spec.ts` rather than with the others: axe reads colour
+  off what is rendered, and a populated audit trail needs a write, so it is
+  scanned inside the serial suite that is already allowed to write instead of a
+  second suite resetting the shared store beside it. Every fix was watched to
+  fail without it — reverting the five colours, the heading, the `h1` and the
+  toggle names fails six of the new checks.
+  `@axe-core/playwright` is a devDependency and reaches no browser;
+  `check:secrets` still passes. The admin screen does still scroll sideways at
+  390 — that predates this, is recorded against the audit trail tests, and is a
+  change to how the screen looks rather than an accessibility violation, so it
+  is left for a person. No migration; nothing waiting on a person. 147 checks.
 - **Monthly Overview has a tile and a route** — `overnight/auto-2026-09-17-0300`.
   The gap between docs/PORTING-APPS.md's nine apps and the portal's seven: the
   eighth is now routed. All of CLAUDE.md's checklist and none of the page — an
@@ -238,6 +579,60 @@ logged a console error, so the suite passing at all is the check; and
   winnable. Neither is a leak of who has what, and the tile names are already
   public in `docs/PORTING-APPS.md`; it is a leak of which routes are real.
   No migration; nothing waiting on a person. 142 checks.
+- **A Content-Security-Policy, with a nonce** — `overnight/auto-2026-09-16-0300`.
+  The sixth header, and the one the whole project was an argument for: no
+  Supabase key is in the bundle and no token is in browser storage, but nothing
+  made a script on the page unable to reach anything — that was a property of the
+  code holding. `default-src 'self'` and no `'unsafe-inline'` on `script-src`.
+  The nonce works under Next 16.3.2 and Turbopack: `src/proxy.ts` mints 128 bits
+  per request, sets the policy on the request as well as the response, and Next
+  reads it back out to stamp every script tag — asserted by reading the served
+  HTML, because a browser blanks the `nonce` attribute once it has read it. Two
+  callers of one `contentSecurityPolicy()` rather than two literals: the proxy's
+  nonced one, and a nonce-free floor in `next.config.ts` under the chunks, the
+  fonts and the logo, which the proxy's matcher skips. Where both apply the
+  proxy's wins, which was checked rather than assumed. Three things came out of
+  it. Next's own 404 page carries a `<style>` element built on the client, so it
+  takes no nonce — a hash names that one string, and when Next changes it every
+  404 test fails on a console error, which is the check. Nothing is prerendered
+  any more: Next's 404 was baked at build time with no nonce and arrived with the
+  console full of violations, so the root layout is `force-dynamic` — every other
+  route already was. And `style-src-attr 'unsafe-inline'`, because React writes a
+  `style` attribute for anything computed and no nonce or hash mechanism reaches
+  an attribute; `style-src` itself stays strict. HSTS is Vercel's and was left
+  alone — asserting it here could only pass by accepting its absence over http on
+  127.0.0.1. `'unsafe-eval'` and inline styles are allowed under `next dev` only,
+  keyed on NODE_ENV, which the suite never runs under. Five new checks, and both
+  of the ones that matter were watched to fail against `script-src 'self'
+  'unsafe-inline'`. No migration; nothing waiting on a person. 138 checks.
+- **Monthly Overview has a tile and a route** — `overnight/auto-2026-09-17-0300`.
+  The gap between docs/PORTING-APPS.md's nine apps and the portal's seven: the
+  eighth is now routed. All of CLAUDE.md's checklist and none of the page — an
+  entry in `src/lib/apps.ts`, a glyph, `/overview` behind `requireApp("overview")`
+  with the same placeholder the other unported apps carry, `has_overview` in
+  `0003_overview.sql`, a `Flag`, an Overview column in `StaffTable`, and cases in
+  both `tests/access-matrix.spec.ts` and `tests/app-routes.spec.ts`. The page
+  itself is deliberately not ported: it reads four SharePoint lists and runs into
+  the "staff names versus staff records" question docs/PORTING-APPS.md records as
+  unsettled, which is a decision and not a task. A fixture person of their own,
+  `overview.only@example.test`, holds the flag and nothing else, so "sees exactly
+  Monthly Overview and My Profile" is a real assertion rather than a subset of
+  Ada Everything's. The 390 width check was strengthened while it was open: it
+  asserted the page did not scroll sideways but never that anything was on it, so
+  it would have passed just as happily on a portal that had lost a tile — it now
+  counts them against `ALL_TILES` first, which is what makes "at 390 with eight
+  tiles" mean anything. One thing shaken out on the way: the eighth toggle column
+  pushed the admin screen's re-render past the 5s default, and
+  `tests/admin.spec.ts` lost that race on a full run. Every toggle in that suite
+  now goes through one `setToggle` helper that waits 15s for the row to come back
+  showing the new state — the same patience the invite check was given, and a
+  stronger check than the bare clicks three of those tests used to do, which
+  asserted on a panel without ever confirming the toggle had moved. No entry in
+  `src/lib/notify.ts`: its `APP_NAMES` covers Invoices, Timesheets, Expenses and
+  Admin and has never covered Margin or Tax Breakdown either, so an
+  access-change email names the raw flag for all three. That is a pre-existing
+  gap, not this task's, and worth a queued line of its own. The migration is
+  committed and **waiting on a person**. 139 checks.
 - **Accessibility pass on the admin table** — `overnight/auto-2026-09-13-0300`.
   axe now runs against the sign-in card, the tiles and the staff screen at 390
   and 1440, with the screenshot attached to each, and nothing is excluded and no

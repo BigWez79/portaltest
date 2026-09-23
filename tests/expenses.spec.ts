@@ -1,4 +1,4 @@
-import { expect, resetStaff, signInAs, test } from "./harness";
+import { expect, resetStores, signInAs, test } from "./harness";
 
 /**
  * Expenses — the first ported app that writes.
@@ -57,7 +57,7 @@ test.describe("expenses — reading your own", () => {
 
 test.describe.serial("expenses — writing", () => {
   test.beforeEach(async ({ page }) => {
-    await resetStaff(page);
+    await resetStores(page, "expenses");
   });
 
   test("an expense can be added and appears in its month", async ({ page }) => {

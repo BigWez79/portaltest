@@ -123,9 +123,21 @@ export async function linkLedger(
 }
 
 /** Restores the fixture staff list. Only for tests that write. */
-export async function resetStaff(page: Page) {
-  const res = await onceMore(() => page.request.post("/api/test/session?reset=1"));
-  expect(res.ok(), "the fixture store should be resettable").toBeTruthy();
+/**
+ * Restore the fixture stores a spec writes to: "staff", "audit", "expenses",
+ * "invoices", "timesheets", "profiles", or "all".
+ *
+ * Name only what you write to. The suite is fully parallel against a single
+ * server, so these files are shared between workers — resetting all of them to
+ * restore the one you touched also puts back whatever another worker was
+ * partway through, and that spec fails somewhere unrelated. An unknown name is
+ * a 400 rather than a reset that quietly did nothing.
+ */
+export async function resetStores(page: Page, ...stores: string[]) {
+  const res = await onceMore(() =>
+    page.request.post(`/api/test/session?reset=${stores.join(",")}`),
+  );
+  expect(res.ok(), `these stores should be resettable: ${stores.join(", ")}`).toBeTruthy();
 }
 
 /**
@@ -143,9 +155,9 @@ export async function axeScan(page: Page, testInfo: TestInfo, shot: string) {
   // Wait for the page-load animation to finish before measuring anything.
   // `rise` fades the shell in from opacity 0 over half a second, and axe reads
   // the *composited* colour: scanned mid-animation, --muted #69718c arrives as
-  // #707792 against the card and fails contrast by a tenth. The colours are not
-  // wrong — the scan was early. Run by hand against the same build, dev or
-  // production, axe reports zero violations every time.
+  // #707792 against the card and fails contrast by a tenth. The colours were
+  // never wrong — the scan was early. Without this the suite reports five
+  // contrast violations that no browser ever shows a person.
   await page
     .waitForFunction(() => document.getAnimations().every((a) => a.playState === "finished"), null, {
       timeout: 5000,
@@ -195,7 +207,12 @@ export async function expectExactlyTiles(page: Page, expected: readonly string[]
   for (const id of ALL_TILES) {
     const locator = page.getByTestId(`tile-${id}`);
     if (expected.includes(id)) {
-      await expect(locator, `${id} tile should be shown`).toBeVisible();
+      // 15s, not the 5s default. The tiles page is server-rendered on every
+      // request, and under a full parallel run the box is busy enough that the
+      // render lands after five seconds — the same flake PR #31 widened on the
+      // invite form. A slower assertion, not a weaker one: the tile still has
+      // to appear, and the DOM-absence check below is untouched.
+      await expect(locator, `${id} tile should be shown`).toBeVisible({ timeout: 15000 });
     } else {
       await expect(locator, `${id} tile should not be in the DOM at all`).toHaveCount(0);
     }

@@ -1,0 +1,38 @@
+{
+  "profiles": [
+    {
+      "staff_email": "invoices.only@example.test",
+      "business_name": "Invoices Only Ltd",
+      "business_type": "Limited company",
+      "business_address": "3 Kiln Lane, Leicester LE2 7AA",
+      "company_number": "09876543",
+      "vat_registered": true,
+      "vat_number": "GB123456789",
+      "account_name": "Invoices Only Ltd",
+      "sort_code": "204567",
+      "account_no": "12345678",
+      "issuer_prefix": "INV",
+      "payment_terms_days": 30,
+      "contact_email": "ivor@example.test",
+      "contact_phone": "0116 496 0100",
+      "tagline": "Billing, done properly"
+    },
+    {
+      "staff_email": "everything@example.test",
+      "business_name": "Everything Consulting",
+      "business_type": "Sole trader",
+      "business_address": null,
+      "company_number": null,
+      "vat_registered": false,
+      "vat_number": null,
+      "account_name": null,
+      "sort_code": null,
+      "account_no": null,
+      "issuer_prefix": "EVR",
+      "payment_terms_days": 14,
+      "contact_email": null,
+      "contact_phone": null,
+      "tagline": null
+    }
+  ]
+}

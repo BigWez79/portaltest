@@ -1,33 +1,36 @@
 import { formatStamp, gbp, type MarginResult } from "@/lib/margin-model";
+import { createPdf, lastY, PDF_BRAND, PDF_INK, PDF_MUTE } from "@/lib/pdf";
 
 /**
  * The PDF report, transcribed from the live page's `downloadPDF()`.
  *
- * jsPDF and jspdf-autotable came from cdnjs there. They are npm dependencies
- * here and bundled with the app: an overnight build must not need cdnjs to be
- * up, and a signed-in page should not be fetching executable code from a third
- * party. They are imported dynamically so the ~400kB only loads when somebody
- * actually presses Download PDF.
+ * The plumbing — loading jsPDF, setting up A4, the colours, and reading back
+ * where the last table ended — is `@/lib/pdf`, shared with the invoice, the
+ * expenses claim and the timesheet's three documents. Everything below that is
+ * this report's own: the coordinates, the font sizes and the wording were read
+ * off the live page and are not the toolkit's to standardise.
+ *
+ * Points, not millimetres, for the same reason: this document is already
+ * correct and converting every coordinate would gain nothing a reader sees.
+ *
+ * It keeps its own money formatter too. `gbp` here rounds to whole pounds and
+ * groups thousands, because these are planning figures; the toolkit's `money`
+ * prints exact pence, because an invoice is an amount somebody transfers.
  */
-type FinalY = { lastAutoTable?: { finalY: number } };
-
 export async function downloadMarginPdf(result: MarginResult, scenarioName: string) {
-  const [{ jsPDF }, { default: autoTable }] = await Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable"),
-  ]);
+  const kit = await createPdf("pt", 40);
+  const { doc, autoTable } = kit;
 
   const L = result;
   const name = scenarioName.trim() || "Scenario";
   const stampIso = new Date().toISOString();
   const g = (n: number) => gbp(n || 0);
 
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const M = 40;
+  const M = kit.margin;
   let y = 46;
-  const BLUE: [number, number, number] = [80, 125, 229];
-  const INK: [number, number, number] = [16, 24, 58];
-  const MUTE: [number, number, number] = [105, 113, 140];
+  const BLUE = PDF_BRAND;
+  const INK = PDF_INK;
+  const MUTE = PDF_MUTE;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
@@ -50,7 +53,7 @@ export async function downloadMarginPdf(result: MarginResult, scenarioName: stri
   y += 10;
 
   const money = { halign: "right" as const };
-  const finalY = () => (doc as unknown as FinalY).lastAutoTable?.finalY ?? y;
+  const finalY = () => lastY(doc, y);
 
   autoTable(doc, {
     startY: y + 8,

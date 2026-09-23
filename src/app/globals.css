@@ -17,6 +17,13 @@
   --muted: #69718c;
   --err: #b3261e;
   --radius: 16px;
+
+  /* Lifted out of .margin-app, which is where the suite's look was worked out.
+     They were scoped to one app because at the time only one app had a look;
+     every page uses them now. */
+  --panel2: #f3f6fd;
+  --good: #1e9e57;
+  --accent2: #0ea394;
 }
 
 * {
@@ -106,6 +113,132 @@ h1 {
   line-height: 1.05;
   margin: 3px 0 0;
   letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------------------------
+   The suite's vocabulary
+
+   These were written inside .margin-app and are the look the whole suite is
+   meant to have. Unprefixed here so every page draws on the same set rather
+   than each one inventing a pill and a button of its own. The .margin-app
+   rules still exist and still win where they are more specific — nothing that
+   works today stops working.
+
+   Use: .tag beside a heading for the caption that explains it, .seg for a
+   two-way view switch, .btn-add for "one more of these", .btn-good for the
+   action that produces a document, .kpi for a figure worth reading first.
+   --------------------------------------------------------------------------- */
+
+.tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  color: var(--brand-dk);
+  font-weight: 600;
+  background: #eef4ff;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1px solid #cfddf7;
+  vertical-align: middle;
+}
+
+.seg {
+  display: inline-flex;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.seg button {
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 16px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: 0;
+  width: auto;
+}
+
+.seg button[aria-pressed="true"],
+.seg button.active {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-add {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--brand);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  width: auto;
+}
+
+.btn-add:hover {
+  border-color: var(--brand);
+  background: var(--panel2);
+}
+
+.btn-good {
+  background: var(--accent2);
+  color: #fff;
+  font-weight: 600;
+  width: auto;
+}
+
+.btn-good:hover {
+  filter: brightness(1.08);
+}
+
+/* A figure worth reading before the detail under it. */
+.kpi {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.kpi .k {
+  font-size: 0.74rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi .v {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi.good .v { color: var(--good); }
+.kpi.accent .v { color: var(--brand-deep); }
+.kpi.warn .v { color: #a8681f; }
+
+/* Inputs across the suite sit on the tinted panel, not on white. White on a
+   white card gives a field no edge until you focus it. */
+.app-field input[type="text"],
+.app-field input[type="number"],
+.app-field input[type="date"],
+.app-field select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 10px 12px;
+  border-radius: 10px;
+  outline: none;
+}
+
+.app-field input:focus,
+.app-field select:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(80, 125, 229, 0.16);
 }
 
 .card {
@@ -363,7 +496,9 @@ footer {
   font-family: inherit;
   font-size: 16px;
   color: var(--ink);
-  background: #fff;
+  /* The tinted panel, matching every app's fields. A white input on a white
+     card has no edge until it is focused. */
+  background: var(--panel2);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 13px;
@@ -371,7 +506,10 @@ footer {
 }
 
 .field input::placeholder {
-  color: #a3aac0;
+  /* Darkened when the field moved onto the tinted panel: #a3aac0 dropped to
+     2.14:1 there. axe does not check placeholders, which is exactly why it is
+     worth doing by hand. */
+  color: #7f87a2;
 }
 
 .field input:focus {
@@ -1646,20 +1784,6 @@ tr.inactive .toggle.on {
 }
 
 /* ---------------------------------------------------------------------------
-   404, and a crash
-   --------------------------------------------------------------------------- */
-
-/*
- * Both borrow the sign-in card's centred layout. .card-note is capped at 56ch
- * and left-aligned for the admin screen's prose, which inside a centred card
- * reads as a block pushed to one side — centre the box, keep the cap.
- */
-.trouble .card-note {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* ---------------------------------------------------------------------------
    Tax Breakdown
 
    Ported from taxbreakdown.html on the live suite, which carries its own copy
@@ -2114,6 +2238,20 @@ tr.inactive .toggle.on {
 }
 
 /* ---------------------------------------------------------------------------
+   404, and a crash
+   --------------------------------------------------------------------------- */
+
+/*
+ * Both borrow the sign-in card's centred layout. .card-note is capped at 56ch
+ * and left-aligned for the admin screen's prose, which inside a centred card
+ * reads as a block pushed to one side — centre the box, keep the cap.
+ */
+.trouble .card-note {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------------------------------------------------------------------------
    Expenses
 
    Ported from expenses.html. The live page is a two-tab layout — add on one,
@@ -2164,11 +2302,13 @@ tr.inactive .toggle.on {
   gap: 20px;
 }
 
-/* 210px, not 180: at 1280 five fields across left From and To wider than the
-   text anybody types into them, and the row read as five empty boxes. */
+/* 185px: the mileage row is five fields — date, type, miles, from, to — and at
+   1280 the card is about 1030px wide inside its padding. Five 210px columns
+   need 1114 and so one wrapped alone onto the next line; five 185px columns
+   need 1014 and sit together. Below that the grid drops to one column. */
 .exp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
   gap: 16px;
 }
 
@@ -2190,7 +2330,9 @@ tr.inactive .toggle.on {
   width: 100%;
   font-family: inherit;
   font-size: 0.95rem;
-  background: var(--card);
+  /* The tinted panel, as Margin and Tax Breakdown use. White on a white card
+     leaves a field with no edge until it is focused. */
+  background: var(--panel2);
   border: 1px solid var(--line);
   color: var(--ink);
   padding: 11px 13px;
@@ -2322,16 +2464,19 @@ tr.inactive .toggle.on {
   color: var(--brand-deep);
 }
 
+/* Same pill as .tag, which is the caption shape the suite uses beside a
+   heading. Kept as its own selector only for the uppercase treatment a status
+   wants and a caption does not. */
 .exp-lock {
-  font-size: 10.5px;
-  letter-spacing: 0.09em;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--bg);
-  border: 1px solid var(--line);
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: #eef4ff;
+  border: 1px solid #cfddf7;
   color: var(--brand-dk);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 /* min-width: 0 is what lets the overflow actually scroll: a flex item defaults
@@ -2452,5 +2597,1334 @@ tr.inactive .toggle.on {
   .exp-table th,
   .exp-table td {
     padding-right: 12px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Invoices
+
+   Ported from invoices.html. The live page is a wizard — pick a customer, save
+   a header, then a separate panel for lines — which means the thing you are
+   building is never on screen with the thing you are building it from. Here an
+   invoice expands in place, its lines and its totals under it, and the next
+   line is typed at the bottom of the same table.
+
+   The status is the one piece of state that changes what you may do, so it is
+   a coloured pill on the row rather than a column you have to look for.
+   --------------------------------------------------------------------------- */
+
+.inv-app {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.inv-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.inv-card {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
+}
+
+.inv-h {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inv-form,
+.inv-lineform {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inv-grid,
+.inv-linegrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 16px;
+}
+
+.inv-wide {
+  grid-column: span 2;
+}
+
+/* the row that opens an invoice ------------------------------------------ */
+
+.inv-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.inv-toggle {
+  flex: 1 1 260px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  width: auto;
+  color: var(--ink);
+  font-weight: 500;
+  flex-wrap: wrap;
+}
+
+.inv-no {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--brand-deep);
+}
+
+.inv-cust {
+  font-size: 0.95rem;
+}
+
+.inv-date,
+.inv-quiet {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.inv-quiet {
+  margin: 0;
+}
+
+.inv-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+/* Five buttons will not sit in a row on a phone. The group scrolls rather than
+   wrapping, so the set still reads as one control. */
+.inv-filters .seg {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.inv-count {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Overdue is the one state somebody needs to spot without reading. */
+.inv-status.is-overdue {
+  background: #fdecea;
+  border-color: #f3c3bd;
+  color: var(--err);
+}
+
+.inv-status {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+
+.inv-status.is-draft {
+  background: var(--panel2);
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.inv-status.is-sent {
+  background: #eef4ff;
+  border-color: #cfddf7;
+  color: var(--brand-dk);
+}
+
+.inv-status.is-paid {
+  background: #e7f6ee;
+  border-color: #bfe6d1;
+  color: #14724a;
+}
+
+.inv-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-left: auto;
+}
+
+/* the lines --------------------------------------------------------------- */
+
+.inv-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.inv-table th,
+.inv-table td {
+  text-align: left;
+  padding: 10px 16px 10px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.inv-table thead th {
+  position: relative;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-top: 0;
+}
+
+.inv-table .inv-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.inv-table tfoot th {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: none;
+}
+
+.inv-table tfoot td {
+  border-bottom: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.inv-table tfoot tr.inv-grand th,
+.inv-table tfoot tr.inv-grand td {
+  color: var(--brand-deep);
+  font-size: 1rem;
+  font-weight: 700;
+  border-top: 2px solid var(--line);
+}
+
+.inv-table td.inv-line-actions {
+  padding-right: 0;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.inv-noline {
+  color: var(--muted);
+}
+
+.inv-inline {
+  display: inline;
+}
+
+.inv-preview {
+  margin: 0;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  font-size: 0.93rem;
+}
+
+.inv-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.inv-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* buttons, borrowing the suite's set -------------------------------------- */
+
+.inv-app button {
+  position: relative;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  padding: 11px 18px;
+  width: auto;
+  white-space: nowrap;
+}
+
+.inv-app button.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+  font-weight: 650;
+}
+
+.inv-app button.primary:hover {
+  filter: brightness(1.08);
+}
+
+.inv-app button.quiet {
+  background: var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 14px;
+}
+
+.inv-app button.quiet:hover {
+  background: var(--ink);
+}
+
+.inv-app button.quiet.danger:hover {
+  background: var(--err);
+}
+
+.inv-app button.inv-toggle:hover .inv-no {
+  text-decoration: underline;
+}
+
+.inv-app button[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .inv-app {
+    gap: 16px;
+  }
+
+  .inv-card {
+    padding: 17px 18px;
+    gap: 14px;
+  }
+
+  .inv-grid,
+  .inv-linegrid {
+    grid-template-columns: 1fr;
+  }
+
+  .inv-wide {
+    grid-column: span 1;
+  }
+
+  .inv-total {
+    margin-left: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Timesheets
+
+   Ported from timesheet.html — the largest file on the live suite and the one
+   people open daily. Its shape is a month, then the days in it, then the
+   activities on each day, because that is the order somebody checking their
+   own week reads it in. A day is several rows: a meeting, some project work,
+   an hour of admin.
+
+   Leave and sickness are marked rather than counted twice — the month total
+   includes them, the worked figure does not, and people need both numbers for
+   different reasons.
+   --------------------------------------------------------------------------- */
+
+.ts-app {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.ts-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.ts-card {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
+}
+
+.ts-h {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ts-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 16px;
+}
+
+.ts-wide {
+  grid-column: span 2;
+}
+
+/* Leave has no hours box — the number is fixed, so the space says so rather
+   than offering a field that ignores what is typed into it. */
+.ts-fixed {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  background: var(--panel2);
+}
+
+.ts-month-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ts-month-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.015em;
+  color: var(--brand-deep);
+}
+
+.ts-lock {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: #eef4ff;
+  border: 1px solid #cfddf7;
+  color: var(--brand-dk);
+  font-weight: 600;
+}
+
+/* a day ------------------------------------------------------------------- */
+
+.ts-day {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.ts-day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.ts-day-name {
+  font-weight: 650;
+  font-size: 0.95rem;
+}
+
+.ts-day-hours {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.ts-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.ts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.ts-table th,
+.ts-table td {
+  text-align: left;
+  padding: 8px 16px 8px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.ts-table thead th {
+  position: relative;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-top: 0;
+}
+
+.ts-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ts-table .ts-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ts-table td.ts-row-actions {
+  padding-right: 0;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ts-away {
+  margin-left: 8px;
+}
+
+.ts-inline {
+  display: inline;
+}
+
+.ts-close {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.ts-quiet,
+.ts-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.ts-empty {
+  font-size: 0.95rem;
+}
+
+/* buttons, from the suite's set ------------------------------------------- */
+
+.ts-app button {
+  position: relative;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  padding: 11px 18px;
+  width: auto;
+  white-space: nowrap;
+}
+
+.ts-app button.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+  font-weight: 650;
+}
+
+.ts-app button.primary:hover {
+  filter: brightness(1.08);
+}
+
+.ts-app button.quiet {
+  background: var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 7px 13px;
+}
+
+.ts-app button.quiet:hover {
+  background: var(--ink);
+}
+
+.ts-app button.quiet.danger:hover {
+  background: var(--err);
+}
+
+.ts-app button[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .ts-app {
+    gap: 16px;
+  }
+
+  .ts-card {
+    padding: 17px 18px;
+    gap: 14px;
+  }
+
+  .ts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ts-wide {
+    grid-column: span 1;
+  }
+
+  .ts-row-actions {
+    text-align: left;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   My Profile
+
+   Ported from myprofile.html. Grouped by what each part is for — the business,
+   VAT, where payment goes, how invoices are numbered — rather than as one long
+   column of boxes, because somebody comes here to change one thing.
+
+   The panel at the top is the point of the page: Invoices stamps these details
+   onto every invoice, and the live suite lets one go out with them blank.
+   --------------------------------------------------------------------------- */
+
+.pf-app {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pf-status {
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pf-status.is-ready {
+  background: #e7f6ee;
+  border-color: #bfe6d1;
+}
+
+.pf-status.is-missing {
+  background: #fdf4e3;
+  border-color: #f2ddc2;
+}
+
+.pf-ready {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.pf-missing {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.9rem;
+}
+
+.pf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pf-card {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
+}
+
+.pf-h {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.pf-wide {
+  grid-column: span 2;
+}
+
+.pf-quiet {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pf-app button {
+  position: relative;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  padding: 11px 18px;
+  width: auto;
+  white-space: nowrap;
+}
+
+.pf-app button.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+  color: #fff;
+  font-weight: 650;
+}
+
+.pf-app button.primary:hover {
+  filter: brightness(1.08);
+}
+
+.pf-app button[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* The logo. The preview sits on white whatever the card behind it is, because
+   that is what it will print on — a logo drawn for a white header looks wrong
+   the moment it is previewed on a tinted panel. */
+.pf-logo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pf-logo-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.pf-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.pf-logo-preview {
+  max-height: 64px;
+  max-width: 190px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px;
+  object-fit: contain;
+}
+
+/* Same footprint as the preview, so choosing a logo does not shift the rest of
+   the card down the page. */
+.pf-logo-empty {
+  display: grid;
+  place-items: center;
+  width: 118px;
+  height: 64px;
+  background: var(--panel2);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.pf-logo-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Not `.btn-add` — that one is dashed because it means "another of these", and
+   there is only ever one logo. This is the ordinary navy the suite uses for a
+   real action. */
+.pf-app .pf-logo-pick {
+  background: var(--brand-deep);
+  border: 1px solid var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 16px;
+}
+
+.pf-app .pf-logo-pick:hover {
+  filter: brightness(1.12);
+}
+
+.pf-app .pf-logo-rm {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--err);
+  font-weight: 600;
+  padding: 10px 15px;
+}
+
+.pf-app .pf-logo-rm:hover {
+  background: color-mix(in srgb, var(--err) 8%, var(--card));
+  border-color: color-mix(in srgb, var(--err) 35%, var(--line));
+}
+
+.pf-logo-problem {
+  margin: 2px 0 0;
+  color: var(--err);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .pf-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-wide {
+    grid-column: span 1;
+  }
+
+  .pf-card {
+    padding: 17px 18px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Monthly Overview
+
+   Ported from overview.html. A month picker, four figures, where the time went,
+   and — for an admin — everybody. The bars are drawn against the largest row
+   rather than against the total, so the shortest is still visible instead of a
+   sliver nobody can read.
+   --------------------------------------------------------------------------- */
+
+.ov-app {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ov-picker {
+  max-width: 260px;
+}
+
+.ov-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.ov-card {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.02),
+    0 20px 44px -30px rgba(16, 24, 58, 0.4);
+}
+
+.ov-h {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ov-bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.ov-bars li {
+  display: grid;
+  grid-template-columns: minmax(110px, 170px) 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.ov-bar-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.ov-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand) 0%, var(--brand-deep) 100%);
+}
+
+.ov-bar-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ov-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.ov-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.ov-table th,
+.ov-table td {
+  text-align: left;
+  padding: 9px 16px 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.ov-table thead th {
+  position: relative;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-top: 0;
+}
+
+.ov-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ov-table .ov-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 0;
+}
+
+.ov-quiet,
+.ov-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.ov-empty {
+  font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+  .ov-bars li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .ov-bar-track {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .ov-card {
+    padding: 17px 18px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The invoice document
+
+   The one thing in the suite designed to leave it. Everything here is sized so
+   the printed page matches what is on the screen: a 21cm sheet, ink on white,
+   and nothing that depends on a hover or a colour a mono printer cannot make.
+   --------------------------------------------------------------------------- */
+
+.inv-docwrap {
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.inv-docbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.inv-doch {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.inv-app button.inv-print {
+  background: var(--brand-deep);
+  border: 1px solid var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  width: auto;
+  padding: 10px 16px;
+  border-radius: 10px;
+}
+
+.inv-app button.inv-print:hover {
+  filter: brightness(1.12);
+}
+
+/* The sheet. Always white with dark ink, in both themes — this is what comes
+   out of a printer, and a document that inverted itself to match somebody's
+   screen would waste a cartridge and read as a mistake. */
+.inv-doc {
+  background: #fff;
+  color: #10183a;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 26px 28px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.ivd-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.ivd-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ivd-logo {
+  max-height: 54px;
+  max-width: 170px;
+  object-fit: contain;
+}
+
+.ivd-wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ivd-name {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ivd-tag {
+  font-size: 0.78rem;
+  color: #69718c;
+}
+
+.ivd-title {
+  text-align: right;
+}
+
+.ivd-title h2 {
+  margin: 0;
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;
+}
+
+.ivd-no {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ivd-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: #667085;
+}
+
+/* The live page's four, kept exactly: somebody reading a printed invoice
+   beside one from the old suite should not have to work out whether the
+   colours mean the same thing. */
+.ivd-badge.is-draft { background: #69718c; }
+.ivd-badge.is-sent { background: #507de5; }
+.ivd-badge.is-paid { background: #1e7a52; }
+.ivd-badge.is-overdue { background: #c0392b; }
+
+.ivd-rule {
+  height: 2px;
+  background: var(--brand);
+  margin: 14px 0 16px;
+}
+
+.ivd-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 18px;
+}
+
+.ivd-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #69718c;
+  margin-bottom: 4px;
+}
+
+.ivd-strong { font-weight: 650; }
+.ivd-quiet { color: #69718c; }
+
+.ivd-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ivd-row.is-due { font-weight: 650; }
+
+.ivd-for {
+  margin: 16px 0 12px;
+  padding: 8px 12px;
+  background: var(--panel2);
+  border-radius: 8px;
+}
+
+/* Six columns will not fit a phone. The sheet itself must not scroll sideways
+   — it is the page — so the table gets its own scroller and the document keeps
+   its width. In print this is lifted: paper has no scrollbar. */
+.ivd-scroll {
+  overflow-x: auto;
+}
+
+.ivd-items {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ivd-items th,
+.ivd-items td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ivd-items thead th {
+  background: var(--panel2);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #69718c;
+}
+
+.ivd-c { text-align: center !important; }
+.ivd-r { text-align: right !important; }
+.ivd-amt { font-weight: 650; }
+.ivd-num { font-variant-numeric: tabular-nums; }
+
+.ivd-foot {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px;
+  margin-top: 18px;
+}
+
+.ivd-paygrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 14px;
+}
+
+.ivd-k { color: #69718c; }
+.ivd-v { font-weight: 600; }
+
+.ivd-terms {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: #69718c;
+}
+
+.ivd-totals {
+  align-self: start;
+}
+
+.ivd-tline,
+.ivd-grand {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+}
+
+.ivd-grand {
+  border-top: 2px solid var(--ink);
+  margin-top: 4px;
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ivd-baseline {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.76rem;
+  color: #69718c;
+}
+
+@media (max-width: 640px) {
+  .ivd-foot {
+    grid-template-columns: 1fr;
+  }
+
+  .ivd-title {
+    text-align: left;
+  }
+
+  .ivd-no {
+    justify-content: flex-start;
+  }
+}
+
+/* What actually comes out of the printer.
+   Only one invoice is ever open at a time, so only one document is in the DOM
+   and this needs no way to choose between them. Visibility rather than
+   display, because display:none on an ancestor would take the document with
+   it however specific the rule underneath. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .inv-doc,
+  .inv-doc * {
+    visibility: visible;
+  }
+
+  .inv-doc {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    font-size: 10.5pt;
+  }
+
+  .ivd-scroll {
+    overflow: visible;
+  }
+
+  .ivd-items {
+    min-width: 0;
+  }
+
+  .ivd-items thead {
+    /* A table that breaks across pages repeats its headings. */
+    display: table-header-group;
+  }
+
+  .ivd-items tr {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 14mm;
   }
 }

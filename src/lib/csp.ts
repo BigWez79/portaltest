@@ -88,11 +88,18 @@ export function contentSecurityPolicy(nonce?: string): string {
     // rather than a hole in it. `style-src` above still governs <style> and
     // stylesheets, which is where CSS could do damage.
     "style-src-attr 'unsafe-inline'",
-    // No `data:` and no `blob:`. Nothing in the suite uses either — the logo is
-    // a file, the glyphs are inline SVG elements, and the margin calculator's
-    // PDF is downloaded rather than displayed — so allowing them would be an
-    // allowance nothing needs, which is how a policy stops meaning anything.
-    "img-src 'self'",
+    // `data:` is here for one thing: the logo on My Profile, which is a picture
+    // resized in the browser, stored as a data URL and printed in an invoice
+    // header. It was `'self'` alone until that was built, on the reasoning that
+    // the logo was a file — it never was, and the policy quietly made the
+    // feature impossible rather than making anything safer.
+    //
+    // What it costs: a data URL in an `img` is a sandboxed image context, so an
+    // SVG arriving that way cannot run script. What actually keeps a crafted
+    // picture out of a document is `checkLogo` in profile-calc.ts, which takes
+    // PNG and nothing else, and the constraint in 0008_profile_logo.sql behind
+    // it. Still no `blob:` — nothing displays one; the PDFs are downloaded.
+    "img-src 'self' data:",
     "font-src 'self'",
     // Server actions and the RSC router both post back here and nowhere else.
     "connect-src 'self'",
