@@ -37,21 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. One way to make a PDF
-`src/components/margin/margin-pdf.ts` is the only PDF in the suite and it is
-private to Margin. Five more documents are queued behind it — the invoice, the
-expenses claim, and the timesheet's three — and each one needs the same header,
-the same money formatting, the same A4 margins and the same logo block.
-
-Written once, or it is written five times and drifts five ways.
-
-**Done when** `src/lib/pdf/` exports a document helper covering: A4 setup, the
-seller header (logo from My Profile, business name, tagline), a money
-formatter, a date formatter, `autoTable` defaults with the suite's heading
-colour, and a footer. Margin's PDF is moved onto it and still produces the same
-document. `npm run verify` passes.
-
-### 2. The invoice document
+### 1. The invoice document
 `4c00479c-invoices.html:477` builds a full A4 invoice and the port renders
 none of it. This is the single biggest thing missing from the suite.
 
@@ -73,7 +59,7 @@ none of it. This is the single biggest thing missing from the suite.
 asserts the document contains the seller's bank details and the customer's
 address, and printing is exercised at 390 and 1440 with screenshots attached.
 
-### 3. What an invoice is worth knowing about
+### 2. What an invoice is worth knowing about
 The port has Draft, Sent and Paid and stops there. The original derives more.
 
 - [ ] `dueDateOf` — invoice date plus the seller's payment terms
@@ -87,7 +73,7 @@ The port has Draft, Sent and Paid and stops there. The original derives more.
 with no write having happened, each filter returns the right set against a
 fixture with one invoice in each state, and `npm run verify` passes.
 
-### 4. Correcting an invoice, and the number on it
+### 3. Correcting an invoice, and the number on it
 Raised is not final. The original lets a header be corrected and an invoice
 deleted, and it numbers them properly.
 
@@ -104,7 +90,7 @@ deleted, and it numbers them properly.
 invoice keeps its number, a full address reaches the document, and
 `npm run verify` passes.
 
-### 5. The expenses claim
+### 4. The expenses claim
 `f303a141-expenses.html` has `Download claim (PDF)` and the port has nothing.
 
 - [ ] Title `EXPENSES CLAIM`, logo, claim month, generated date
@@ -119,7 +105,7 @@ invoice keeps its number, a full address reaches the document, and
 produces both tables, both subtotals and a total equal to their sum, and
 `npm run verify` passes.
 
-### 6. Expenses — the two screens, and an admin's copy
+### 5. Expenses — the two screens, and an admin's copy
 The original keeps `My entries` and `Monthly claim` apart; the port merged
 them, which is why a month's claim is hard to see.
 
@@ -131,7 +117,7 @@ them, which is why a month's claim is hard to see.
 claim, a non-admin calling that action is refused (rule 5), and
 `npm run verify` passes.
 
-### 7. Timesheets — a day is the unit
+### 6. Timesheets — a day is the unit
 The port is not a thinner version of the original, it is a different model, and
 this is the task that fixes that. Today a day with three activities takes three
 actions to correct and the shape of the day cannot be changed at all.
@@ -148,7 +134,7 @@ actions to correct and the shape of the day cannot be changed at all.
 deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
 refused; and `npm run verify` passes.
 
-### 8. Timesheets — the day rate and the period
+### 7. Timesheets — the day rate and the period
 - [ ] A day rate on the profile, with `Save day rate`
 - [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
 - [ ] The button label follows the period: `Invoice` for a month, `Statement`
@@ -157,7 +143,7 @@ refused; and `npm run verify` passes.
 **Done when** the switch changes the range and the label, the rate persists,
 and `npm run verify` passes.
 
-### 9. Timesheets — three documents
+### 8. Timesheets — three documents
 `1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
 
 - [ ] `Timesheet_<name>_<period>.pdf` — the full record
@@ -167,7 +153,7 @@ and `npm run verify` passes.
 **Done when** all three come out for a period holding billable and non-billable
 days, the draft is watermarked as a draft, and `npm run verify` passes.
 
-### 10. Timesheets — Issue invoice
+### 9. Timesheets — Issue invoice
 The original hands billable days to the invoicing system with net, VAT and
 gross already worked out. In the port the two apps do not speak.
 
@@ -175,7 +161,7 @@ gross already worked out. In the port the two apps do not speak.
 billable day at the day rate, the timesheet records that it was issued and
 refuses to issue the same period twice, and `npm run verify` passes.
 
-### 11. Monthly Overview is the wrong page
+### 10. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -202,7 +188,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 12. Admin — the three controls that are missing
+### 11. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -212,7 +198,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 13. The runner opens a second pull request for work it already did
+### 12. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -372,6 +358,25 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **One way to make a PDF** — `overnight/suite-theme`. `src/lib/pdf/` now holds
+  the part five documents share: loading jsPDF and autotable dynamically,
+  setting up A4 in either unit, the suite's colours, the seller header with the
+  logo from My Profile, the money and date formatters the live pages use, and
+  reading back where the last table ended. Margin's report moved onto it and
+  produces the same document — `tests/margin.spec.ts` asserts the filename and
+  that nothing is fetched off-site, and still passes.
+
+  Two things deliberately not standardised. Margin keeps points while the new
+  documents use millimetres, because Margin is already correct and converting
+  every coordinate would gain nothing a reader sees. And it keeps its own money
+  formatter: `gbp` rounds to whole pounds and groups thousands because these are
+  planning figures, where `money` prints exact pence because an invoice is an
+  amount somebody transfers. One formatter would make an invoice say £1,234.
+
+  The toolkit's own surface — the header, the formatters — is exercised by the
+  invoice document rather than by a page built to test it. A fixture page would
+  pass while the real caller was broken, which rule 12 says is not a check.
 
 - **Ported Tax Breakdown** — `overnight/auto-2026-09-12-0300`. The second app
   folded in, and the last one that touches no data. Most of the work was step 1
