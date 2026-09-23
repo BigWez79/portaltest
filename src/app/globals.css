@@ -4411,3 +4411,28 @@ tr.inactive .toggle.on {
     margin: 10mm;
   }
 }
+
+/* Resend and Remove on the staff table. */
+.row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.row-actions button {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  width: auto;
+  /* .sr-only is position:absolute; without a positioned ancestor it escapes the
+     table and takes the document sideways with it. */
+  position: relative;
+}
+
+.row-actions button.danger {
+  color: var(--err);
+}
+
+.inline-form {
+  display: inline;
+}

@@ -111,10 +111,13 @@ test.describe("the staff table, read rather than seen", () => {
       const headers = page.getByTestId("staff-table").getByRole("columnheader");
       const abbreviated = w.width <= 720;
 
-      await expect(headers).toHaveCount(COLUMNS.length + 1);
+      // Person, the toggles, and the Resend / Remove column at the end. That
+      // last one is drawn blank and announced as "Actions": a column header
+      // that reads as nothing leaves a screen reader saying "column eight".
+      await expect(headers).toHaveCount(COLUMNS.length + 2);
 
       // What is announced: the full word, at both widths.
-      for (const [i, name] of ["Person", ...COLUMNS.map((c) => c.label)].entries()) {
+      for (const [i, name] of ["Person", ...COLUMNS.map((c) => c.label), "Actions"].entries()) {
         await expect(
           headers.nth(i),
           `column ${i} should be announced as "${name}" at ${w.name}`,

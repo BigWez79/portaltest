@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { toggleFlag, type AdminState } from "@/app/actions/staff";
+import { removePerson, resendInvitation, toggleFlag, type AdminState } from "@/app/actions/staff";
 import type { StaffRow } from "@/lib/staff";
 import type { Flag } from "@/lib/staff-admin";
 
@@ -78,11 +78,34 @@ export function StaffTable({
   staff: StaffRow[];
   currentEmail: string;
 }) {
+  const [resend, resendAction] = useActionState(resendInvitation, initial);
+  const [removed, removeAction] = useActionState(removePerson, initial);
+
   if (staff.length === 0) {
     return <p className="empty">Nobody on the staff list yet.</p>;
   }
 
   return (
+    <>
+      {resend.status !== "idle" ? (
+        <div
+          className={`msg ${resend.status === "ok" ? "ok" : ""}`}
+          role={resend.status === "ok" ? "status" : "alert"}
+          data-testid="resend-msg"
+        >
+          {resend.message}
+        </div>
+      ) : null}
+      {removed.status !== "idle" ? (
+        <div
+          className={`msg ${removed.status === "ok" ? "ok" : ""}`}
+          role={removed.status === "ok" ? "status" : "alert"}
+          data-testid="remove-msg"
+        >
+          {removed.message}
+        </div>
+      ) : null}
+
     <div className="table-scroll">
       <table className="staff-table" data-testid="staff-table">
         <thead>
@@ -98,6 +121,9 @@ export function StaffTable({
             ))}
             <th scope="col" className="col-toggle">
               Active
+            </th>
+            <th scope="col">
+              <span className="sr-only">Actions</span>
             </th>
           </tr>
         </thead>
@@ -129,11 +155,40 @@ export function StaffTable({
                 <td className="col-toggle">
                   <Toggle row={row} flag="active" label="Active" disabled={isSelf} />
                 </td>
+                <td className="row-actions">
+                  {/* Resend is offered only where it helps: somebody invited who
+                      has never signed in. Beside a person who signs in every day
+                      it is a button that does nothing they need. */}
+                  {!row.lastSeenAt && row.active ? (
+                    <form action={resendAction} className="inline-form">
+                      <input type="hidden" name="email" value={row.email} />
+                      <button type="submit" className="quiet" data-testid={`resend-${row.email}`}>
+                        Resend
+                        <span className="sr-only"> the invitation to {row.email}</span>
+                      </button>
+                    </form>
+                  ) : null}
+
+                  {isSelf ? null : (
+                    <form action={removeAction} className="inline-form">
+                      <input type="hidden" name="email" value={row.email} />
+                      <button
+                        type="submit"
+                        className="quiet danger"
+                        data-testid={`remove-${row.email}`}
+                      >
+                        Remove
+                        <span className="sr-only"> {row.email} from the staff list</span>
+                      </button>
+                    </form>
+                  )}
+                </td>
               </tr>
             );
           })}
         </tbody>
       </table>
     </div>
+    </>
   );
 }

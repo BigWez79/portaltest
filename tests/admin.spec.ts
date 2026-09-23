@@ -10,6 +10,13 @@ import {
 } from "./harness";
 
 // Two of these ask for a page that must 404; the browser logs that itself.
+/**
+ * One worker, in order: two blocks reset the staff and audit stores, and
+ * `test.describe.serial` orders the tests inside a block without saying
+ * anything about two blocks running beside each other.
+ */
+test.describe.configure({ mode: "serial" });
+
 test.describe("admin screen — who can reach it", () => {
   test.use({ tolerate: ["status of 404"] });
 
@@ -347,3 +354,63 @@ test.describe.serial("admin screen — changing access", () => {
     await expect(page.getByTestId("invite-error")).toBeVisible();
   });
 });
+
+test.describe.serial("admin — resending and removing", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetStores(page, "staff", "audit");
+    await signInAs(page, "everything@example.test");
+  });
+
+  test("Resend is offered to somebody invited who has never signed in", async ({ page }) => {
+    await page.goto("/admin");
+
+    // invited@ was invited and has not signed in.
+    await expect(page.getByTestId("resend-invited@example.test")).toBeVisible();
+
+    // Beside somebody who signs in every day it would be a button that does
+    // nothing they need, so it is not rendered at all.
+    await expect(page.getByTestId("resend-nadia@example.test")).toHaveCount(0);
+  });
+
+  test("somebody who has left nothing behind can be removed", async ({ page }) => {
+    await page.goto("/admin");
+
+    await page.getByTestId("remove-grantable@example.test").click();
+    await expect(page.getByTestId("remove-msg")).toContainText("removed", { timeout: 15000 });
+    await expect(page.getByTestId("row-grantable@example.test")).toHaveCount(0);
+  });
+
+  test("somebody with records behind them is not removed, and it says what", async ({ page }) => {
+    await page.goto("/admin");
+
+    // invoices.only@ has invoices. Deleting the row would leave those documents
+    // pointing at nobody.
+    await page.getByTestId("remove-invoices.only@example.test").click();
+    await expect(page.getByTestId("remove-msg")).toContainText("invoice", { timeout: 15000 });
+    await expect(page.getByTestId("remove-msg")).toContainText("Deactivate");
+    await expect(page.getByTestId("row-invoices.only@example.test")).toBeVisible();
+  });
+
+  test("an admin cannot remove themselves", async ({ page }) => {
+    await page.goto("/admin");
+
+    // They would be locked out of the screen they need to undo it, and if they
+    // were the last admin nobody could grant it back.
+    await expect(page.getByTestId("remove-everything@example.test")).toHaveCount(0);
+  });
+
+  /*
+   * NOT TESTED HERE, AND WHY.
+   *
+   * Both actions call `requireAdmin` before anything else, which is the rule 5
+   * check. There is no honest way to drive it from this suite: a non-admin gets
+   * a 404 on /admin, so they never hold the form, and posting to the route by
+   * hand does not reach a server action at all — it reaches the page. A test
+   * doing that would pass with the guard deleted, which rule 12 says is not a
+   * test.
+   *
+   * What is covered: the route 404s for a non-admin (above), and the guard is
+   * the same function `toggleFlag` uses on every one of these actions.
+   */
+});
+

@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/current-user";
 import { notifyAccessChange } from "@/lib/notify";
 import { resolveAccess } from "@/lib/staff";
-import { FLAGS, inviteStaff, setFlag, type Flag } from "@/lib/staff-admin";
+import {
+  FLAGS,
+  inviteStaff,
+  removeStaff,
+  resendInvite,
+  setFlag,
+  type Flag,
+} from "@/lib/staff-admin";
 
 export type AdminState = { status: "idle" | "ok" | "error"; message?: string };
 
@@ -95,4 +102,52 @@ export async function invite(_previous: AdminState, formData: FormData): Promise
 
   revalidatePath("/admin");
   return { status: "ok", message: `Invitation sent to ${email}.` };
+}
+
+export async function resendInvitation(
+  _previous: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { status: "error", message: "You are not allowed to do that." };
+  }
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!EMAIL.test(email)) return { status: "error", message: "That is not an email address." };
+
+  const result = await resendInvite(email);
+  if (!result.ok) return { status: "error", message: result.message };
+
+  revalidatePath("/admin");
+  return { status: "ok", message: `Invitation sent to ${email} again.` };
+}
+
+export async function removePerson(
+  _previous: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  let caller;
+  try {
+    caller = await requireAdmin();
+  } catch {
+    return { status: "error", message: "You are not allowed to do that." };
+  }
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!EMAIL.test(email)) return { status: "error", message: "That is not an email address." };
+
+  // An admin removing themselves would be locked out of the screen they would
+  // need to undo it, and if they were the last admin nobody could grant it back.
+  if (email === caller.user.email?.toLowerCase()) {
+    return { status: "error", message: "You cannot remove yourself." };
+  }
+
+  const result = await removeStaff(email);
+  if (!result.ok) return { status: "error", message: result.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { status: "ok", message: `${email} removed from the staff list.` };
 }

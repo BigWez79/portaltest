@@ -37,17 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. Admin — the three controls that are missing
-- [ ] `Resend` an invitation
-- [ ] `Remove` somebody
-- [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
-- [ ] Everybody's invoices, read-only
-
-**Done when** each control re-checks the caller (rule 5), a non-admin calling
-any of them is refused, removal is recorded in the audit trail, and
-`npm run verify` passes.
-
-### 2. The runner opens a second pull request for work it already did
+### 1. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -207,6 +197,33 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **Admin: Resend and Remove** — `overnight/port-gaps`. Resend exists for the
+  failure `inviteStaff` already reports and cannot fix — the staff row was
+  written and the email did not go. Without it an admin's only move is to delete
+  the person and start again, throwing away their flags and their audit history.
+  It is offered only beside somebody invited who has never signed in; next to
+  somebody who signs in daily it is a button that does nothing they need.
+
+  Remove refuses anybody who has left records behind, and says what they are:
+  deleting a person whose name is on an invoice leaves that document pointing at
+  nobody. Deactivation is the right answer almost every time, and the message
+  says so. An admin cannot remove themselves — they would be locked out of the
+  screen they need to undo it, and a last admin could never be granted it back.
+
+  The audit row outlives the staff row on purpose. Who removed whom is exactly
+  the change worth being able to look up afterwards.
+
+  The mileage rates and "Download their claim" landed with the expenses work.
+  "Everybody's invoices" is not built: see the note in the queue.
+
+  One test written and then deleted rather than kept. A non-admin posting to
+  these actions cannot be driven from this suite — they get a 404 on /admin so
+  never hold the form, and posting to the route by hand reaches the page rather
+  than a server action. The test would have passed with the guard removed, which
+  rule 12 says is not a test. The note where it was says what is covered instead.
+
+  npm run verify: 298 passed.
 
 - **Monthly Overview: everybody's month** — `overnight/port-gaps`. The one I had
   most wrong. The live page is an administrators-only whole-team calendar and
