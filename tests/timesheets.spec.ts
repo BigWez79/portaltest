@@ -1,4 +1,4 @@
-import { expect, resetStores, signInAs, test } from "./harness";
+import { expect, pdfText, resetStores, signInAs, test } from "./harness";
 
 /**
  * Timesheets — the largest file on the live suite and the one people open
@@ -342,6 +342,97 @@ test.describe.serial("timesheets — the period and the rate", () => {
     await expect(page.getByTestId("period-name")).toContainText("Financial year 2027-28");
   });
 
+});
+
+test.describe.serial("timesheets — the three documents", () => {
+  // Back to the seed: the tests above log days in 2027, which would make the
+  // current period April 2027 and every filename below wrong.
+  test.beforeEach(async ({ page }) => {
+    await resetStores(page, "timesheets");
+  });
+
+  test("the timesheet is the record of what was done", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByTestId("doc-timesheet").click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(/^Timesheet_.+_2026-07\.pdf$/);
+
+    const text = await pdfText((await download.path())!);
+    expect(text).toContain("Timesheet");
+    expect(text).toContain("July 2026");
+    // The activities themselves, not a total — this document exists so somebody
+    // can see what was done on which day.
+    expect(text).toContain("Project work");
+    expect(text).toContain("Billable days");
+    expect(text, "and it says plainly that it is not a bill").toContain(
+      "Not a request for payment",
+    );
+  });
+
+  test("an open month invoices as a draft, and says not to pay it", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    // July is open in the fixture, so anything billed from it can still change.
+    await expect(page.getByTestId("doc-invoice")).toHaveText("Invoice (draft)");
+
+    // The rate is seeded on this person's profile rather than saved here: a
+    // write would reach into the profiles store, which profile.spec owns.
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByTestId("doc-invoice").click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(/^Invoice_DRAFT_/);
+
+    const text = await pdfText((await download.path())!);
+    expect(text).toContain("DRAFT INVOICE");
+    // Said in words, not drawn as a watermark: a watermark is the first thing
+    // lost to greyscale printing or a screenshot, and this has to survive being
+    // forwarded to whoever pays it.
+    expect(text).toContain("Do not pay against this document");
+    expect(text).toContain("£400.00");
+  });
+
+  test("without a day rate there is nothing to invoice, and it says so", async ({ page }) => {
+    // A person with timesheet access and no profile row at all. Deliberately
+    // their own fixture person rather than a convenient existing one: every
+    // other timesheet-capable account has their profile written by some test
+    // somewhere, and this assertion is about the absence of a day rate.
+    await signInAs(page, "timesheet.norate@example.test");
+    await page.goto("/timesheets");
+
+    await expect(page.getByTestId("no-rate")).toBeVisible();
+    await expect(page.getByTestId("doc-invoice")).toBeDisabled();
+  });
+
+  test("the financial year produces a statement rather than an invoice", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+    await page.getByTestId("period-year").click();
+
+    // The button follows the period, as on the live page: a year is not
+    // something anybody invoices in one go.
+    await expect(page.getByTestId("doc-invoice")).toHaveCount(0);
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByTestId("doc-statement").click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(/^Statement_.+_FY2026-27\.pdf$/);
+
+    const text = await pdfText((await download.path())!);
+    expect(text).toContain("ANNUAL STATEMENT");
+    // By month, because a year of days is not read row by row.
+    expect(text).toContain("July 2026");
+    expect(text).toContain("June 2026");
+  });
 });
 
 test.describe("timesheets — the guard", () => {

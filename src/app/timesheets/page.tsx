@@ -31,7 +31,18 @@ export default async function TimesheetsPage() {
 
   return (
     <AppShell access={access} current="timesheet" title="Timesheets" wide>
-      <TimesheetsApp entries={entries} locked={locked} dayRate={profile.dayRate} />
+      <TimesheetsApp
+        entries={entries}
+        locked={locked}
+        dayRate={profile.dayRate}
+        person={{ name: access.displayName || null, email: access.email }}
+        seller={{
+          businessName: profile.businessName,
+          tagline: profile.tagline,
+          logo: profile.logo,
+        }}
+        vatRate={profile.vatRegistered ? 20 : 0}
+      />
     </AppShell>
   );
 }

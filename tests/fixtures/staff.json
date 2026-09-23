@@ -180,5 +180,19 @@
     "hasOverview": false,
     "invitedAt": "2026-08-01T09:00:00.000Z",
     "lastSeenAt": "2026-08-20T09:00:00.000Z"
+  },
+  {
+    "email": "timesheet.norate@example.test",
+    "fullName": "Norah Norate",
+    "active": true,
+    "isAdmin": false,
+    "hasInvoices": false,
+    "hasTimesheet": true,
+    "hasExpenses": false,
+    "invitedAt": "2026-08-01T09:00:00.000Z",
+    "lastSeenAt": "2026-08-20T09:00:00.000Z",
+    "hasMargin": false,
+    "hasTaxBreakdown": false,
+    "hasOverview": false
   }
 ]

@@ -22,7 +22,9 @@ import { expect, resetStores, signInAs, test } from "./harness";
  */
 test.describe.configure({ mode: "serial" });
 
-const STAFF = "timesheet.only@example.test";
+// everything@ has every app, so it can reach Timesheets. Deliberately not
+// timesheet.only@, whose profile timesheets.spec reads for its documents.
+const STAFF = "everything@example.test";
 const COMPLETE = "invoices.only@example.test";
 const PARTIAL = "everything@example.test";
 const NO_FLAGS = "no.flags@example.test";

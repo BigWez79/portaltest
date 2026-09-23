@@ -1,6 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import type { PdfSeller } from "@/lib/pdf";
+import {
+  downloadStatementPdf,
+  downloadTimesheetInvoicePdf,
+  downloadTimesheetPdf,
+} from "./timesheet-pdf";
 import {
   closeMonth,
   deleteDay,
@@ -51,10 +57,17 @@ export function TimesheetsApp({
   entries,
   locked,
   dayRate,
+  person,
+  seller,
+  vatRate,
 }: {
   entries: TimesheetEntry[];
   locked: string[];
   dayRate: number | null;
+  person: { name: string | null; email: string };
+  seller: PdfSeller;
+  /** 20 when the profile says VAT registered, 0 when it does not. */
+  vatRate: number;
 }) {
   const [day, dayAction, saving] = useActionState(submitDay, idle);
   const [del, delAction] = useActionState(deleteHours, idle);
@@ -116,6 +129,20 @@ export function TimesheetsApp({
   );
   const periodHours = inCurrent.reduce((n, e) => n + e.hoursWorked, 0);
   const periodDays = daysWorked(inCurrent);
+  const [docProblem, setDocProblem] = useState(false);
+
+  const docFor = () => ({
+    entries: inCurrent,
+    period,
+    periodKey: periods[0],
+    person,
+    seller,
+  });
+
+  const run = (make: () => Promise<void>) => {
+    setDocProblem(false);
+    make().catch(() => setDocProblem(true));
+  };
 
   return (
     <div className="ts-app" data-testid="timesheets-app">
@@ -179,6 +206,63 @@ export function TimesheetsApp({
               {hrs(periodHours)}
             </div>
           </div>
+          <div className="ts-docs">
+            <button
+              type="button"
+              className="ts-doc"
+              onClick={() => run(() => downloadTimesheetPdf(docFor()))}
+              data-testid="doc-timesheet"
+            >
+              Timesheet
+            </button>
+
+            {period === "month" ? (
+              <button
+                type="button"
+                className="ts-doc"
+                disabled={dayRate == null}
+                onClick={() =>
+                  run(() =>
+                    downloadTimesheetInvoicePdf({
+                      ...docFor(),
+                      dayRate: dayRate ?? 0,
+                      vatRate,
+                      // Draft until the month is closed. Closing a month is how
+                      // it gets billed, so anything before that is a figure that
+                      // can still change — and a customer paying against it
+                      // would be paying the wrong amount.
+                      draft: !isLocked(periods[0]),
+                    }),
+                  )
+                }
+                data-testid="doc-invoice"
+              >
+                {isLocked(periods[0]) ? "Invoice" : "Invoice (draft)"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="ts-doc"
+                onClick={() => run(() => downloadStatementPdf({ ...docFor(), dayRate }))}
+                data-testid="doc-statement"
+              >
+                Statement
+              </button>
+            )}
+
+            {dayRate == null && period === "month" ? (
+              <span className="ts-quiet" data-testid="no-rate">
+                Set a day rate to invoice this month.
+              </span>
+            ) : null}
+          </div>
+
+          {docProblem ? (
+            <p className="ts-problem" role="status" data-testid="doc-problem">
+              That document could not be produced. Reload the page and try again.
+            </p>
+          ) : null}
+
           <p className="ts-quiet" data-testid="period-days">
             {periodDays} billable {periodDays === 1 ? "day" : "days"}
             {dayRate != null ? ` · ${gbpish(periodDays * dayRate)} at £${dayRate} a day` : ""}

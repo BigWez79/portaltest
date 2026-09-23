@@ -4150,3 +4150,41 @@ tr.inactive .toggle.on {
 .ts-periodcard {
   padding-bottom: 16px;
 }
+
+/* The three documents a timesheet produces. */
+.ts-docs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 8px;
+}
+
+.ts-app button.ts-doc {
+  background: var(--brand-deep);
+  border: 1px solid var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.82rem;
+  width: auto;
+  padding: 9px 16px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+.ts-app button.ts-doc:hover {
+  filter: brightness(1.12);
+}
+
+.ts-app button.ts-doc[disabled] {
+  opacity: 0.45;
+  cursor: default;
+  filter: none;
+}
+
+.ts-problem {
+  margin: 4px 0 0;
+  color: var(--err);
+  font-size: 0.85rem;
+  font-weight: 600;
+}

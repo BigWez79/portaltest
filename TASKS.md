@@ -37,17 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. Timesheets — three documents
-`1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
-
-- [ ] `Timesheet_<name>_<period>.pdf` — the full record
-- [ ] `Invoice_<name>_<period>.pdf`, and `Invoice_DRAFT_` before it is issued
-- [ ] `Statement_<name>_<period>.pdf` — the annual statement
-
-**Done when** all three come out for a period holding billable and non-billable
-days, the draft is watermarked as a draft, and `npm run verify` passes.
-
-### 2. Timesheets — Issue invoice
+### 1. Timesheets — Issue invoice
 The original hands billable days to the invoicing system with net, VAT and
 gross already worked out. In the port the two apps do not speak.
 
@@ -55,7 +45,7 @@ gross already worked out. In the port the two apps do not speak.
 billable day at the day rate, the timesheet records that it was issued and
 refuses to issue the same period twice, and `npm run verify` passes.
 
-### 3. Monthly Overview is the wrong page
+### 2. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -82,7 +72,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 4. Admin — the three controls that are missing
+### 3. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -92,7 +82,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 5. The runner opens a second pull request for work it already did
+### 4. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -252,6 +242,33 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **Timesheets: three documents** — `overnight/port-gaps`. Three, because they
+  answer three questions for three audiences. The timesheet is the record — what
+  was done, on which day, with the activities on it rather than a total. The
+  invoice is the bill — one line per billable day, because "21 days" gives a
+  customer nothing to check against. The statement is the year, by month,
+  because a year of days is not read row by row.
+
+  An open month invoices as a **draft**, and says so in words rather than as a
+  watermark: a watermark is the first thing lost to greyscale printing or a
+  screenshot, and that warning has to survive being forwarded to whoever pays
+  it. Closing a month is how it gets billed, so anything before that is a figure
+  that can still change.
+
+  The filename carries the period — `Timesheet_A_Person_2026-07.pdf`,
+  `Statement_A_Person_FY2026-27.pdf` — because a folder of four files called the
+  same thing is not a folder anybody can use.
+
+  Three goes at the test isolation before it was right, and all three were the
+  same mistake in different clothes: a test that writes to a store another spec
+  owns. First the day rate was saved through the UI, which writes profiles.
+  Then it moved to a shared fixture person, whose profile the other spec was
+  also writing. The fix was a seeded day rate on a person only this spec reads,
+  and a fixture person of this spec's own for the no-rate case. The check caught
+  none of these — it sees resets, not writes — which is written down beside it.
+
+  npm run verify: 284 passed.
 
 - **Timesheets: the day rate and the period** — `overnight/port-gaps`. A Month /
   Financial year switch, and the financial year turns over on **6 April** — not
