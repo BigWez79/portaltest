@@ -31,7 +31,11 @@ create table if not exists public.profiles (
 
   -- How invoices are numbered and when they fall due
   issuer_prefix     text,
-  payment_terms_days integer    not null default 30,
+  -- 14, because that is what the live page suggests in its own placeholder.
+  -- It was 30 here on the reasoning that 30 is the common UK term, which is
+  -- true and is not the point: somebody moving off the old screen should find
+  -- the number they are used to seeing.
+  payment_terms_days integer    not null default 14,
 
   -- How to reach this person
   contact_email     citext,
