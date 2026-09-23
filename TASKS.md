@@ -25,85 +25,211 @@ parked in BLOCKED.md until their repositories have been read.
 
 ## Next up — functionality the port dropped
 
-Read against the 12 original pages in `BigWez79/portal` (copies supplied
-2026-09-23). Each port kept the data and the rules and lost the documents: the
-originals are, to the person using them, mostly a way of producing a PDF. None
-of this is new work anybody asked for — it is work that already existed and
-stopped existing when the page moved.
+Read against the twelve original pages in `BigWez79/portal`, copies supplied
+2026-09-23, control by control. Each port kept the data and the rules and lost
+the documents: to the person using these screens the original *is* a way of
+producing a PDF, and that is the part that did not come across.
 
-The order below is the order to build in. It is not arbitrary: the logo is
-first because three documents print it, and building those first means
-rebuilding them.
+Forty-one changes, grouped below into tasks that are each one run's work. The
+grouping is the unit; the checklist inside each is what "done" means.
 
-### 1. The logo on My Profile
-`05d8d49d-myprofile.html:306` holds a logo the original stores as base64 and
-`4c00479c-invoices.html:477` prints in the invoice header. There is no column
-for it here, no control on the form, and so no logo on any document.
+Build in the order written. It is not arbitrary — the toolkit is first because
+five documents need it, and the invoice document is before the invoice's
+filters because the document is what somebody is actually missing.
 
-Original behaviour, which is worth keeping exactly: pick a file, scale it to
-300px wide on a canvas, `toDataURL('image/png')`, and refuse anything still
-over 120,000 characters after the resize with "That image is too detailed even
-after resizing — try a simpler/smaller logo." That last part is the useful bit
-— it fails at the point somebody can do something about it, rather than at the
-point a 4MB row hits the database.
+### 1. One way to make a PDF
+`src/components/margin/margin-pdf.ts` is the only PDF in the suite and it is
+private to Margin. Five more documents are queued behind it — the invoice, the
+expenses claim, and the timesheet's three — and each one needs the same header,
+the same money formatting, the same A4 margins and the same logo block.
 
-**Done when** a logo can be chosen, previewed, saved and removed; a resized PNG
-is stored; an oversized one is refused with that message; and the column exists
-in a migration with a length check behind it rather than only the browser's.
+Written once, or it is written five times and drifts five ways.
 
-### 2. Invoices — the document
-No print, no PDF. `4c00479c-invoices.html` builds a full A4 invoice with the
-seller block, logo, line table, totals, bank details and payment terms.
+**Done when** `src/lib/pdf/` exports a document helper covering: A4 setup, the
+seller header (logo from My Profile, business name, tagline), a money
+formatter, a date formatter, `autoTable` defaults with the suite's heading
+colour, and a footer. Margin's PDF is moved onto it and still produces the same
+document. `npm run verify` passes.
 
-Also missing, and all from the same file: the due date (raised date + the
-profile's payment terms), the Outstanding / Overdue / Due-in-7-days filters,
-and editing an invoice's header after it has been raised.
+### 2. The invoice document
+`4c00479c-invoices.html:477` builds a full A4 invoice and the port renders
+none of it. This is the single biggest thing missing from the suite.
 
-**Done when** an invoice prints to PDF with the seller's details and logo on
-it, the due date is derived rather than typed, and the three filters work.
+- [ ] Header: logo, business name, tagline
+- [ ] Title reads `VAT INVOICE` when the seller is VAT registered, else `INVOICE`
+- [ ] Invoice number and a status badge
+- [ ] `From` block — the seller, from My Profile
+- [ ] `Bill To` block — the customer
+- [ ] `Details` block — invoice no., invoice date, due by
+- [ ] `Invoice for:` the project line
+- [ ] Items table — Item #, Description, Qty, Unit price, VAT, Amount
+- [ ] `Payment Details` — payee, sort code, account no., reference
+- [ ] The payment-terms sentence, naming the number of days
+- [ ] Totals — subtotal net, VAT at the rate, Total Due
+- [ ] Baseline — "Thank you for your business" and the VAT registration number
+- [ ] A `Print / Save PDF` button and an `@media print` stylesheet
 
-### 3. Expenses — the claim PDF
-`expenses.html` has "Download claim" for a person and "Download their claim"
-for an admin — two `autoTable`s, mileage and receipted, each subtotalled.
-The port has neither, and it also merged two screens the original keeps apart:
-"My entries" and "Monthly claim".
+**Done when** an invoice with two lines renders every block above, a test
+asserts the document contains the seller's bank details and the customer's
+address, and printing is exercised at 390 and 1440 with screenshots attached.
 
-**Done when** both PDFs come out with both subtotals, and the two views are
-separate again.
+### 3. What an invoice is worth knowing about
+The port has Draft, Sent and Paid and stops there. The original derives more.
 
-### 4. Timesheets — three documents and the day
-The biggest gap by some distance, and the one to be honest about: the port is
-not a thinner version of the original, it is a different model.
+- [ ] `dueDateOf` — invoice date plus the seller's payment terms
+- [ ] `effStatus` — Paid stays Paid; anything not Draft, past its due date, is
+      **Overdue**. Overdue is computed, never stored, so it is right tomorrow
+      without anything having run overnight.
+- [ ] Badge colours: Draft grey, Sent blue, Paid green, Overdue red
+- [ ] Filters: All / Outstanding / Due in 7 days / Overdue / Paid
 
-The original treats **a day** as the unit. You add activities to a day
-("+ Add activity"), then "Submit day" once. After that it is "Edit day" or
-"Delete day". The port logs single entries and lets you remove one — which
-means a day with three activities takes three actions to correct and there is
-no way to fix the shape of the day itself.
+**Done when** an invoice dated past its terms and marked Sent shows as Overdue
+with no write having happened, each filter returns the right set against a
+fixture with one invoice in each state, and `npm run verify` passes.
 
-It also produces three PDFs, not one:
-- `1b38c30f-timesheet.html:1278` — the timesheet
-- `:1399` — an invoice from the timesheet, draft or final
-- `:1581` — an annual statement
+### 4. Correcting an invoice, and the number on it
+Raised is not final. The original lets a header be corrected and an invoice
+deleted, and it numbers them properly.
 
-and carries a day rate, a Month / Financial-year switch, and "Issue invoice",
-which hands billable days to Invoices with net, VAT and gross already worked
-out.
+- [ ] Edit an invoice's header after it is raised
+- [ ] Delete an invoice
+- [ ] `PREFIX-0000001` — the issuer prefix from My Profile, seven digits, the
+      sequence being the highest already used for that prefix plus one
+- [ ] The "next number" hint on the new-invoice form
+- [ ] Customer address lines 1 and 2 — the port has town and postcode only, so
+      an invoice cannot print a full address
+- [ ] Edit and delete a customer
 
-**Done when** a day is the unit of editing, the day rate is stored, the period
-switch works, all three documents come out, and "Issue invoice" raises a real
-invoice rather than describing one.
+**Done when** the next number after `PA-0000009` is `PA-0000010`, a corrected
+invoice keeps its number, a full address reaches the document, and
+`npm run verify` passes.
 
-### 5. Overview — print
-`50eeaf69-overview.html` prints. The port does not.
+### 5. The expenses claim
+`f303a141-expenses.html` has `Download claim (PDF)` and the port has nothing.
 
-### 6. Admin — three controls
-"Download their claim (PDF)", "Resend" an invite, and "Run report". None ported.
+- [ ] Title `EXPENSES CLAIM`, logo, claim month, generated date
+- [ ] The person's name and email
+- [ ] Mileage table — Date, Route, Miles, Amount
+- [ ] Everything else — Date, Type, Description, Receipt, Amount
+- [ ] Mileage subtotal, other subtotal, and `Total to claim (GBP)`
+- [ ] The declaration: "I confirm these expenses were incurred wholly and
+      necessarily for business."
 
-### Not a gap
-`44c9daa5-taxbreakdown.html` has no document — Reset is the only control, and
-the port matches it. `margin.html` matches. `404.html`, `index.html`,
-`permissions.html` and `robots.txt` are the shell, not apps.
+**Done when** a month holding one mileage claim and one receipted claim
+produces both tables, both subtotals and a total equal to their sum, and
+`npm run verify` passes.
+
+### 6. Expenses — the two screens, and an admin's copy
+The original keeps `My entries` and `Monthly claim` apart; the port merged
+them, which is why a month's claim is hard to see.
+
+- [ ] Split `My entries` from `Monthly claim`
+- [ ] Admin: `Download their claim (PDF)`, with a person picker and a month
+      picker
+
+**Done when** the two views are separate, an admin can produce somebody else's
+claim, a non-admin calling that action is refused (rule 5), and
+`npm run verify` passes.
+
+### 7. Timesheets — a day is the unit
+The port is not a thinner version of the original, it is a different model, and
+this is the task that fixes that. Today a day with three activities takes three
+actions to correct and the shape of the day cannot be changed at all.
+
+- [ ] `+ Add activity` — build a day up from several rows before submitting
+- [ ] `Submit day` — the whole day at once
+- [ ] `Edit day` — loads every activity for that date back into the form
+- [ ] `Delete day`
+- [ ] Annual Leave and Sick are full days: eight hours, and the hours box locks
+- [ ] Refuse a second submission for a date already logged, naming the date and
+      pointing at `My entries`
+
+**Done when** a three-activity day is submitted once, edited as a unit, and
+deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
+refused; and `npm run verify` passes.
+
+### 8. Timesheets — the day rate and the period
+- [ ] A day rate on the profile, with `Save day rate`
+- [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
+- [ ] The button label follows the period: `Invoice` for a month, `Statement`
+      for a year
+
+**Done when** the switch changes the range and the label, the rate persists,
+and `npm run verify` passes.
+
+### 9. Timesheets — three documents
+`1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
+
+- [ ] `Timesheet_<name>_<period>.pdf` — the full record
+- [ ] `Invoice_<name>_<period>.pdf`, and `Invoice_DRAFT_` before it is issued
+- [ ] `Statement_<name>_<period>.pdf` — the annual statement
+
+**Done when** all three come out for a period holding billable and non-billable
+days, the draft is watermarked as a draft, and `npm run verify` passes.
+
+### 10. Timesheets — Issue invoice
+The original hands billable days to the invoicing system with net, VAT and
+gross already worked out. In the port the two apps do not speak.
+
+**Done when** issuing from a month creates a real invoice carrying one line per
+billable day at the day rate, the timesheet records that it was issued and
+refuses to issue the same period twice, and `npm run verify` passes.
+
+### 11. Monthly Overview is the wrong page
+This is the one I got most wrong, so it is written plainly: the original is an
+**administrators-only whole-team calendar**, and what was built is a personal
+hours summary. Not a thinner version — a different screen.
+
+`50eeaf69-overview.html:123` — "This overview is only available to
+administrators."
+
+- [ ] The grid: every person down the side, every **working day** across the
+      top, Monday to Friday only
+- [ ] Eleven activity colours, with Annual Leave orange and Sick red so absence
+      is visible at a glance
+- [ ] A legend
+- [ ] Stacked bars per day, scaled to the busiest single day in the month
+- [ ] Per-activity totals across all staff, and a grand total
+- [ ] `Print / PDF`
+
+**Held question inside this task:** the original is admin-only; the port shows
+a personal view to everybody. Keeping both is probably right — the personal
+view is useful and costs nothing — but that is a decision, not a default. Build
+the grid for admins and leave the personal view where it is, and say so in the
+pull request.
+
+**Done when** a month with three people and a mix of activities renders one row
+per person, weekends absent, absence in its own colours, totals that sum to the
+grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
+
+### 12. Admin — the three controls that are missing
+- [ ] `Resend` an invitation
+- [ ] `Remove` somebody
+- [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
+- [ ] Everybody's invoices, read-only
+
+**Done when** each control re-checks the caller (rule 5), a non-admin calling
+any of them is refused, removal is recorded in the audit trail, and
+`npm run verify` passes.
+
+### 13. The runner opens a second pull request for work it already did
+`overnight.sh:403` excludes draft pull requests from claiming a task. That is
+deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
+behind when verify failed, and that task does need doing again.
+
+The cost is what happened with #35/#36 and #38/#39 — the task is redone, a
+second pull request opens, and the failed draft stays open forever. Two pull
+requests for one task, and a queue of drafts nobody closes.
+
+The fix is not to let drafts claim tasks; that would strand a task behind a
+draft that is never cleaned up. It is to close the superseded draft when a
+later run finishes the same task, saying in the comment which pull request
+replaced it.
+
+**Done when** a run that completes a task an open draft attempted closes that
+draft with a comment naming the new pull request, a draft for a *different*
+task is left alone, and rule 12 is answered in the comment: what would have to
+be true for this to close a draft that was still wanted.
 
 ## Next up — Power Suite hygiene
 
