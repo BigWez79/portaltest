@@ -37,19 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. Expenses — the two screens, and an admin's copy
-The original keeps `My entries` and `Monthly claim` apart; the port merged
-them, which is why a month's claim is hard to see.
-
-- [ ] Split `My entries` from `Monthly claim`
-- [ ] Admin: `Download their claim (PDF)`, with a person picker and a month
-      picker
-
-**Done when** the two views are separate, an admin can produce somebody else's
-claim, a non-admin calling that action is refused (rule 5), and
-`npm run verify` passes.
-
-### 2. Timesheets — a day is the unit
+### 1. Timesheets — a day is the unit
 The port is not a thinner version of the original, it is a different model, and
 this is the task that fixes that. Today a day with three activities takes three
 actions to correct and the shape of the day cannot be changed at all.
@@ -66,7 +54,7 @@ actions to correct and the shape of the day cannot be changed at all.
 deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
 refused; and `npm run verify` passes.
 
-### 3. Timesheets — the day rate and the period
+### 2. Timesheets — the day rate and the period
 - [ ] A day rate on the profile, with `Save day rate`
 - [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
 - [ ] The button label follows the period: `Invoice` for a month, `Statement`
@@ -75,7 +63,7 @@ refused; and `npm run verify` passes.
 **Done when** the switch changes the range and the label, the rate persists,
 and `npm run verify` passes.
 
-### 4. Timesheets — three documents
+### 3. Timesheets — three documents
 `1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
 
 - [ ] `Timesheet_<name>_<period>.pdf` — the full record
@@ -85,7 +73,7 @@ and `npm run verify` passes.
 **Done when** all three come out for a period holding billable and non-billable
 days, the draft is watermarked as a draft, and `npm run verify` passes.
 
-### 5. Timesheets — Issue invoice
+### 4. Timesheets — Issue invoice
 The original hands billable days to the invoicing system with net, VAT and
 gross already worked out. In the port the two apps do not speak.
 
@@ -93,7 +81,7 @@ gross already worked out. In the port the two apps do not speak.
 billable day at the day rate, the timesheet records that it was issued and
 refuses to issue the same period twice, and `npm run verify` passes.
 
-### 6. Monthly Overview is the wrong page
+### 5. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -120,7 +108,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 7. Admin — the three controls that are missing
+### 6. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -130,7 +118,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 8. The runner opens a second pull request for work it already did
+### 7. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -290,6 +278,30 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **Expenses: four screens, and an admin's copy** — `overnight/port-gaps`. The
+  live page keeps Log expense, My entries, Monthly claim and Admin apart and the
+  port had merged them, which is why a month's total was hard to find. They are
+  four again. Logging one, looking back over what you have logged, and putting a
+  month in are three jobs done at three different moments.
+
+  Editing from My entries takes you to the form with the expense loaded, rather
+  than leaving somebody on a list while the form they need is elsewhere.
+
+  An admin can produce anybody's claim — the same document that person would
+  download, with their name on it rather than the admin's. The months offered
+  are read off that person's own rows, because a claim for a month somebody has
+  nothing in is an empty document and offering it is a dead end.
+
+  `listAllExpenses` is a separate function from `listExpenses` even though the
+  query is identical, so a caller has to say out loud that it expects other
+  people's data. The guard is still the policy (rule 11), not the name — but in
+  fixture mode there is no policy, so the caller's `isAdmin` check is the only
+  thing standing there, and that is written down beside it. A non-admin is sent
+  an empty list rather than a shorter one: there is nothing for the browser to
+  filter, and no Admin screen in the DOM at all (rule 3).
+
+  npm run verify: 269 passed.
 
 - **The expenses claim** — `overnight/port-gaps`. Two tables, not one, which is
   the shape of the document rather than a layout choice: mileage is a route and

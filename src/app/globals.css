@@ -4007,3 +4007,39 @@ tr.inactive .toggle.on {
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+/* The four expenses screens. */
+.exp-views {
+  margin-bottom: 16px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.exp-app-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.exp-app .exp-app-actions button {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  width: auto;
+  /* .sr-only is position:absolute; without a positioned ancestor it escapes the
+     table and pushes the document sideways. */
+  position: relative;
+}
+
+.exp-inline {
+  display: inline;
+}
+
+.exp-app button.danger {
+  color: var(--err);
+}
+
+.exp-app button[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}

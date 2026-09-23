@@ -193,3 +193,34 @@ export async function saveRates(rates: MileageRates): Promise<boolean> {
   }
   return true;
 }
+
+/**
+ * Everybody's claims, for an admin.
+ *
+ * The same query as `listExpenses` — the policy is what decides whether more
+ * than one person's rows come back (rule 11), and an admin's session gets them
+ * all. It is a separate function only so the *caller* has to say out loud that
+ * it expects other people's data; the guard is still the policy, not the name.
+ *
+ * The caller must have checked `isAdmin` first. In fixture mode there is no
+ * policy to lean on, so that check is the only thing standing here.
+ */
+export async function listAllExpenses(): Promise<Expense[]> {
+  if (staffSource() === "fixture") {
+    const { expenseStore } = await import("./expenses-store");
+    return expenseStore.listAll();
+  }
+
+  const { supabaseServer } = await import("./supabase/server");
+  const client = await supabaseServer();
+  const { data, error } = await client
+    .from("expenses")
+    .select(COLUMNS)
+    .order("expense_date", { ascending: false });
+
+  if (error) {
+    console.error("[expenses] list all failed", error.message);
+    return [];
+  }
+  return (data ?? []).map((row) => toExpense(row as Record<string, unknown>));
+}

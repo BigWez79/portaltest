@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { ExpensesApp } from "@/components/expenses/ExpensesApp";
-import { getRates, listExpenses, lockedMonths } from "@/lib/expenses";
+import { getRates, listAllExpenses, listExpenses, lockedMonths } from "@/lib/expenses";
 import { requireApp } from "@/lib/guard";
 import { getProfile } from "@/lib/profile";
 
@@ -30,6 +30,11 @@ export default async function ExpensesPage() {
     getProfile(access.email),
   ]);
 
+  // Everybody's, but only for an admin, and only so the Admin view can produce
+  // somebody else's claim. A non-admin is sent an empty list rather than a
+  // shorter one — there is nothing here for the browser to filter.
+  const everybody = access.isAdmin ? await listAllExpenses() : [];
+
   return (
     <AppShell access={access} current="expenses" title="Expenses" wide>
       <ExpensesApp
@@ -39,6 +44,7 @@ export default async function ExpensesPage() {
         isAdmin={access.isAdmin}
         person={{ name: access.displayName || null, email: access.email }}
         seller={{ businessName: profile.businessName, logo: profile.logo }}
+        everybody={everybody}
       />
     </AppShell>
   );
