@@ -37,24 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. Correcting an invoice, and the number on it
-Raised is not final. The original lets a header be corrected and an invoice
-deleted, and it numbers them properly.
-
-- [ ] Edit an invoice's header after it is raised
-- [ ] Delete an invoice
-- [ ] `PREFIX-0000001` — the issuer prefix from My Profile, seven digits, the
-      sequence being the highest already used for that prefix plus one
-- [ ] The "next number" hint on the new-invoice form
-- [ ] Customer address lines 1 and 2 — the port has town and postcode only, so
-      an invoice cannot print a full address
-- [ ] Edit and delete a customer
-
-**Done when** the next number after `PA-0000009` is `PA-0000010`, a corrected
-invoice keeps its number, a full address reaches the document, and
-`npm run verify` passes.
-
-### 2. The expenses claim
+### 1. The expenses claim
 `f303a141-expenses.html` has `Download claim (PDF)` and the port has nothing.
 
 - [ ] Title `EXPENSES CLAIM`, logo, claim month, generated date
@@ -69,7 +52,7 @@ invoice keeps its number, a full address reaches the document, and
 produces both tables, both subtotals and a total equal to their sum, and
 `npm run verify` passes.
 
-### 3. Expenses — the two screens, and an admin's copy
+### 2. Expenses — the two screens, and an admin's copy
 The original keeps `My entries` and `Monthly claim` apart; the port merged
 them, which is why a month's claim is hard to see.
 
@@ -81,7 +64,7 @@ them, which is why a month's claim is hard to see.
 claim, a non-admin calling that action is refused (rule 5), and
 `npm run verify` passes.
 
-### 4. Timesheets — a day is the unit
+### 3. Timesheets — a day is the unit
 The port is not a thinner version of the original, it is a different model, and
 this is the task that fixes that. Today a day with three activities takes three
 actions to correct and the shape of the day cannot be changed at all.
@@ -98,7 +81,7 @@ actions to correct and the shape of the day cannot be changed at all.
 deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
 refused; and `npm run verify` passes.
 
-### 5. Timesheets — the day rate and the period
+### 4. Timesheets — the day rate and the period
 - [ ] A day rate on the profile, with `Save day rate`
 - [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
 - [ ] The button label follows the period: `Invoice` for a month, `Statement`
@@ -107,7 +90,7 @@ refused; and `npm run verify` passes.
 **Done when** the switch changes the range and the label, the rate persists,
 and `npm run verify` passes.
 
-### 6. Timesheets — three documents
+### 5. Timesheets — three documents
 `1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
 
 - [ ] `Timesheet_<name>_<period>.pdf` — the full record
@@ -117,7 +100,7 @@ and `npm run verify` passes.
 **Done when** all three come out for a period holding billable and non-billable
 days, the draft is watermarked as a draft, and `npm run verify` passes.
 
-### 7. Timesheets — Issue invoice
+### 6. Timesheets — Issue invoice
 The original hands billable days to the invoicing system with net, VAT and
 gross already worked out. In the port the two apps do not speak.
 
@@ -125,7 +108,7 @@ gross already worked out. In the port the two apps do not speak.
 billable day at the day rate, the timesheet records that it was issued and
 refuses to issue the same period twice, and `npm run verify` passes.
 
-### 8. Monthly Overview is the wrong page
+### 7. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -152,7 +135,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 9. Admin — the three controls that are missing
+### 8. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -162,7 +145,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 10. The runner opens a second pull request for work it already did
+### 9. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -322,6 +305,34 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **Correcting an invoice, and the number on it** — `overnight/port-gaps`. An
+  invoice's header can be changed after it is raised, and changing the VAT rate
+  re-prices every line from it: a header rate that disagreed with the tax on the
+  lines would be a document that does not add up, which is the one thing an
+  invoice must never be. The due date follows the date.
+
+  Numbering now comes from My Profile's issuer prefix, worked out on the server
+  because it depends on every invoice this person has and the browser only holds
+  the ones it was sent. A prefix nobody has used starts at seven digits, which
+  is what the live page does — `PA-0000001`. One already in use keeps its own
+  width, so somebody who started at `INV-0001` does not suddenly get seven.
+
+  Two departures, both deliberate and both easy to reverse. A **paid** invoice
+  cannot be deleted: the customer holds it, money moved against it, and the gap
+  would be silent — nothing on any screen says a number was used once and is now
+  missing. Draft and Sent still go, which is what somebody actually reaches for.
+  And a **customer on an invoice** cannot be removed: `Bill To` is read from the
+  customer row at render time rather than stamped like the seller's half, so
+  removing them would blank the address on every document they were ever sent.
+  The message says how many invoices are in the way.
+
+  The paid-invoice check is exercised by posting past the screen with the paid
+  invoice's id, because the page renders no delete button for one — without that
+  the check would never run in the suite and could be deleted tomorrow with
+  everything still green.
+
+  npm run verify: 262 passed.
 
 - **The invoice filters, and a check for the bug that keeps finding me** —
   `overnight/suite-theme`. All / Outstanding / Due in 7 days / Overdue / Paid,

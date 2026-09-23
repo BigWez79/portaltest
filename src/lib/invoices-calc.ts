@@ -127,14 +127,25 @@ export function splitInvoiceNo(no: string): { prefix: string | null; seq: number
 }
 
 /**
+ * The width a brand-new prefix starts at.
+ *
+ * Seven, because that is what the live page does — `paNextNumber` pads to seven
+ * and every invoice anybody has been sent looks like `PA-0000001`. A number
+ * that suddenly went four digits would be the same sequence wearing a different
+ * face, and a customer matching a remittance to an invoice would not thank
+ * anybody for it.
+ */
+export const NEW_PREFIX_WIDTH = 7;
+
+/**
  * The next number for a prefix, padded to the width already in use. Somebody
  * who started at INV-0001 keeps four digits; somebody who started at INV-1 does
- * not suddenly get INV-0002.
+ * not suddenly get INV-0002. A prefix nobody has used yet starts at seven.
  */
 export function nextInvoiceNo(existing: string[], prefix: string): string {
   const p = prefix.toUpperCase();
   let highest = 0;
-  let width = 4;
+  let width = 0;
   for (const no of existing) {
     const { prefix: got, seq } = splitInvoiceNo(no);
     if (got !== p || seq == null) continue;
@@ -142,7 +153,7 @@ export function nextInvoiceNo(existing: string[], prefix: string): string {
     const digits = no.trim().split("-")[1]?.length ?? 4;
     if (digits > width) width = digits;
   }
-  return `${p}-${String(highest + 1).padStart(width, "0")}`;
+  return `${p}-${String(highest + 1).padStart(width || NEW_PREFIX_WIDTH, "0")}`;
 }
 
 /* -------------------------------------------------------------------------
