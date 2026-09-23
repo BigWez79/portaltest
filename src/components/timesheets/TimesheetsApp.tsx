@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import {
   closeMonth,
   deleteDay,
+  saveDayRate,
   deleteHours,
   submitDay,
   type TimesheetState,
@@ -12,9 +13,14 @@ import {
   ACTIVITY_TYPES,
   FULL_DAY_HOURS,
   dayName,
+  daysWorked,
   groupByMonth,
+  inPeriod,
   isFullDay,
   monthName,
+  periodLabel,
+  periodsFor,
+  type Period,
   type TimesheetEntry,
 } from "@/lib/timesheets-calc";
 
@@ -38,21 +44,28 @@ const blankActivity = (): Draft => ({
 // reads like a precision nobody logged.
 const hrs = (n: number) => `${Number(n.toFixed(2))} h`;
 
+/** Whole pounds with a separator — a figure to look at, not one to pay. */
+const gbpish = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
+
 export function TimesheetsApp({
   entries,
   locked,
+  dayRate,
 }: {
   entries: TimesheetEntry[];
   locked: string[];
+  dayRate: number | null;
 }) {
   const [day, dayAction, saving] = useActionState(submitDay, idle);
   const [del, delAction] = useActionState(deleteHours, idle);
   const [wipeDay, wipeDayAction] = useActionState(deleteDay, idle);
   const [close, closeAction] = useActionState(closeMonth, idle);
+  const [rate, rateAction, savingRate] = useActionState(saveDayRate, idle);
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [activities, setActivities] = useState<Draft[]>(() => [blankActivity()]);
   const [editing, setEditing] = useState(false);
+  const [period, setPeriod] = useState<Period>("month");
 
   function setActivity(at: number, patch: Partial<Draft>) {
     setActivities((list) => list.map((a, i) => (i === at ? { ...a, ...patch } : a)));
@@ -94,8 +107,85 @@ export function TimesheetsApp({
 
   const thisMonth = months[0];
 
+  // The period the buttons are showing. Newest first, so "this month" and "this
+  // financial year" are what somebody lands on.
+  const periods = useMemo(() => periodsFor(entries, period), [entries, period]);
+  const inCurrent = useMemo(
+    () => (periods.length === 0 ? [] : entries.filter((e) => inPeriod(e.entryDate, period, periods[0]))),
+    [entries, period, periods],
+  );
+  const periodHours = inCurrent.reduce((n, e) => n + e.hoursWorked, 0);
+  const periodDays = daysWorked(inCurrent);
+
   return (
     <div className="ts-app" data-testid="timesheets-app">
+      <div className="ts-bar">
+        <div className="seg" role="group" aria-label="Period">
+          <button
+            type="button"
+            aria-pressed={period === "month"}
+            onClick={() => setPeriod("month")}
+            data-testid="period-month"
+          >
+            Month
+          </button>
+          <button
+            type="button"
+            aria-pressed={period === "year"}
+            onClick={() => setPeriod("year")}
+            data-testid="period-year"
+          >
+            Financial year
+          </button>
+        </div>
+
+        <form action={rateAction} className="ts-rate" data-testid="day-rate-form">
+          <label className="field app-field ts-ratefield">
+            <span className="field-label">Day rate (£)</span>
+            <input
+              type="number"
+              name="dayRate"
+              step="0.01"
+              min="0"
+              placeholder="not set"
+              defaultValue={dayRate ?? ""}
+              data-testid="ts-day-rate"
+            />
+          </label>
+          <button type="submit" className="quiet" disabled={savingRate} data-testid="save-day-rate">
+            {savingRate ? "Saving…" : "Save day rate"}
+          </button>
+        </form>
+      </div>
+
+      {rate.status === "ok" ? (
+        <div className="msg ok" role="status" data-testid="rate-ok">
+          {rate.message}
+        </div>
+      ) : null}
+      {rate.status === "error" ? (
+        <div className="msg" role="alert" data-testid="rate-error">
+          {rate.message}
+        </div>
+      ) : null}
+
+      {periods.length > 0 ? (
+        <section className="ts-card ts-periodcard" data-testid="period-card">
+          <div className="ts-month-head">
+            <h2 className="ts-h" data-testid="period-name">
+              {periodLabel(period, periods[0])}
+            </h2>
+            <div className="ts-month-total" data-testid="period-total">
+              {hrs(periodHours)}
+            </div>
+          </div>
+          <p className="ts-quiet" data-testid="period-days">
+            {periodDays} billable {periodDays === 1 ? "day" : "days"}
+            {dayRate != null ? ` · ${gbpish(periodDays * dayRate)} at £${dayRate} a day` : ""}
+          </p>
+        </section>
+      ) : null}
+
       {thisMonth ? (
         <div className="ts-kpis">
           <div className="kpi accent" data-testid="kpi-hours">

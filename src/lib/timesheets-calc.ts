@@ -144,3 +144,59 @@ export type EntryInput = {
   hoursWorked: number;
   workDescription: string;
 };
+
+/* -------------------------------------------------------------------------
+   Month, or financial year
+   ------------------------------------------------------------------------- */
+
+export type Period = "month" | "year";
+
+/**
+ * The UK financial year a date falls in, as the year it starts.
+ *
+ * From 6 April, not 1 April and not 1 January. 5 April 2027 is in 2026-27;
+ * 6 April 2027 starts the next one. Getting this wrong by a day puts a week of
+ * somebody's work in the wrong statement, and the boundary is the only part
+ * anybody ever gets wrong — so it is one function, tested at both sides of it.
+ */
+export function financialYearOf(date: string): number {
+  const d = new Date(`${date}T00:00:00`);
+  if (isNaN(d.getTime())) return NaN;
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  return month > 4 || (month === 4 && day >= 6) ? d.getFullYear() : d.getFullYear() - 1;
+}
+
+/** "2026-27", how a financial year is written down. */
+export const financialYearLabel = (start: number) => `${start}-${String((start + 1) % 100).padStart(2, "0")}`;
+
+/** Whether a date is inside a period — a month like "2026-07", or a FY start. */
+export function inPeriod(date: string, period: Period, key: string): boolean {
+  return period === "month" ? date.slice(0, 7) === key : financialYearOf(date) === Number(key);
+}
+
+/** The periods these entries actually cover, newest first. */
+export function periodsFor(entries: TimesheetEntry[], period: Period): string[] {
+  const keys = entries.map((e) =>
+    period === "month" ? e.entryDate.slice(0, 7) : String(financialYearOf(e.entryDate)),
+  );
+  return [...new Set(keys)].sort((a, b) => b.localeCompare(a));
+}
+
+export const periodLabel = (period: Period, key: string) =>
+  period === "month" ? monthName(key) : `Financial year ${financialYearLabel(Number(key))}`;
+
+/** What a period's worth of days is billed at, given a day rate. */
+export function daysWorked(entries: TimesheetEntry[]): number {
+  const byDay = new Map<string, number>();
+  for (const e of entries) {
+    if (isFullDay(e.activityType)) continue;
+    byDay.set(e.entryDate, (byDay.get(e.entryDate) ?? 0) + e.hoursWorked);
+  }
+  // A day is a day. The live page bills whole days rather than hours, so a
+  // seven-hour day and a nine-hour day are both one — and a day with nothing
+  // billable on it is none.
+  let days = 0;
+  for (const hours of byDay.values()) if (hours > 0) days += 1;
+  return days;
+}

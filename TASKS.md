@@ -37,16 +37,7 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. Timesheets — the day rate and the period
-- [ ] A day rate on the profile, with `Save day rate`
-- [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
-- [ ] The button label follows the period: `Invoice` for a month, `Statement`
-      for a year
-
-**Done when** the switch changes the range and the label, the rate persists,
-and `npm run verify` passes.
-
-### 2. Timesheets — three documents
+### 1. Timesheets — three documents
 `1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
 
 - [ ] `Timesheet_<name>_<period>.pdf` — the full record
@@ -56,7 +47,7 @@ and `npm run verify` passes.
 **Done when** all three come out for a period holding billable and non-billable
 days, the draft is watermarked as a draft, and `npm run verify` passes.
 
-### 3. Timesheets — Issue invoice
+### 2. Timesheets — Issue invoice
 The original hands billable days to the invoicing system with net, VAT and
 gross already worked out. In the port the two apps do not speak.
 
@@ -64,7 +55,7 @@ gross already worked out. In the port the two apps do not speak.
 billable day at the day rate, the timesheet records that it was issued and
 refuses to issue the same period twice, and `npm run verify` passes.
 
-### 4. Monthly Overview is the wrong page
+### 3. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -91,7 +82,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 5. Admin — the three controls that are missing
+### 4. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -101,7 +92,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 6. The runner opens a second pull request for work it already did
+### 5. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -261,6 +252,35 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **Timesheets: the day rate and the period** — `overnight/port-gaps`. A Month /
+  Financial year switch, and the financial year turns over on **6 April** — not
+  1 April and not 1 January. 5 April 2027 is in 2026-27, 6 April starts the
+  next, and the test drives both sides of that boundary because it is the only
+  part anybody gets wrong and getting it wrong puts a week of somebody's work in
+  the wrong statement.
+
+  The day rate lives on the profile (0010) rather than in a second copy inside
+  Timesheets. The live suite keeps its own profile inside `timesheet.html` —
+  its own save, its own logo upload — because each page was a separate file with
+  nothing to share. Here that would be two answers to "what do you charge" with
+  nothing saying which one an invoice used. One column, two ways in: My Profile,
+  and "Save day rate" on Timesheets where somebody is standing when they think
+  about it.
+
+  That action reads the profile, changes one field and writes it back. Writing
+  only the rate would blank every other field, which is somebody's bank details
+  — so there is a test that saves a rate and then checks the sort code is still
+  there.
+
+  Those two tests live in `profile.spec.ts`, not `timesheets.spec.ts`, because
+  they write to the profiles store which that spec owns and resets. Two specs
+  sharing one fixture file interleave however serial either of them is, and
+  `check-test-isolation.mjs` cannot see this case — it catches two specs
+  *resetting* a store, not one writing to another's. The note is left where the
+  tests would have been.
+
+  npm run verify: 280 passed.
 
 - **Timesheets: a day is the unit** — `overnight/port-gaps`. The port was not a
   thinner version of the live page, it was a different model, and this is the

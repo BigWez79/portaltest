@@ -22,6 +22,8 @@ export type Profile = {
   contactPhone: string | null;
   tagline: string | null;
   logo: string | null;
+  /** What one day is invoiced at. Null means not set — never guessed. */
+  dayRate: number | null;
 };
 
 export const BUSINESS_TYPES = [
@@ -49,6 +51,7 @@ export const EMPTY_PROFILE: Profile = {
   contactPhone: null,
   tagline: null,
   logo: null,
+  dayRate: null,
 };
 
 /* -------------------------------------------------------------------------
@@ -122,6 +125,7 @@ export function toProfile(row: Record<string, unknown>): Profile {
     contactPhone: (row.contact_phone as string) ?? null,
     tagline: (row.tagline as string) ?? null,
     logo: (row.logo as string) ?? null,
+    dayRate: row.day_rate == null ? null : Number(row.day_rate),
   };
 }
 

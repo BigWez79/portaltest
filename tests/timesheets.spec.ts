@@ -287,6 +287,63 @@ test.describe.serial("timesheets — a day is the unit", () => {
   });
 });
 
+test.describe.serial("timesheets — the period and the rate", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetStores(page, "timesheets");
+  });
+
+  test("the switch changes what the period covers", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    await expect(page.getByTestId("period-name")).toContainText("July 2026");
+    const monthHours = await page.getByTestId("period-total").textContent();
+
+    await page.getByTestId("period-year").click();
+    await expect(page.getByTestId("period-name")).toContainText("Financial year 2026-27");
+
+    // The year holds June as well as July, so it cannot be the same number.
+    await expect(page.getByTestId("period-total")).not.toHaveText(monthHours!);
+  });
+
+  /*
+   * The day-rate round trip lives in profile.spec.ts, not here.
+   *
+   * It writes to the profiles store, which that spec owns and resets. Two specs
+   * sharing one fixture file interleave however serial either of them is, and
+   * check-test-isolation.mjs cannot see this one — it catches two specs
+   * *resetting* a store, not one writing to another's. So it is written down
+   * here instead, next to the tests that would have caused it.
+   */
+
+  test("the financial year turns over on 6 April, not 1 April", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    // 5 April 2027 is the last day of 2026-27; 6 April starts 2027-28. A day
+    // either side is the only part of this anybody gets wrong, and getting it
+    // wrong puts a week of somebody's work in the wrong statement.
+    await page.getByTestId("entry-date").fill("2027-04-05");
+    await page.getByTestId("entry-type-0").selectOption("Project work");
+    await page.getByTestId("entry-hours-0").fill("8");
+    await page.getByTestId("submit-day").click();
+    await expect(page.getByTestId("log-ok")).toBeVisible({ timeout: 15000 });
+
+    await page.getByTestId("period-year").click();
+    await expect(page.getByTestId("period-name")).toContainText("Financial year 2026-27");
+
+    await page.getByTestId("entry-date").fill("2027-04-06");
+    await page.getByTestId("entry-type-0").selectOption("Project work");
+    await page.getByTestId("entry-hours-0").fill("8");
+    await page.getByTestId("submit-day").click();
+    await expect(page.getByTestId("log-ok")).toBeVisible({ timeout: 15000 });
+
+    await page.getByTestId("period-year").click();
+    await expect(page.getByTestId("period-name")).toContainText("Financial year 2027-28");
+  });
+
+});
+
 test.describe("timesheets — the guard", () => {
   test.use({ tolerate: ["status of 404"] });
 

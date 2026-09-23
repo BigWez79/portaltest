@@ -4116,3 +4116,37 @@ tr.inactive .toggle.on {
 .ts-app button.danger {
   color: var(--err);
 }
+
+/* The period switch and the day rate. */
+.ts-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ts-bar .seg {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ts-rate {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.ts-ratefield {
+  max-width: 150px;
+}
+
+.ts-app button.quiet[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ts-periodcard {
+  padding-bottom: 16px;
+}

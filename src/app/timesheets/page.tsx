@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { TimesheetsApp } from "@/components/timesheets/TimesheetsApp";
 import { requireApp } from "@/lib/guard";
+import { getProfile } from "@/lib/profile";
 import { listEntries, lockedMonths } from "@/lib/timesheets";
 
 export const dynamic = "force-dynamic";
@@ -22,14 +23,15 @@ export default async function TimesheetsPage() {
   // 404s for anyone without the flag, including signed-out visitors.
   const access = await requireApp("timesheet");
 
-  const [entries, locked] = await Promise.all([
+  const [entries, locked, profile] = await Promise.all([
     listEntries(access.email),
     lockedMonths(access.email),
+    getProfile(access.email),
   ]);
 
   return (
     <AppShell access={access} current="timesheet" title="Timesheets" wide>
-      <TimesheetsApp entries={entries} locked={locked} />
+      <TimesheetsApp entries={entries} locked={locked} dayRate={profile.dayRate} />
     </AppShell>
   );
 }

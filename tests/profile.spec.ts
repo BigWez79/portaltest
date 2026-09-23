@@ -22,6 +22,7 @@ import { expect, resetStores, signInAs, test } from "./harness";
  */
 test.describe.configure({ mode: "serial" });
 
+const STAFF = "timesheet.only@example.test";
 const COMPLETE = "invoices.only@example.test";
 const PARTIAL = "everything@example.test";
 const NO_FLAGS = "no.flags@example.test";
@@ -315,6 +316,57 @@ test.describe.serial("profile — the logo", () => {
     await page.getByTestId("profile-save").click();
 
     await expect(page.getByTestId("profile-error")).toContainText("PNG", { timeout: 15000 });
+  });
+});
+
+/**
+ * The day rate is on the profile but saved from two screens — My Profile and
+ * Timesheets, because that is where somebody is standing when they think about
+ * what a day is worth. These tests live here rather than in timesheets.spec.ts
+ * because they write to the profiles store, which this file owns and resets.
+ */
+test.describe("profile — the day rate", () => {
+  test.beforeEach(async ({ page }) => {
+    await resetStores(page, "profiles");
+  });
+
+  test("a day rate saved here shows up on My Profile", async ({ page }) => {
+    await signInAs(page, STAFF);
+    await page.goto("/timesheets");
+
+    await page.getByTestId("ts-day-rate").fill("450");
+    await page.getByTestId("save-day-rate").click();
+    await expect(page.getByTestId("rate-ok")).toBeVisible({ timeout: 15000 });
+
+    // One column, two ways in. A second copy would be two answers to "what do
+    // you charge" with nothing saying which one an invoice used.
+    await page.goto("/profile");
+    await expect(page.getByTestId("day-rate")).toHaveValue("450");
+  });
+
+  test("saving a day rate does not blank the rest of the profile", async ({ page }) => {
+    await signInAs(page, STAFF);
+
+    // The action reads the profile, changes one field and writes it back. If it
+    // wrote only the rate it would blank somebody's bank details, which is the
+    // worst thing in this schema to lose quietly.
+    await page.goto("/profile");
+    await page.getByTestId("business-name").fill("Tessa Timesheets Ltd");
+    await page.getByTestId("sort-code").fill("40-11-22");
+    await page.getByTestId("account-no").fill("11223344");
+    await page.getByTestId("profile-save").click();
+    await expect(page.getByTestId("profile-ok")).toBeVisible({ timeout: 15000 });
+
+    await page.goto("/timesheets");
+    await page.getByTestId("ts-day-rate").fill("525");
+    await page.getByTestId("save-day-rate").click();
+    await expect(page.getByTestId("rate-ok")).toBeVisible({ timeout: 15000 });
+
+    await page.goto("/profile");
+    await expect(page.getByTestId("business-name")).toHaveValue("Tessa Timesheets Ltd");
+    await expect(page.getByTestId("sort-code")).toHaveValue("40-11-22");
+    await expect(page.getByTestId("account-no")).toHaveValue("11223344");
+    await expect(page.getByTestId("day-rate")).toHaveValue("525");
   });
 });
 

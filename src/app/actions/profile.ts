@@ -76,6 +76,18 @@ export async function updateProfile(
   const logoProblem = checkLogo(logo);
   if (logoProblem) return { status: "error", message: logoProblem };
 
+  // Blank means not set, which is different from zero. Zero is a real answer
+  // that means free; a blank box guessed at as zero would put that on a bill.
+  const rateRaw = String(formData.get("dayRate") ?? "").trim();
+  let dayRate: number | null = null;
+  if (rateRaw) {
+    const n = Number(rateRaw);
+    if (!Number.isFinite(n) || n < 0 || n > 100_000) {
+      return { status: "error", message: "A day rate is a number of pounds, up to 100,000." };
+    }
+    dayRate = Math.round(n * 100) / 100;
+  }
+
   const terms = Number(formData.get("paymentTermsDays"));
   if (!Number.isFinite(terms) || terms < 0 || terms > 365) {
     return { status: "error", message: "Payment terms are a number of days, up to 365." };
@@ -97,6 +109,7 @@ export async function updateProfile(
     contactPhone: text(formData.get("contactPhone")),
     tagline: text(formData.get("tagline")),
     logo,
+    dayRate,
   });
 
   if (!ok) return { status: "error", message: "That could not be saved." };

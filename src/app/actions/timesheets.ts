@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getProfile, saveProfile } from "@/lib/profile";
 import { getCurrentUser } from "@/lib/current-user";
 import { resolveAccess } from "@/lib/staff";
 import {
@@ -258,4 +259,44 @@ export async function deleteDay(
   revalidatePath("/timesheets");
   revalidatePath("/overview");
   return { status: "ok", message: `${entryDate} removed.` };
+}
+
+/**
+ * The day rate, saved from the Timesheets screen.
+ *
+ * It lives on the profile — one place for a person's details (rule 10) — but
+ * this is where somebody is standing when they think about what a day is worth,
+ * which is where the live page puts the button. One column, two ways in.
+ */
+export async function saveDayRate(
+  _previous: TimesheetState,
+  formData: FormData,
+): Promise<TimesheetState> {
+  let access;
+  try {
+    access = await requireTimesheets();
+  } catch {
+    return { status: "error", message: "You are not allowed to change this." };
+  }
+
+  const raw = String(formData.get("dayRate") ?? "").trim();
+  let dayRate: number | null = null;
+  if (raw) {
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0 || n > 100_000) {
+      return { status: "error", message: "A day rate is a number of pounds, up to 100,000." };
+    }
+    dayRate = Math.round(n * 100) / 100;
+  }
+
+  // Read, change one field, write back. Saving only the rate would blank every
+  // other field on the profile, which is somebody's bank details.
+  const current = await getProfile(access.email);
+  const { staffEmail: _ignored, ...rest } = current;
+  const ok = await saveProfile(access.email, { ...rest, dayRate });
+  if (!ok) return { status: "error", message: "That could not be saved." };
+
+  revalidatePath("/timesheets");
+  revalidatePath("/profile");
+  return { status: "ok", message: dayRate == null ? "Day rate cleared." : "Day rate saved." };
 }
