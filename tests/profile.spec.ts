@@ -7,6 +7,21 @@ import { expect, resetStores, signInAs, test } from "./harness";
  * document a customer reads.
  */
 
+/**
+ * The whole file runs in one worker, in order.
+ *
+ * `test.describe.serial` orders the tests *inside* one block; it says nothing
+ * about two blocks running beside each other, and this file has two that both
+ * reset the profile store and both write to the same fixture person. They
+ * interleaved: the logo block's reset landed between the sort-code test's save
+ * and its reload, and the field came back empty. It failed as a sort-code bug,
+ * which is the second time this shape of thing has been found here.
+ *
+ * One line, at file level, because the constraint is the file's: these tests
+ * share one row in one file on disk.
+ */
+test.describe.configure({ mode: "serial" });
+
 const COMPLETE = "invoices.only@example.test";
 const PARTIAL = "everything@example.test";
 const NO_FLAGS = "no.flags@example.test";

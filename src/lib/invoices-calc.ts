@@ -55,6 +55,10 @@ export type Invoice = {
   sellerBankName: string | null;
   sellerSortCode: string | null;
   sellerAccountNo: string | null;
+  sellerTagline: string | null;
+  sellerLogo: string | null;
+  /** The terms as they stood when this was raised; the due date comes from it. */
+  paymentTermsDays: number | null;
 };
 
 export const STATUSES: InvoiceStatus[] = ["Draft", "Sent", "Paid"];
@@ -141,6 +145,102 @@ export function nextInvoiceNo(existing: string[], prefix: string): string {
   return `${p}-${String(highest + 1).padStart(width, "0")}`;
 }
 
+/* -------------------------------------------------------------------------
+   When it falls due, and whether it is late
+   ------------------------------------------------------------------------- */
+
+/**
+ * The day payment is due: the invoice date plus the terms stamped on it.
+ *
+ * Null when no terms were stamped — an invoice raised before 0009, or by
+ * somebody whose profile had none. A document with no due date prints without
+ * one rather than inventing a date the customer never agreed to.
+ */
+export function dueDate(invoice: Pick<Invoice, "invoiceDate" | "paymentTermsDays">): Date | null {
+  if (invoice.paymentTermsDays == null) return null;
+  const d = new Date(`${invoice.invoiceDate}T00:00:00`);
+  if (isNaN(d.getTime())) return null;
+  d.setDate(d.getDate() + invoice.paymentTermsDays);
+  return d;
+}
+
+/** Draft, Sent, Paid — and Overdue, which is worked out rather than stored. */
+export type EffectiveStatus = InvoiceStatus | "Overdue";
+
+/**
+ * What the invoice's status actually is today.
+ *
+ * Overdue is derived, never written. Two reasons, and the second is the one
+ * that matters: a stored "Overdue" is wrong the moment it is paid, and it is
+ * only ever right if something ran overnight to set it — so an invoice that
+ * fell due on Saturday would sit there saying Sent until Monday's job, or
+ * forever if the job stopped. Derived, it is right every time the page renders,
+ * with nothing scheduled and nothing to go wrong quietly.
+ *
+ * Paid stays Paid whatever the date. A Draft is never overdue: it has not been
+ * sent to anybody, so nobody is late paying it.
+ */
+export function effectiveStatus(
+  invoice: Pick<Invoice, "invoiceDate" | "paymentTermsDays" | "status">,
+  now: Date = new Date(),
+): EffectiveStatus {
+  if (invoice.status === "Paid") return "Paid";
+  if (invoice.status === "Draft") return "Draft";
+  const due = dueDate(invoice);
+  if (due && due < startOfDay(now)) return "Overdue";
+  return invoice.status;
+}
+
+/** Midnight, so an invoice due today is not overdue until tomorrow. */
+function startOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+/** Days until it falls due; negative once it is late. Null with no due date. */
+export function daysUntilDue(
+  invoice: Pick<Invoice, "invoiceDate" | "paymentTermsDays">,
+  now: Date = new Date(),
+): number | null {
+  const due = dueDate(invoice);
+  if (!due) return null;
+  return Math.round((due.getTime() - startOfDay(now).getTime()) / 86_400_000);
+}
+
+export const INVOICE_FILTERS = ["All", "Outstanding", "Due in 7 days", "Overdue", "Paid"] as const;
+export type InvoiceFilter = (typeof INVOICE_FILTERS)[number];
+
+/**
+ * Whether an invoice belongs in a filter.
+ *
+ * "Outstanding" is everything not yet paid, drafts included — it answers "what
+ * is still owed to me", and an unsent draft is money not yet asked for, which
+ * is the thing somebody opening this filter is chasing.
+ */
+export function matchesFilter(
+  invoice: Pick<Invoice, "invoiceDate" | "paymentTermsDays" | "status">,
+  filter: InvoiceFilter,
+  now: Date = new Date(),
+): boolean {
+  const eff = effectiveStatus(invoice, now);
+  switch (filter) {
+    case "All":
+      return true;
+    case "Paid":
+      return eff === "Paid";
+    case "Overdue":
+      return eff === "Overdue";
+    case "Outstanding":
+      return eff !== "Paid";
+    case "Due in 7 days": {
+      if (eff === "Paid" || eff === "Overdue") return false;
+      const days = daysUntilDue(invoice, now);
+      return days != null && days >= 0 && days <= 7;
+    }
+  }
+}
+
 export const gbp = (n: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n);
 
@@ -199,6 +299,10 @@ export function toInvoice(row: Record<string, unknown>): Invoice {
     sellerBankName: (row.seller_bank_name as string) ?? null,
     sellerSortCode: (row.seller_sort_code as string) ?? null,
     sellerAccountNo: (row.seller_account_no as string) ?? null,
+    sellerTagline: (row.seller_tagline as string) ?? null,
+    sellerLogo: (row.seller_logo as string) ?? null,
+    paymentTermsDays:
+      row.payment_terms_days == null ? null : Number(row.payment_terms_days),
   };
 }
 

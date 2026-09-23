@@ -39,13 +39,16 @@
       "invoice_total": 1800.0,
       "status": "Sent",
       "paid_date": null,
-      "seller_name": "Ivor Invoices",
-      "seller_address": null,
-      "seller_vat": null,
-      "seller_company_no": null,
-      "seller_bank_name": null,
-      "seller_sort_code": null,
-      "seller_account_no": null
+      "seller_name": "Invoices Only Ltd",
+      "seller_address": "3 Kiln Lane, Leicester LE2 7AA",
+      "seller_vat": "GB123456789",
+      "seller_company_no": "09876543",
+      "seller_bank_name": "Invoices Only Ltd",
+      "seller_sort_code": "204567",
+      "seller_account_no": "12345678",
+      "seller_tagline": "Billing, done properly",
+      "seller_logo": null,
+      "payment_terms_days": 14
     },
     {
       "id": "10000002-0000-4000-8000-000000000002",
@@ -62,13 +65,16 @@
       "invoice_total": 480.0,
       "status": "Paid",
       "paid_date": "2026-06-30",
-      "seller_name": "Ivor Invoices",
-      "seller_address": null,
+      "seller_name": "Invoices Only Ltd",
+      "seller_address": "3 Kiln Lane, Leicester LE2 7AA",
       "seller_vat": null,
-      "seller_company_no": null,
-      "seller_bank_name": null,
-      "seller_sort_code": null,
-      "seller_account_no": null
+      "seller_company_no": "09876543",
+      "seller_bank_name": "Invoices Only Ltd",
+      "seller_sort_code": "204567",
+      "seller_account_no": "12345678",
+      "seller_tagline": null,
+      "seller_logo": null,
+      "payment_terms_days": 14
     },
     {
       "id": "10000003-0000-4000-8000-000000000003",
@@ -91,7 +97,10 @@
       "seller_company_no": null,
       "seller_bank_name": null,
       "seller_sort_code": null,
-      "seller_account_no": null
+      "seller_account_no": null,
+      "seller_tagline": null,
+      "seller_logo": null,
+      "payment_terms_days": 30
     }
   ],
   "lines": [

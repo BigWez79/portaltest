@@ -151,6 +151,9 @@ export const invoiceStore = {
       sellerBankName: seller.bankName,
       sellerSortCode: seller.sortCode,
       sellerAccountNo: seller.accountNo,
+      sellerTagline: seller.tagline,
+      sellerLogo: seller.logo,
+      paymentTermsDays: seller.paymentTermsDays,
     };
     doc.invoices.push(row);
     await save(doc);

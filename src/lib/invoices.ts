@@ -34,7 +34,7 @@ export * from "./invoices-calc";
 const CUSTOMER_COLS =
   "id, company_name, contact_name, address1, address2, town, postcode, phone, email";
 const INVOICE_COLS =
-  "id, seller_email, invoice_no, issuer_prefix, invoice_seq, customer_id, invoice_date, project, tax_rate, unit_total, tax_total, invoice_total, status, paid_date, seller_name, seller_address, seller_vat, seller_company_no, seller_bank_name, seller_sort_code, seller_account_no";
+  "id, seller_email, invoice_no, issuer_prefix, invoice_seq, customer_id, invoice_date, project, tax_rate, unit_total, tax_total, invoice_total, status, paid_date, seller_name, seller_address, seller_vat, seller_company_no, seller_bank_name, seller_sort_code, seller_account_no, seller_tagline, seller_logo, payment_terms_days";
 const LINE_COLS =
   "id, invoice_id, item_no, description, qty, unit_price, tax, line_total, position";
 
@@ -132,6 +132,10 @@ export type SellerStamp = {
   bankName: string | null;
   sortCode: string | null;
   accountNo: string | null;
+  tagline: string | null;
+  logo: string | null;
+  /** Stamped, not read live — see 0009_invoice_document.sql for why. */
+  paymentTermsDays: number | null;
 };
 
 export async function createInvoice(
@@ -162,6 +166,9 @@ export async function createInvoice(
       seller_bank_name: seller.bankName,
       seller_sort_code: seller.sortCode,
       seller_account_no: seller.accountNo,
+      seller_tagline: seller.tagline,
+      seller_logo: seller.logo,
+      payment_terms_days: seller.paymentTermsDays,
     })
     .select("id")
     .single();

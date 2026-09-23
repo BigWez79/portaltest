@@ -37,43 +37,23 @@ Build in the order written. It is not arbitrary — the toolkit is first because
 five documents need it, and the invoice document is before the invoice's
 filters because the document is what somebody is actually missing.
 
-### 1. The invoice document
-`4c00479c-invoices.html:477` builds a full A4 invoice and the port renders
-none of it. This is the single biggest thing missing from the suite.
-
-- [ ] Header: logo, business name, tagline
-- [ ] Title reads `VAT INVOICE` when the seller is VAT registered, else `INVOICE`
-- [ ] Invoice number and a status badge
-- [ ] `From` block — the seller, from My Profile
-- [ ] `Bill To` block — the customer
-- [ ] `Details` block — invoice no., invoice date, due by
-- [ ] `Invoice for:` the project line
-- [ ] Items table — Item #, Description, Qty, Unit price, VAT, Amount
-- [ ] `Payment Details` — payee, sort code, account no., reference
-- [ ] The payment-terms sentence, naming the number of days
-- [ ] Totals — subtotal net, VAT at the rate, Total Due
-- [ ] Baseline — "Thank you for your business" and the VAT registration number
-- [ ] A `Print / Save PDF` button and an `@media print` stylesheet
-
-**Done when** an invoice with two lines renders every block above, a test
-asserts the document contains the seller's bank details and the customer's
-address, and printing is exercised at 390 and 1440 with screenshots attached.
-
-### 2. What an invoice is worth knowing about
+### 1. What an invoice is worth knowing about
 The port has Draft, Sent and Paid and stops there. The original derives more.
 
-- [ ] `dueDateOf` — invoice date plus the seller's payment terms
-- [ ] `effStatus` — Paid stays Paid; anything not Draft, past its due date, is
-      **Overdue**. Overdue is computed, never stored, so it is right tomorrow
-      without anything having run overnight.
-- [ ] Badge colours: Draft grey, Sent blue, Paid green, Overdue red
-- [ ] Filters: All / Outstanding / Due in 7 days / Overdue / Paid
+`dueDate`, `effectiveStatus`, `daysUntilDue` and `matchesFilter` already exist
+in `src/lib/invoices-calc.ts` — they landed with the document, which needed the
+due date and the badge. What is left is the screen.
+
+- [ ] The five filter buttons: All / Outstanding / Due in 7 days / Overdue / Paid
+- [ ] The list shows the effective status, not the stored one, so an overdue
+      invoice reads as overdue in the list as well as on the document
+- [ ] Badge colours in the list, matching the document
 
 **Done when** an invoice dated past its terms and marked Sent shows as Overdue
 with no write having happened, each filter returns the right set against a
 fixture with one invoice in each state, and `npm run verify` passes.
 
-### 3. Correcting an invoice, and the number on it
+### 2. Correcting an invoice, and the number on it
 Raised is not final. The original lets a header be corrected and an invoice
 deleted, and it numbers them properly.
 
@@ -90,7 +70,7 @@ deleted, and it numbers them properly.
 invoice keeps its number, a full address reaches the document, and
 `npm run verify` passes.
 
-### 4. The expenses claim
+### 3. The expenses claim
 `f303a141-expenses.html` has `Download claim (PDF)` and the port has nothing.
 
 - [ ] Title `EXPENSES CLAIM`, logo, claim month, generated date
@@ -105,7 +85,7 @@ invoice keeps its number, a full address reaches the document, and
 produces both tables, both subtotals and a total equal to their sum, and
 `npm run verify` passes.
 
-### 5. Expenses — the two screens, and an admin's copy
+### 4. Expenses — the two screens, and an admin's copy
 The original keeps `My entries` and `Monthly claim` apart; the port merged
 them, which is why a month's claim is hard to see.
 
@@ -117,7 +97,7 @@ them, which is why a month's claim is hard to see.
 claim, a non-admin calling that action is refused (rule 5), and
 `npm run verify` passes.
 
-### 6. Timesheets — a day is the unit
+### 5. Timesheets — a day is the unit
 The port is not a thinner version of the original, it is a different model, and
 this is the task that fixes that. Today a day with three activities takes three
 actions to correct and the shape of the day cannot be changed at all.
@@ -134,7 +114,7 @@ actions to correct and the shape of the day cannot be changed at all.
 deleted as a unit; a full-day type locks the hours at 8; a duplicate date is
 refused; and `npm run verify` passes.
 
-### 7. Timesheets — the day rate and the period
+### 6. Timesheets — the day rate and the period
 - [ ] A day rate on the profile, with `Save day rate`
 - [ ] A `Month` / `Financial year` switch, the financial year starting 6 April
 - [ ] The button label follows the period: `Invoice` for a month, `Statement`
@@ -143,7 +123,7 @@ refused; and `npm run verify` passes.
 **Done when** the switch changes the range and the label, the rate persists,
 and `npm run verify` passes.
 
-### 8. Timesheets — three documents
+### 7. Timesheets — three documents
 `1b38c30f-timesheet.html` produces three, at lines 1278, 1399 and 1581.
 
 - [ ] `Timesheet_<name>_<period>.pdf` — the full record
@@ -153,7 +133,7 @@ and `npm run verify` passes.
 **Done when** all three come out for a period holding billable and non-billable
 days, the draft is watermarked as a draft, and `npm run verify` passes.
 
-### 9. Timesheets — Issue invoice
+### 8. Timesheets — Issue invoice
 The original hands billable days to the invoicing system with net, VAT and
 gross already worked out. In the port the two apps do not speak.
 
@@ -161,7 +141,7 @@ gross already worked out. In the port the two apps do not speak.
 billable day at the day rate, the timesheet records that it was issued and
 refuses to issue the same period twice, and `npm run verify` passes.
 
-### 10. Monthly Overview is the wrong page
+### 9. Monthly Overview is the wrong page
 This is the one I got most wrong, so it is written plainly: the original is an
 **administrators-only whole-team calendar**, and what was built is a personal
 hours summary. Not a thinner version — a different screen.
@@ -188,7 +168,7 @@ pull request.
 per person, weekends absent, absence in its own colours, totals that sum to the
 grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 
-### 11. Admin — the three controls that are missing
+### 10. Admin — the three controls that are missing
 - [ ] `Resend` an invitation
 - [ ] `Remove` somebody
 - [ ] Mileage rates, and `Download their claim (PDF)` — see task 6
@@ -198,7 +178,7 @@ grand total, and a print stylesheet. Screenshots at 390, 768, 1024 and 1440.
 any of them is refused, removal is recorded in the audit trail, and
 `npm run verify` passes.
 
-### 12. The runner opens a second pull request for work it already did
+### 11. The runner opens a second pull request for work it already did
 `overnight.sh:403` excludes draft pull requests from claiming a task. That is
 deliberate and the reasoning above it is sound: a draft is what exit 69 leaves
 behind when verify failed, and that task does need doing again.
@@ -358,6 +338,46 @@ attached; and `npm run verify` passes.
 ---
 
 ## Done
+
+- **The invoice document** — `overnight/suite-theme`. The largest single thing
+  the port had dropped: the suite could raise an invoice and had no way to send
+  one. `InvoiceDocument.tsx` is the page a customer receives — seller block with
+  the logo, VAT INVOICE or INVOICE by whether a VAT number is actually on it,
+  From / Bill To / Details, the project line, the items table, payment details
+  with the sort code grouped, the terms sentence, the totals stack, and the VAT
+  registration number along the bottom.
+
+  Printed rather than drawn with jsPDF, which is what the live page does and is
+  the right tool: this is typography, and the browser sets it better than
+  coordinates would, keeps the text selectable, and reflows for other paper. The
+  print rules are asserted by emulating print media and asking the browser what
+  is visible — every other assertion in that file runs on screen and would pass
+  just as happily if the rules were scoped to a selector nothing carries.
+
+  My Profile now feeds the seller stamp; the comment saying "null until then"
+  was written before it was ported. And 0009 stamps the payment terms onto the
+  invoice rather than reading them live, which is a deliberate departure from
+  the original: `invoices.html` works the due date out from whatever the
+  settings say now, so changing your terms from 14 days to 30 silently moves
+  the due date on every invoice you have ever raised, and one that was three
+  days overdue this morning is not overdue this afternoon. Nothing was sent to
+  the customer that says so.
+
+  Overdue is derived, never written — right the morning after it falls due with
+  nothing scheduled, and so wrong for nobody if that schedule ever stopped.
+
+  Two corrections to the gap list while building it. Customer address lines
+  were already there, in the type and the form — what is missing is only that
+  the customer table displays the town alone. And the toolkit from the last
+  task serves four documents rather than five, because this one does not use it.
+
+  Found and fixed a test bug of my own making: `test.describe.serial` orders the
+  tests inside one block and says nothing about two blocks running beside each
+  other. This file had two that both reset the profile store and wrote the same
+  fixture person, and the logo block's reset landed between the sort-code test's
+  save and its reload. It failed as a sort-code bug. The file is serial now.
+
+  npm run verify: 252 passed, up from 246.
 
 - **One way to make a PDF** — `overnight/suite-theme`. `src/lib/pdf/` now holds
   the part five documents share: loading jsPDF and autotable dynamically,

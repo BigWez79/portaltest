@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import { InvoiceDocument } from "./InvoiceDocument";
 import {
   addInvoiceLine,
   discardDraft,
@@ -303,6 +304,25 @@ export function InvoicesApp({
                           </tr>
                         </tfoot>
                       </table>
+                    </div>
+
+                    <div className="inv-docwrap">
+                      <div className="inv-docbar">
+                        <h3 className="inv-doch">The document</h3>
+                        <button
+                          type="button"
+                          className="inv-print"
+                          onClick={() => window.print()}
+                          data-testid={`print-${inv.invoiceNo}`}
+                        >
+                          Print / Save PDF
+                        </button>
+                      </div>
+                      <InvoiceDocument
+                        invoice={inv}
+                        customer={customers.find((c) => c.id === inv.customerId) ?? null}
+                        lines={lines}
+                      />
                     </div>
 
                     {inv.status === "Paid" ? (

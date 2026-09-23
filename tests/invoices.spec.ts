@@ -180,6 +180,117 @@ test.describe.serial("invoices — writing", () => {
   });
 });
 
+test.describe("invoices — the document", () => {
+  test("the document carries everything a customer needs to pay it", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    const doc = page.getByTestId("invoice-document");
+    await expect(doc).toBeVisible();
+
+    // Who it is from, and who it is to. The address comes from the customer
+    // row; the seller block comes from the invoice, not from My Profile, so
+    // the document keeps saying what was sent.
+    await expect(page.getByTestId("doc-seller-name")).toHaveText("Invoices Only Ltd");
+    await expect(doc).toContainText("3 Kiln Lane");
+    await expect(doc).toContainText("Argyle Energy");
+    await expect(doc).toContainText("14 Wharf Road");
+    await expect(doc).toContainText("Leicester");
+
+    // How to pay it. Without these an invoice is a letter saying somebody owes
+    // money, with no way to send any.
+    await expect(page.getByTestId("doc-sort")).toHaveText("20-45-67");
+    await expect(page.getByTestId("doc-account")).toHaveText("12345678");
+    await expect(page.getByTestId("doc-no")).toHaveText("INV-0001");
+    await expect(page.getByTestId("doc-total")).toHaveText("£1,800.00");
+    await expect(page.getByTestId("doc-terms")).toContainText("within 14 days");
+  });
+
+  test("the due date is the invoice date plus the terms stamped on it", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    // Raised 4 July 2026 on 14-day terms.
+    await expect(page.getByTestId("doc-due")).toHaveText("18 July 2026");
+  });
+
+  test("a sent invoice past its due date reads as Overdue, without anything having written that", async ({
+    page,
+  }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+
+    await expect(page.getByTestId("doc-badge")).toHaveText("Overdue");
+
+    // The stored status is still Sent. Overdue is worked out at render time, so
+    // it is right the morning after it falls due with nothing scheduled — and
+    // wrong for nobody if that schedule ever stopped.
+    await expect(page.getByTestId("status-INV-0001")).toHaveText("Sent");
+  });
+
+  test("paid beats overdue, and a draft is never overdue", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // INV-0002 fell due on 25 June 2026 and was paid. A paid invoice is not
+    // late however long ago it was due.
+    await page.getByTestId("open-INV-0002").click();
+    await expect(page.getByTestId("doc-badge")).toHaveText("Paid");
+
+    // And a draft has not been sent to anybody, so nobody is late paying it.
+    await signInAs(page, OTHER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+    await expect(page.getByTestId("doc-badge")).toHaveText("Draft");
+  });
+
+  test("the title promises a VAT invoice only when the number is on it", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    await page.getByTestId("open-INV-0001").click();
+    await expect(page.getByTestId("doc-title")).toHaveText("VAT INVOICE");
+    await expect(page.getByTestId("invoice-document")).toContainText("VAT Registration No.");
+
+    // A heading promising a number that is not printed below is worse than the
+    // plain heading: it is what a customer reclaiming VAT goes looking for.
+    await page.getByTestId("open-INV-0001").click();
+    await page.getByTestId("open-INV-0002").click();
+    await expect(page.getByTestId("doc-title")).toHaveText("INVOICE");
+  });
+
+  test("the printed page is the document and nothing else", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+    await page.getByTestId("open-INV-0001").click();
+    await expect(page.getByTestId("invoice-document")).toBeVisible();
+
+    // What would have to be true for this to pass wrongly: the print rules
+    // could be scoped to a selector nothing carries, and every assertion above
+    // would still pass because they all run on screen. So this one asks the
+    // browser what it would actually print.
+    await page.emulateMedia({ media: "print" });
+
+    const visible = await page.evaluate(() => {
+      const shown = (el: Element) => getComputedStyle(el).visibility === "visible";
+      return {
+        doc: shown(document.querySelector("[data-testid=invoice-document]")!),
+        form: shown(document.querySelector("[data-testid=line-form]") ?? document.body),
+        nav: shown(document.querySelector("header") ?? document.body),
+      };
+    });
+
+    expect(visible.doc, "the document prints").toBe(true);
+    expect(visible.form, "the editing form does not").toBe(false);
+    expect(visible.nav, "nor does the page furniture").toBe(false);
+
+    await page.emulateMedia({ media: "screen" });
+  });
+});
+
 test.describe("invoices — the guard", () => {
   test.use({ tolerate: ["status of 404"] });
 

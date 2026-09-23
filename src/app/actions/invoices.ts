@@ -16,6 +16,7 @@ import {
   syncTotals,
   type InvoiceStatus,
 } from "@/lib/invoices";
+import { getProfile } from "@/lib/profile";
 import { resolveAccess } from "@/lib/staff";
 
 export type InvoiceState = { status: "idle" | "ok" | "error"; message?: string };
@@ -88,8 +89,10 @@ export async function raiseInvoice(
 
   // The seller's details are copied onto the invoice as they stand today, so
   // the document keeps saying what the customer was sent even after somebody
-  // changes their business address. Only the name is known here; the rest comes
-  // from My Profile once that is ported, and null until then.
+  // changes their business address. They come from My Profile, which is where
+  // a person maintains them; falling back to the display name means somebody
+  // who has never opened that screen still gets an invoice with a name on it.
+  const profile = await getProfile(access.email);
   const result = await createInvoice(
     access.email,
     {
@@ -100,13 +103,19 @@ export async function raiseInvoice(
       taxRate: normaliseRate(formData.get("taxRate")),
     },
     {
-      name: access.displayName || null,
-      address: null,
-      vat: null,
-      companyNo: null,
-      bankName: null,
-      sortCode: null,
-      accountNo: null,
+      name: profile.businessName || access.displayName || null,
+      address: profile.businessAddress,
+      // A VAT number is only printed when the business says it is registered.
+      // The profile's own constraint stops the pair disagreeing, but an invoice
+      // is the document that would carry the mistake to a customer.
+      vat: profile.vatRegistered ? profile.vatNumber : null,
+      companyNo: profile.companyNumber,
+      bankName: profile.accountName,
+      sortCode: profile.sortCode,
+      accountNo: profile.accountNo,
+      tagline: profile.tagline,
+      logo: profile.logo,
+      paymentTermsDays: profile.paymentTermsDays,
     },
   );
 

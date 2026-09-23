@@ -3577,3 +3577,325 @@ tr.inactive .toggle.on {
     padding: 17px 18px;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The invoice document
+
+   The one thing in the suite designed to leave it. Everything here is sized so
+   the printed page matches what is on the screen: a 21cm sheet, ink on white,
+   and nothing that depends on a hover or a colour a mono printer cannot make.
+   --------------------------------------------------------------------------- */
+
+.inv-docwrap {
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.inv-docbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.inv-doch {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.inv-app button.inv-print {
+  background: var(--brand-deep);
+  border: 1px solid var(--brand-deep);
+  color: #fff;
+  font-weight: 600;
+  width: auto;
+  padding: 10px 16px;
+  border-radius: 10px;
+}
+
+.inv-app button.inv-print:hover {
+  filter: brightness(1.12);
+}
+
+/* The sheet. Always white with dark ink, in both themes — this is what comes
+   out of a printer, and a document that inverted itself to match somebody's
+   screen would waste a cartridge and read as a mistake. */
+.inv-doc {
+  background: #fff;
+  color: #10183a;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 26px 28px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.ivd-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.ivd-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ivd-logo {
+  max-height: 54px;
+  max-width: 170px;
+  object-fit: contain;
+}
+
+.ivd-wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ivd-name {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ivd-tag {
+  font-size: 0.78rem;
+  color: #69718c;
+}
+
+.ivd-title {
+  text-align: right;
+}
+
+.ivd-title h2 {
+  margin: 0;
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;
+}
+
+.ivd-no {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ivd-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: #667085;
+}
+
+/* The live page's four, kept exactly: somebody reading a printed invoice
+   beside one from the old suite should not have to work out whether the
+   colours mean the same thing. */
+.ivd-badge.is-draft { background: #69718c; }
+.ivd-badge.is-sent { background: #507de5; }
+.ivd-badge.is-paid { background: #1e7a52; }
+.ivd-badge.is-overdue { background: #c0392b; }
+
+.ivd-rule {
+  height: 2px;
+  background: var(--brand);
+  margin: 14px 0 16px;
+}
+
+.ivd-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 18px;
+}
+
+.ivd-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #69718c;
+  margin-bottom: 4px;
+}
+
+.ivd-strong { font-weight: 650; }
+.ivd-quiet { color: #69718c; }
+
+.ivd-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ivd-row.is-due { font-weight: 650; }
+
+.ivd-for {
+  margin: 16px 0 12px;
+  padding: 8px 12px;
+  background: var(--panel2);
+  border-radius: 8px;
+}
+
+/* Six columns will not fit a phone. The sheet itself must not scroll sideways
+   — it is the page — so the table gets its own scroller and the document keeps
+   its width. In print this is lifted: paper has no scrollbar. */
+.ivd-scroll {
+  overflow-x: auto;
+}
+
+.ivd-items {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ivd-items th,
+.ivd-items td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ivd-items thead th {
+  background: var(--panel2);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #69718c;
+}
+
+.ivd-c { text-align: center !important; }
+.ivd-r { text-align: right !important; }
+.ivd-amt { font-weight: 650; }
+.ivd-num { font-variant-numeric: tabular-nums; }
+
+.ivd-foot {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px;
+  margin-top: 18px;
+}
+
+.ivd-paygrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 14px;
+}
+
+.ivd-k { color: #69718c; }
+.ivd-v { font-weight: 600; }
+
+.ivd-terms {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: #69718c;
+}
+
+.ivd-totals {
+  align-self: start;
+}
+
+.ivd-tline,
+.ivd-grand {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+}
+
+.ivd-grand {
+  border-top: 2px solid var(--ink);
+  margin-top: 4px;
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ivd-baseline {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.76rem;
+  color: #69718c;
+}
+
+@media (max-width: 640px) {
+  .ivd-foot {
+    grid-template-columns: 1fr;
+  }
+
+  .ivd-title {
+    text-align: left;
+  }
+
+  .ivd-no {
+    justify-content: flex-start;
+  }
+}
+
+/* What actually comes out of the printer.
+   Only one invoice is ever open at a time, so only one document is in the DOM
+   and this needs no way to choose between them. Visibility rather than
+   display, because display:none on an ancestor would take the document with
+   it however specific the rule underneath. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .inv-doc,
+  .inv-doc * {
+    visibility: visible;
+  }
+
+  .inv-doc {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    font-size: 10.5pt;
+  }
+
+  .ivd-scroll {
+    overflow: visible;
+  }
+
+  .ivd-items {
+    min-width: 0;
+  }
+
+  .ivd-items thead {
+    /* A table that breaks across pages repeats its headings. */
+    display: table-header-group;
+  }
+
+  .ivd-items tr {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+}
