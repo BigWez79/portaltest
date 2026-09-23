@@ -4,6 +4,7 @@ import { requireApp } from "@/lib/guard";
 import {
   listCustomers,
   listInvoices,
+  listAllInvoices,
   listLines,
   nextInvoiceNo,
   type InvoiceLine,
@@ -38,6 +39,10 @@ export default async function InvoicesPage() {
   // every invoice this person has, and the browser only ever holds the ones it
   // was sent. `PA` is the live page's own fallback for somebody who has not set
   // a prefix on My Profile yet.
+  // Everybody's, and only for an admin. A non-admin is sent an empty list
+  // rather than a shorter one: there is nothing here for the browser to filter.
+  const everybody = access.isAdmin ? await listAllInvoices() : [];
+
   const suggestedNo = nextInvoiceNo(
     invoices.map((i) => i.invoiceNo),
     profile.issuerPrefix || "PA",
@@ -59,6 +64,8 @@ export default async function InvoicesPage() {
         // it meant the first click on that invoice closed it — and with a list
         // of them, choosing one for somebody is a guess.
         suggestedNo={suggestedNo}
+        everybody={everybody}
+        isAdmin={access.isAdmin}
         openId={null}
       />
     </AppShell>

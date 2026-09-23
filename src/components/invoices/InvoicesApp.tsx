@@ -39,6 +39,8 @@ export function InvoicesApp({
   customers,
   linesByInvoice,
   suggestedNo,
+  everybody,
+  isAdmin,
   openId,
 }: {
   invoices: Invoice[];
@@ -46,6 +48,9 @@ export function InvoicesApp({
   linesByInvoice: Record<string, InvoiceLine[]>;
   /** The next number in this seller's own sequence, worked out on the server. */
   suggestedNo: string;
+  /** Everybody's invoices — empty unless the caller is an admin. */
+  everybody: Invoice[];
+  isAdmin: boolean;
   openId: string | null;
 }) {
   const [raise, raiseAction, raising] = useActionState(raiseInvoice, idle);
@@ -59,7 +64,7 @@ export function InvoicesApp({
   const [custEdit, custEditAction] = useActionState(editCustomer, idle);
   const [custWipe, custWipeAction] = useActionState(removeCustomer, idle);
 
-  const [tab, setTab] = useState<"invoices" | "customers">("invoices");
+  const [tab, setTab] = useState<"invoices" | "customers" | "everybody">("invoices");
   const [filter, setFilter] = useState<InvoiceFilter>("All");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<string | null>(null);
@@ -137,7 +142,69 @@ export function InvoicesApp({
         >
           Customers
         </button>
+        {isAdmin ? (
+          <button
+            type="button"
+            aria-pressed={tab === "everybody"}
+            onClick={() => setTab("everybody")}
+            data-testid="tab-everybody"
+          >
+            Everybody
+          </button>
+        ) : null}
       </div>
+
+      {tab === "everybody" ? (
+        <section className="inv-card" data-testid="everybody-panel">
+          <h2 className="inv-h">
+            Everybody&rsquo;s invoices <span className="tag">admins only, read only</span>
+          </h2>
+          <p className="inv-quiet">
+            An admin could already read every expenses claim and every timesheet.
+            This is the same policy applied to the one table that had no screen
+            for it. Nothing here can be changed from this view.
+          </p>
+
+          <div className="inv-scroll">
+            <table className="inv-table">
+              <caption className="sr-only">Every invoice raised by anybody</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Number</th>
+                  <th scope="col">Raised by</th>
+                  <th scope="col">Customer</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" className="inv-num">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {everybody.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="inv-noline">
+                      Nobody has raised an invoice yet.
+                    </td>
+                  </tr>
+                ) : null}
+                {everybody.map((inv) => (
+                  <tr key={inv.id} data-testid={`all-${inv.id}`}>
+                    <td>{inv.invoiceNo}</td>
+                    <td>{inv.sellerName ?? inv.sellerEmail}</td>
+                    <td>{customerName(inv.customerId)}</td>
+                    <td>{ukDate(inv.invoiceDate)}</td>
+                    <td>
+                      <span className={`inv-status is-${effectiveStatus(inv).toLowerCase()}`}>
+                        {effectiveStatus(inv)}
+                      </span>
+                    </td>
+                    <td className="inv-num">{gbp(inv.invoiceTotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       {tab === "invoices" ? (
         <>

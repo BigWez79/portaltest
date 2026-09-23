@@ -198,6 +198,20 @@ attached; and `npm run verify` passes.
 
 ## Done
 
+- **Everybody's invoices, for an admin** — `overnight/port-gaps`. An admin could
+  already read every expenses claim and every timesheet, and produce somebody
+  else's claim as a PDF. Invoices were the one table with no screen for it, and
+  the policy in 0005 had allowed it all along.
+
+  Read-only, showing whose each invoice is and its **effective** status, so an
+  admin chasing money sees Overdue rather than a stale Sent. `listAllInvoices`
+  is the same query as `listInvoices` with a different name, so a caller has to
+  say out loud that it expects other people's documents — the same shape as
+  `listAllExpenses`. A non-admin is sent an empty list rather than a filtered
+  one, and the tab is absent from the DOM rather than hidden (rule 3).
+
+  npm run verify: 300 passed.
+
 - **Admin: Resend and Remove** — `overnight/port-gaps`. Resend exists for the
   failure `inviteStaff` already reports and cannot fix — the staff row was
   written and the email did not go. Without it an admin's only move is to delete

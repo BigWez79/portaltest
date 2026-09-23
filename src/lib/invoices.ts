@@ -450,3 +450,28 @@ export async function deleteCustomer(
   }
   return { ok: true };
 }
+
+/**
+ * Everybody's invoices, for an admin.
+ *
+ * The same query as `listInvoices` — the policy in 0005 is what decides whether
+ * more than one seller's rows come back (rule 11). A separate function so the
+ * caller has to say out loud that it expects other people's documents, which is
+ * the same shape as `listAllExpenses`.
+ *
+ * The caller must have checked `isAdmin`. In fixture mode there is no policy to
+ * lean on and that check is the only thing standing here.
+ */
+export async function listAllInvoices(): Promise<Invoice[]> {
+  if (fixture()) return (await store()).allInvoices();
+
+  const { data, error } = await (await client())
+    .from("invoices")
+    .select(INVOICE_COLS)
+    .order("invoice_date", { ascending: false });
+  if (error) {
+    console.error("[invoices] list all failed", error.message);
+    return [];
+  }
+  return (data ?? []).map((row) => toInvoice(row as Record<string, unknown>));
+}

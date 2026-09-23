@@ -518,6 +518,40 @@ test.describe.serial("invoices — the customer list", () => {
   });
 });
 
+test.describe("invoices — everybody's, for an admin", () => {
+  test("an admin sees every invoice, whose it is, and what it is really worth", async ({
+    page,
+  }) => {
+    await signInAs(page, OTHER); // everything@ is an admin
+    await page.goto("/invoices");
+    await page.getByTestId("tab-everybody").click();
+
+    const panel = page.getByTestId("everybody-panel");
+    await expect(panel).toBeVisible();
+
+    // Somebody else's, which is the entire point — an admin could already read
+    // every claim and every timesheet, and invoices were the one table with no
+    // screen for it.
+    await expect(panel).toContainText("Invoices Only Ltd");
+    await expect(panel).toContainText("INV-0001");
+
+    // The effective status, so an admin chasing money sees Overdue rather than
+    // a stale Sent.
+    await expect(panel).toContainText("Overdue");
+  });
+
+  test("a non-admin has no such view, and none of the rows", async ({ page }) => {
+    await signInAs(page, SELLER);
+    await page.goto("/invoices");
+
+    // Absent from the DOM, not hidden (rule 3). And the page was sent an empty
+    // list rather than a filtered one — there is nothing here to filter.
+    await expect(page.getByTestId("tab-everybody")).toHaveCount(0);
+    await expect(page.getByTestId("everybody-panel")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("Ada Everything");
+  });
+});
+
 test.describe("invoices — the guard", () => {
   test.use({ tolerate: ["status of 404"] });
 

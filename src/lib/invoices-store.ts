@@ -91,6 +91,12 @@ export const invoiceStore = {
       .sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
   },
 
+  /** Everybody's, for an admin. The caller checks that; this does not. */
+  async allInvoices(): Promise<Invoice[]> {
+    const doc = await load();
+    return [...doc.invoices].sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
+  },
+
   async linesFor(invoiceId: string): Promise<InvoiceLine[]> {
     const doc = await load();
     return doc.lines
