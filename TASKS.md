@@ -77,10 +77,39 @@ happened, and both are a person's.
   an insert into `signin_attempts`, which already expires rows out of itself.
   Held because only a person can say whether a warning came. It cannot be
   checked at 3am, and writing that down is better than pretending it can.
-- **Why `getUser()` sees nobody on Vercel.** Sign-in works against a local dev
-  server and against a local production build, and not on the deployment. The
-  logging from PR #10 is on main; reading what it prints needs a redeploy and
-  somebody with the Vercel runtime logs open.
+
+  Evidence as at 2026-09-25: the keep-alive has now run every morning for
+  22 days, 190 lines of log, answering 200 with a real query and reporting the
+  auth config right each time — signups disabled, `mailer_autoconfirm` false,
+  anonymous users off. The project has not been paused in that window. That is
+  consistent with selects counting, and it is not proof: nobody has said whether
+  a second warning arrived. The question is unchanged; only the run of evidence
+  behind it is longer.
+- **Why `getUser()` sees nobody on Vercel — very probably not an app bug.**
+  Looked at again on 2026-09-25, and the symptom now has a simpler explanation
+  than the one this entry was written under.
+
+  There is no working URL for the deployment. `portaltest.vercel.app` is a
+  different project belonging to somebody else — it answers 200 and it is a
+  Pages Router app, where this one is App Router. The only addresses that reach
+  this project are the per-deployment hashed ones, and every one of those sits
+  behind Vercel Deployment Protection: a request to `/` answers 302 to
+  `vercel.com/sso-api`, with no CSP header and no sign-in form, because nothing
+  ever reaches Next.js.
+
+  A magic link lands on `/auth/callback`. Through an SSO interstitial that
+  callback never runs, so no session cookie is ever set, so `getUser()` correctly
+  sees nobody. It matches the symptom exactly: sign-in works locally, where there
+  is no interstitial, and not on the deployment, where there is.
+
+  Two things would settle it, and both are a person's: turn Deployment
+  Protection off for Production, or do the domain cutover. Check `SITE_URL` in
+  Vercel Production at the same time — the variable is set, its value has not
+  been read, and a magic link pointing at a hashed URL or at localhost would
+  break sign-in on its own.
+
+  Still held, because confirming it means signing in against a reachable
+  deployment. But nobody should spend another night reading `getUser()`.
 
 ---
 
