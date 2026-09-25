@@ -4,14 +4,20 @@ One app for the whole Power Analytix suite: sign-in, the apps, and the screen
 where staff access is granted. Replaces `portal_index.html` v2.0. No Microsoft
 dependency.
 
-Seven tiles: Invoices, Timesheets, Expenses, Margin & Profit Split, Tax
-Breakdown, My Profile and Admin. All but Admin still run as single HTML pages in
-`BigWez79/portal` and have guarded placeholder routes here until each is folded
-in.
+Eight tiles: Invoices, Timesheets, Expenses, Margin & Profit Split, Tax
+Breakdown, Monthly Overview, My Profile and Admin. All eight are built here —
+the last of the single-page originals in `BigWez79/portal` came across on
+23 September 2026, documents included: the invoice, the expenses claim, the
+timesheet's timesheet, invoice and annual statement, and the Monthly Overview
+team calendar.
+
+What is left of the move off SharePoint is not a port. It is the domain
+cutover, the one-off staff import, and applying the migrations — all three in
+[`BLOCKED.md`](./BLOCKED.md), all three a person's.
 
 The agent-facing rules are in [`CLAUDE.md`](./CLAUDE.md); what needs a person is
 in [`BLOCKED.md`](./BLOCKED.md); the queue is [`TASKS.md`](./TASKS.md); how the
-other three apps get folded in is in
+apps were folded in, and the decisions taken along the way, is in
 [`docs/PORTING-APPS.md`](./docs/PORTING-APPS.md).
 
 ## Running it

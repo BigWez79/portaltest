@@ -18,15 +18,32 @@ copies are stale.
 | Portal | 209 | 1 | 0 | rebuilt |
 | Margin & Profit Split | 848 | 0 | 0 | **ported** |
 | Tax Breakdown | 557 | 0 | 0 | **ported** |
-| Monthly Overview | 383 | 4 | 0 | route ready |
-| My Profile | 375 | 5 | 2 | route ready |
-| Expenses | 586 | 4 | 5 | route ready |
-| Invoices | 1,004 | 6 | 12 | route ready |
+| Monthly Overview | 383 | 4 | 0 | **ported** |
+| My Profile | 375 | 5 | 2 | **ported** |
+| Expenses | 586 | 4 | 5 | **ported** |
+| Invoices | 1,004 | 6 | 12 | **ported** |
 | Admin | 1,099 | 16 | 13 | rebuilt (staff only) |
-| Timesheets | 1,623 | 8 | 8 | route ready |
+| Timesheets | 1,623 | 8 | 8 | **ported** |
 
-"Route ready" means the route exists here, behind `requireApp`, showing a
-placeholder. Porting one is replacing that placeholder.
+All nine. The last four came across in September 2026, and on 23 September the
+twelve original pages were read again control by control — because the first
+pass had moved the data and the rules and left the documents behind. To the
+person using these screens the original largely *is* a way of producing a PDF,
+and none of that had come with it.
+
+What that second pass found, and closed:
+
+- **Invoices** had no document at all. It now prints the invoice — seller block
+  with logo, From / Bill To / Details, line table, payment details, totals, VAT
+  registration number — with due dates, derived Overdue, and the four filters.
+- **Expenses** had no claim. Two tables, mileage and receipted, each subtotalled.
+- **Timesheets** was a different model, not a thinner one: the original edits a
+  **day** as the unit, and produces three documents rather than none.
+- **Monthly Overview** was the wrong page — the original is an administrators-only
+  whole-team calendar, and what had been built was a personal hours summary.
+
+The lesson worth keeping: a port is not finished when the data and the rules
+arrive. Read the original's buttons, one at a time, and ask what each produces.
 
 ## Decisions already taken
 
@@ -184,7 +201,8 @@ contents overlap. Look before merging them.
 
 ## While the migration is running
 
-Ported pages live here; unported ones stay on GitHub Pages at the old address.
+All pages live here now. The old GitHub Pages copies stay up until the domain
+cutover, which is in BLOCKED.md.
 The two cannot share a sign-in, so people hold two sessions until an app has
 moved. With nine apps that is not a fortnight, and it is the main cost of doing
 this incrementally rather than in one cutover.
