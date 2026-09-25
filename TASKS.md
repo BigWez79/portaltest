@@ -18,142 +18,46 @@ reading top to bottom — ports before hygiene — not the lowest number.
 The agreed plan: all nine apps move off SharePoint, one at a time.
 See docs/PORTING-APPS.md for the order and the decisions behind it.
 
-Nothing is queued here at the moment. My Profile is next in the order, and it
-is queued once the legacy-profile question in `docs/PORTING-APPS.md` has been
-read from the data rather than guessed at. Invoices, Timesheets and Expenses are
-parked in BLOCKED.md until their repositories have been read.
+Nothing queued: all eight are ported. Margin, Tax Breakdown, Expenses,
+Invoices, Timesheets, Monthly Overview and My Profile are in Done below, and
+Admin was always here. The text that stood here until 2026-09-25 still said My
+Profile was next and that Invoices, Timesheets and Expenses were parked — all
+four had shipped.
+
+What remains of the move off SharePoint is not a port. It is the cutover, the
+one-off staff import, and applying the migrations, and all three are in Held.
 
 ## Next up — functionality the port dropped
 
-Everything read against the twelve originals is built. What is left of this
-section is in Done below; the sections after this one are the queue again.
+Nothing queued. The twelve original pages in `BigWez79/portal` were read control
+by control on 2026-09-23 and all forty-one gaps are in Done below — the invoice
+document, the expenses claim, the timesheet's three documents and its day-as-a-
+unit editing, the Monthly Overview calendar, and Admin's missing controls.
 
-Read against the twelve original pages in `BigWez79/portal`, copies supplied
-2026-09-23, control by control. Each port kept the data and the rules and lost
-the documents: to the person using these screens the original *is* a way of
-producing a PDF, and that is the part that did not come across.
-
-Forty-one changes, grouped below into tasks that are each one run's work. The
-grouping is the unit; the checklist inside each is what "done" means.
-
-Build in the order written. It is not arbitrary — the toolkit is first because
-five documents need it, and the invoice document is before the invoice's
-filters because the document is what somebody is actually missing.
+The instructions that were here are gone with the tasks they described. What
+this section is for, if it fills again: work that exists on the live pages and
+does not exist here.
 
 ## Next up — Power Suite hygiene
 
-### 2. Delete the import script at cutover
-`scripts/import-staff.ts` is a one-off. Once the staff list is in Supabase and
-the admin screen is the way access is granted, the script is a loaded gun: it
-overwrites every access flag from a CSV. Remove it — with `scripts/staff-csv.ts`
-and `tests/staff-csv.spec.ts`, which exist only to serve it — and its
-`import:staff` script, in the pull request that cuts the domain over.
-
-Last, and only after the import has actually run. Do not pick it up before then
-— and note it deletes the parser those tests cover, which is the right order
-round.
-
-**Done when** the script is gone, `npm run verify` still passes, and README no
-longer tells anybody to run it.
-
-### 4. A 404 and a crash that look like the product
-There is no `not-found.tsx` and no `error.tsx` anywhere in `src/`. Both cases
-render Next's own page today.
-
-That matters more here than it usually would. Rule 4 says a route 404s for
-anybody without its flag, and that 404 is not an edge case — it is the designed
-answer to somebody trying `/invoices` to see what happens. What they get is an
-unstyled Next page, which tells them two things we would rather not say: that
-they reached something real, and what it is built with.
-
-Add `src/app/not-found.tsx`, `src/app/error.tsx`, and `global-error.tsx` — the
-last one catches a failure in the root layout, which `error.tsx` cannot. They
-should look like the rest of the suite and say nothing about what was missing or
-why: no path, no flag name, no stack, no "you do not have access to this".
-
-`error.tsx` is a client component and takes `{ error, reset }`. Log the digest,
-show the person nothing but a way back to the portal.
-
-Note for the test: the harness fails any test whose page logged a console error,
-so exercising `error.tsx` needs `test.use({ tolerate: [...] })` in the same
-spirit as the 404 tests already do — declare it, do not turn the check off.
-
-**Done when** a signed-in request to a route the person has no flag for renders
-the suite's own 404 rather than Next's; a test asserts the body names no route,
-no flag and no framework; the 404 renders at 390 and 1440 with screenshots
-attached; and `npm run verify` passes.
-### 5. Content-Security-Policy
-`next.config.ts` sets `X-Frame-Options`, `X-Content-Type-Options`,
-`Referrer-Policy` and `Permissions-Policy`, and `tests/hardening.spec.ts`
-asserts the first three. Vercel adds `Strict-Transport-Security` on top of
-those. The one header nothing sets is `Content-Security-Policy`.
-
-CSP is the one that would have mattered. What this project spent its first month
-removing was a `Sites.ReadWrite.All` token sitting in a browser, and the
-argument behind every server-side decision since is that a script running on the
-page must not be able to reach anything. Nothing enforces that; it is a property
-of the code holding, not something checked.
-
-The app is unusually well placed for a strict policy. Fonts are self-hosted,
-jsPDF is bundled rather than fetched from cdnjs, and `tests/margin.spec.ts`
-already asserts the page makes no off-site request at all. `default-src 'self'`
-should be close to reachable.
-
-The hard part is Next's inline scripts. Use a nonce issued from `src/proxy.ts`
-rather than leaving `script-src` open — and if a nonce cannot be made to work
-with this version of Next under Turbopack, **say so in the pull request with
-what you tried**, rather than shipping `'unsafe-inline'` on `script-src`
-quietly. A CSP with `'unsafe-inline'` on scripts is the rule 12 shape: a header
-that is present, asserted, and not stopping the thing it names.
-
-**HSTS is already there** and this task should not re-add it. Checked against
-the deployment on 9 September: Vercel serves
-`strict-transport-security: max-age=63072000; includeSubDomains; preload` on its
-own, and `content-security-policy` is the only one of the six that is absent.
-Setting HSTS in `next.config.ts` as well would be a second source of truth for a
-header that is already correct — and a weaker `max-age` there would quietly
-override the good one. Leave it to Vercel and say so in the pull request.
-
-If a test asserts HSTS, it has to allow for localhost not sending it, because
-localhost is not https. Assert it where it is served or not at all; an assertion
-that passes because the header is absent everywhere it is checked is the rule 12
-shape again.
-
-**Done when** every response carries a `Content-Security-Policy`;
-`tests/hardening.spec.ts` asserts it alongside the four it already checks; no page
-in the suite logs a CSP violation — the harness already fails a test whose page
-logged a console error, so the suite passing at all is the check; and
-`npm run verify` passes.
-### 4. A 404 and a crash that look like the product
-There is no `not-found.tsx` and no `error.tsx` anywhere in `src/`. Both cases
-render Next's own page today.
-
-That matters more here than it usually would. Rule 4 says a route 404s for
-anybody without its flag, and that 404 is not an edge case — it is the designed
-answer to somebody trying `/invoices` to see what happens. What they get is an
-unstyled Next page, which tells them two things we would rather not say: that
-they reached something real, and what it is built with.
-
-Add `src/app/not-found.tsx`, `src/app/error.tsx`, and `global-error.tsx` — the
-last one catches a failure in the root layout, which `error.tsx` cannot. They
-should look like the rest of the suite and say nothing about what was missing or
-why: no path, no flag name, no stack, no "you do not have access to this".
-
-`error.tsx` is a client component and takes `{ error, reset }`. Log the digest,
-show the person nothing but a way back to the portal.
-
-Note for the test: the harness fails any test whose page logged a console error,
-so exercising `error.tsx` needs `test.use({ tolerate: [...] })` in the same
-spirit as the 404 tests already do — declare it, do not turn the check off.
-
-**Done when** a signed-in request to a route the person has no flag for renders
-the suite's own 404 rather than Next's; a test asserts the body names no route,
-no flag and no framework; the 404 renders at 390 and 1440 with screenshots
-attached; and `npm run verify` passes.
-
----
+Nothing queued. The import-script deletion moved to Held on 2026-09-25: it
+cannot start until the domain cutover and the one-off staff import have both
+happened, and both are a person's.
 
 ## Held — needs a person
+
+- **Deleting the import script**, once the cutover has happened.
+  `scripts/import-staff.ts` is a one-off, and once the staff list is in Supabase
+  and the admin screen grants access it is a loaded gun — it overwrites every
+  access flag from a CSV. It goes, with `scripts/staff-csv.ts`,
+  `tests/staff-csv.spec.ts` and the `import:staff` script, in the pull request
+  that cuts the domain over.
+
+  Held rather than queued because it is gated on two other things in this list —
+  the cutover, and the import having actually run — and neither is the machine's
+  to do. It sat in Next up until 2026-09-25, where every overnight run read it,
+  found it blocked, and stopped without reaching anything else. Move it back to
+  Next up once the import has run.
 
 - Creating the Supabase projects and applying `0001_staff.sql` and
   `0002_signin_rate_limit.sql` (BLOCKED.md)
@@ -720,32 +624,6 @@ attached; and `npm run verify` passes.
   winnable. Neither is a leak of who has what, and the tile names are already
   public in `docs/PORTING-APPS.md`; it is a leak of which routes are real.
   No migration; nothing waiting on a person. 142 checks.
-- **A Content-Security-Policy, with a nonce** — `overnight/auto-2026-09-16-0300`.
-  The sixth header, and the one the whole project was an argument for: no
-  Supabase key is in the bundle and no token is in browser storage, but nothing
-  made a script on the page unable to reach anything — that was a property of the
-  code holding. `default-src 'self'` and no `'unsafe-inline'` on `script-src`.
-  The nonce works under Next 16.3.2 and Turbopack: `src/proxy.ts` mints 128 bits
-  per request, sets the policy on the request as well as the response, and Next
-  reads it back out to stamp every script tag — asserted by reading the served
-  HTML, because a browser blanks the `nonce` attribute once it has read it. Two
-  callers of one `contentSecurityPolicy()` rather than two literals: the proxy's
-  nonced one, and a nonce-free floor in `next.config.ts` under the chunks, the
-  fonts and the logo, which the proxy's matcher skips. Where both apply the
-  proxy's wins, which was checked rather than assumed. Three things came out of
-  it. Next's own 404 page carries a `<style>` element built on the client, so it
-  takes no nonce — a hash names that one string, and when Next changes it every
-  404 test fails on a console error, which is the check. Nothing is prerendered
-  any more: Next's 404 was baked at build time with no nonce and arrived with the
-  console full of violations, so the root layout is `force-dynamic` — every other
-  route already was. And `style-src-attr 'unsafe-inline'`, because React writes a
-  `style` attribute for anything computed and no nonce or hash mechanism reaches
-  an attribute; `style-src` itself stays strict. HSTS is Vercel's and was left
-  alone — asserting it here could only pass by accepting its absence over http on
-  127.0.0.1. `'unsafe-eval'` and inline styles are allowed under `next dev` only,
-  keyed on NODE_ENV, which the suite never runs under. Five new checks, and both
-  of the ones that matter were watched to fail against `script-src 'self'
-  'unsafe-inline'`. No migration; nothing waiting on a person. 138 checks.
 - **Monthly Overview has a tile and a route** — `overnight/auto-2026-09-17-0300`.
   The gap between docs/PORTING-APPS.md's nine apps and the portal's seven: the
   eighth is now routed. All of CLAUDE.md's checklist and none of the page — an
