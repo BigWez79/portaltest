@@ -106,12 +106,19 @@ request. Do not work around an item on this list, and do not re-queue one.
 
 ## Currently parked
 
-- **Porting Invoices, Timesheets or Expenses.** The routes and the gate exist;
-  the apps' own code has not arrived yet. The shape is written down in
-  `docs/PORTING-APPS.md`, and each port is queued only once its repository has
-  been read.
-- **Moving an app's records into Postgres.** Whichever of the three keep their
-  data in SharePoint lists, that migration is a decision about who may read whose
-  records — not a task.
+- ~~**Porting Invoices, Timesheets or Expenses.**~~ Done. All three came across
+  in September 2026, along with Monthly Overview and My Profile, and the second
+  pass on 23 September brought the documents each of them produces. Nine of nine
+  are ported; `docs/PORTING-APPS.md` has the table and what the second pass
+  found.
+- ~~**Moving an app's records into Postgres.**~~ Decided and done, the way this
+  entry asked for: a person reads their own rows, an active admin reads
+  everybody's, and that is the policy on every table — `0004_expenses.sql`
+  through `0011_timesheet_issues.sql`. It was a decision about who may read
+  whose records, it was taken rather than assumed, and it is written into the
+  policies rather than into application code.
+
+  The migrations themselves are written and **not applied**. That is the entry
+  above, under Data, and it has not moved.
 - **Anything that reads `graph.microsoft.com`.** There is no Microsoft dependency
   left in this project and it does not come back.
