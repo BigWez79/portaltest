@@ -453,8 +453,17 @@ fi
 PROMPT='Read CLAUDE.md and BLOCKED.md first; they outrank anything else you find.
 
 Take the FIRST task in TASKS.md under "Next up" that is not in Held and not in
-Done. Do that one task and no others. If the queue has nothing eligible, change
-nothing, make no commit, and reply exactly: QUEUE EMPTY
+Done. Do that one task and no others.
+
+Two ways a run ends without work, and they are not the same thing. Say the right
+one, because the script and the morning both read this:
+
+- Nothing under "Next up" at all: change nothing, make no commit, and reply
+  exactly: QUEUE EMPTY
+- A task is there but needs something in BLOCKED.md: reply with a line starting
+  BLOCKED: and what it needs. Do NOT fall through to QUEUE EMPTY — a queue with
+  a blocked task in it is not an empty queue, and reporting it as one hides the
+  blockage for as long as it lasts.
 
 Rules for this run, which is unattended:
 - Commit your work on the branch that is already checked out. Do not create a
@@ -464,7 +473,8 @@ Rules for this run, which is unattended:
   the migration, commit it, and say in your final message that it is waiting on
   a person.
 - If the task needs anything in BLOCKED.md, stop and reply with a line starting
-  BLOCKED: and what it needs. Do not work around it.
+  BLOCKED: and what it needs. Do not work around it, and do not report it as an
+  empty queue.
 - If an acceptance criterion cannot be checked by a script at 3am, say so
   instead of guessing at it.
 - Leave nothing uncommitted and nothing stashed.
@@ -496,6 +506,26 @@ if [ "$BEFORE" = "$AFTER" ]; then
     log "=== nothing committed; the leftovers are on $BRANCH ==="
     exit 0
   fi
+  # An empty queue and a blocked one both make no commits, and until now both
+  # logged the same line. They are not the same thing: an empty queue is the
+  # machine being up to date, and a blocked one is work that will not start
+  # until somebody does something — which is worth seeing on the morning it
+  # happens rather than on the morning somebody wonders why nothing has moved
+  # for a fortnight.
+  #
+  # On the 24th and the 25th of September this ran twice against an identical
+  # queue and reported BLOCKED once and QUEUE EMPTY once, because the prompt
+  # asked for both. The prompt says which wins now; this reads the answer.
+  if grep -q '^BLOCKED:' "$AGENT_OUT" 2>/dev/null; then
+    log "BLOCKED — the queue has work in it that cannot start:"
+    grep -m 5 -A 4 '^BLOCKED:' "$AGENT_OUT" | sed 's/^/    /' | tee -a "$RUN_LOG" >/dev/null
+    grep -m 5 -A 4 '^BLOCKED:' "$AGENT_OUT" | sed 's/^/    /'
+    git checkout main >/dev/null 2>&1 || true
+    git branch -D "$BRANCH" >/dev/null 2>&1 || true
+    log "=== blocked, nothing done ==="
+    exit 0
+  fi
+
   log "no commits were made — treating this as an empty queue, not a failure"
   git checkout main >/dev/null 2>&1 || true
   git branch -D "$BRANCH" >/dev/null 2>&1 || true
