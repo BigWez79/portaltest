@@ -1,6 +1,6 @@
 # Scheduled jobs
 
-Two launchd jobs, deliberately separate. Neither is installed by committing it —
+Three launchd jobs, deliberately separate. None is installed by committing it —
 a person installs them, and installing the overnight one starts something that
 commits code unattended.
 
@@ -8,10 +8,12 @@ commits code unattended.
 |---|---|---|
 | `uk.poweranalytix.portal.overnight` | 03:00 daily | Works `TASKS.md` through the installed `overnight.sh` |
 | `uk.poweranalytix.portal.staging-keepalive` | 07:00 daily | Pings `portal-staging`, then checks its auth settings |
+| `uk.poweranalytix.portal.rc` | at login, then every 10 min | Keeps one Remote Control session alive in tmux `suite`, in the `~/portal-rc` worktree |
 
 The reasoning lives in the plists themselves, next to the lines it explains, the
 way `i-love-isle-of-wight/deploy/` does it. This file is only how to install
-them and what is known to be unfinished.
+them and what is known to be unfinished. How each job decides what to do, and
+where a person is needed, is in `docs/OPERATIONS.md`.
 
 ## The overnight runner
 

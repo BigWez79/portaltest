@@ -37,10 +37,10 @@ AGENTS="$HOME/Library/LaunchAgents"
 # env-lib.sh is sourced by the others and is not run on its own, so it is copied
 # without the executable bit. The rest find it via `cd "$(dirname "$0")"`, which
 # is why they all have to land in the same directory.
-SCRIPTS=(env-lib.sh check-auth-config.sh staging-keepalive.sh)
+SCRIPTS=(env-lib.sh check-auth-config.sh staging-keepalive.sh rc-keepalive.sh)
 # The runner lives in the repo root, not deploy/, and does not exist yet.
 RUNNERS=(overnight.sh)
-PLISTS=(uk.poweranalytix.portal.staging-keepalive.plist uk.poweranalytix.portal.overnight.plist)
+PLISTS=(uk.poweranalytix.portal.staging-keepalive.plist uk.poweranalytix.portal.overnight.plist uk.poweranalytix.portal.rc.plist)
 
 mkdir -p "$LIBEXEC" "$LOGS" "$AGENTS"
 
@@ -70,6 +70,23 @@ done
 
 echo "logs    -> $LOGS"
 
+# The Remote Control session's own checkout. A worktree, not a clone: it shares
+# the repository, so nothing is fetched twice, but it has its own files and its
+# own branch, so the 03:00 build and a live session never touch the same tree.
+# Created once; left alone after that, because it may hold somebody's work.
+RC_WORKTREE="$HOME/portal-rc"
+RC_BRANCH="rc/desk"
+if [ -d "$RC_WORKTREE" ]; then
+  echo "worktree -> $RC_WORKTREE (already there, not touched)"
+elif git -C "$HERE" show-ref --verify --quiet "refs/heads/$RC_BRANCH"; then
+  git -C "$HERE" worktree add -q "$RC_WORKTREE" "$RC_BRANCH"
+  echo "worktree -> $RC_WORKTREE on existing $RC_BRANCH"
+else
+  git -C "$HERE" worktree add -q -b "$RC_BRANCH" "$RC_WORKTREE" origin/main
+  echo "worktree -> $RC_WORKTREE on new $RC_BRANCH from origin/main"
+fi
+command -v tmux >/dev/null 2>&1 || echo "  note: tmux is not installed, and the rc job needs it — brew install tmux"
+
 echo
 echo "Nothing has been started. To load, or to reload after a plist change:"
 for f in "${PLISTS[@]}"; do
@@ -78,6 +95,9 @@ for f in "${PLISTS[@]}"; do
   launchctl list "$label" >/dev/null 2>&1 && loaded="   # currently loaded — bootout first"
   echo "  launchctl bootstrap gui/\$(id -u) $AGENTS/$f$loaded"
 done
+echo
+echo "The rc job has RunAtLoad: bootstrapping it starts the session. The first time,"
+echo "attach once (tmux attach -t suite) to answer the folder-trust question; detach with C-b d."
 echo
 echo "A plist change needs a bootout + bootstrap. A script change does not —"
 echo "re-running this file is enough, because the script is read at run time."

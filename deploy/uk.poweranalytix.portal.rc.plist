@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.poweranalytix.portal.rc</string>
+
+    <!-- One Remote Control session, kept alive in tmux, in its own worktree.
+         The reasoning is in deploy/rc-keepalive.sh; this file only says when.
+
+         It writes no code on a schedule and holds no credential: it starts an
+         interactive session and leaves it waiting for a person. Nothing is
+         done in it until somebody types into it, from the Mac or the phone. -->
+
+    <!-- PATH twice, on purpose. EnvironmentVariables is what launchd hands the
+         shell; the export inside -lc is what survives a login file that resets
+         PATH. claude lives in ~/.local/bin, which no login file adds — the
+         lesson of I Love Wight's 02:00 run on 2026-08-25. LANG so tmux draws
+         UTF-8 rather than underscores. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/wesleyhughes/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>LANG</key>
+        <string>en_GB.UTF-8</string>
+    </dict>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"; exec $HOME/.local/libexec/poweranalytix/rc-keepalive.sh</string>
+    </array>
+
+    <!-- At load, so a login brings the session straight back, and then every
+         ten minutes, so a crash or a /exit costs at most ten. The script exits
+         silently when the session is already there, so this is cheap. -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <!-- Not the repo and not ~/portal-rc: if the worktree has gone, launchd
+         would fail to spawn with an error that names neither. The script checks
+         for it and says so. -->
+    <key>WorkingDirectory</key>
+    <string>/Users/wesleyhughes</string>
+
+    <!-- The tmux server is forked from this job. Without this, launchd reaps
+         the job's whole process group when the script exits — the session
+         would start and die in the same second. -->
+    <key>AbandonProcessGroup</key>
+    <true/>
+
+    <!-- Standard, not Background: Background throttles CPU and I/O, and the
+         tmux server inherits that — an interactive session should not. -->
+    <key>ProcessType</key>
+    <string>Standard</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/rc-keepalive.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/rc-keepalive.log</string>
+</dict>
+</plist>
