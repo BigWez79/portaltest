@@ -13,6 +13,58 @@ reading top to bottom — ports before hygiene — not the lowest number.
 
 ---
 
+## Next up — new work
+
+### T-1 — Margin Split
+
+Asked for by Wesley on 2026-09-26. An admin-only page where jobs feed a shared
+pot and contractors draw from it. These are new records created here, not an
+app's records moved off SharePoint, so the "Currently parked" item in
+BLOCKED.md about moving records into Postgres does not apply.
+
+It is **not a new tile and not the Margin & Profit Split app**. `/margin` (the
+calculator, behind `has_margin`) is untouched. This lives at
+`/admin/margin-split`, calls `requireApp("admin")`, and is linked from the
+admin screen. Because it adds no app, the "adding an app" checklist in
+CLAUDE.md does not apply: no flag, no tile, no `StaffTable` column.
+
+- [ ] **Jobs**: name, date, value (£) and margin %. Money is held as integer
+      pence and margin % as integer basis points (12.5% = 1250). A job's
+      contribution to the pot is value × margin %, computed in integers and
+      rounded half-up to the nearest penny.
+- [ ] **Contractors**: three to start, and an admin can add more. A contractor
+      is a name, not a staff sign-in. Each has a share held in basis points.
+      Shares are equal by default, and saving is refused unless they total
+      exactly 10000.
+- [ ] **Allocation**: the pot total is split across contractors by
+      largest-remainder. Each contractor gets the floor of their exact share,
+      and the pennies left over go one each to the largest remainders. Ties go
+      in contractor order, so the first-listed contractor wins. The allocations
+      always sum exactly to the pot.
+- [ ] **Drawings**: contractor, date, amount, method (`cash` or
+      `bank_transfer`) and note.
+- [ ] **Summary**: the pot total. For each contractor: their share, drawn to
+      date (split into cash and transfer) and balance. A negative balance is
+      shown as "overdrawn £x.xx", not as a minus. Then pot remaining = pot
+      total − all drawings.
+- [ ] **Migration**: `supabase/migrations/0012_margin_split.sql`, with RLS on
+      every table and read and write for an active admin only (rule 11).
+      **Not applied.** Say in the pull request that it is waiting on a person.
+- [ ] **Fixtures**: the page runs on the fixture store, so `npm run verify`
+      passes without the migration applied.
+- [ ] **Tests**:
+      - 100p split three equal ways gives 34/33/33, totalling exactly 100;
+      - an overdrawn balance;
+      - cash and transfer totals;
+      - a non-admin gets a 404 on `/admin/margin-split` (rule 4), and the
+        server actions refuse them (rule 5);
+      - the page has no horizontal scroll at 390, 768, 1024 and 1440.
+
+      Tests that write use `test.describe.serial` after the fixture reset.
+
+**Done when** the page works on fixtures, every total reconciles to the penny,
+all tests pass, and `0012_margin_split.sql` is committed and unapplied.
+
 ## Next up — ports
 
 The agreed plan: all nine apps move off SharePoint, one at a time.
