@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.poweranalytix.portal.rc</string>
+    <!-- Keeps one Remote Control session alive in tmux, in its own worktree
+         (~/portal-rc, branch rc/desk), so the 03:00 build's checkout is never
+         shared with an interactive session. The script does nothing when the
+         tmux session already exists, so firing every ten minutes is cheap.
+
+         It runs the INSTALLED copy, like every other job here: a script read
+         out of the working tree stops existing the moment a branch without it
+         is checked out.
+
+         A LaunchAgent only runs once the user is logged in. With FileVault on
+         and no automatic login, a power cut means none of this comes back until
+         somebody types the password at the Mac. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>exec $HOME/.local/libexec/poweranalytix/rc-keepalive.sh</string>
+    </array>
+    <!-- PATH explicitly: launchd's is nearly empty, and claude lives in
+         ~/.local/bin, which no login file adds. tmux is Homebrew's. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/wesleyhughes/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>600</integer>
+    <key>WorkingDirectory</key>
+    <string>/Users/wesleyhughes</string>
+    <!-- launchd does not expand $HOME here, so these are literal. -->
+    <key>StandardOutPath</key>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/rc-keepalive.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/rc-keepalive.log</string>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>

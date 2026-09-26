@@ -1,6 +1,6 @@
 # Scheduled jobs
 
-Two launchd jobs, deliberately separate. Neither is installed by committing it —
+Three launchd jobs, deliberately separate. Neither is installed by committing it —
 a person installs them, and installing the overnight one starts something that
 commits code unattended.
 
@@ -8,6 +8,7 @@ commits code unattended.
 |---|---|---|
 | `uk.poweranalytix.portal.overnight` | 03:00 daily | Works `TASKS.md` through the installed `overnight.sh` |
 | `uk.poweranalytix.portal.staging-keepalive` | 07:00 daily | Pings `portal-staging`, then checks its auth settings |
+| `uk.poweranalytix.portal.rc` | at load, then every 10 min | Keeps one Remote Control session alive in tmux, in `~/portal-rc` |
 
 The reasoning lives in the plists themselves, next to the lines it explains, the
 way `i-love-isle-of-wight/deploy/` does it. This file is only how to install
@@ -208,3 +209,20 @@ than the expected state. PostgREST's root is still no good — it answers
 has no business holding a key that can change anything.
 
 It still writes nothing and still never touches the service-role key.
+
+## The Remote Control keep-alive
+
+One interactive session, reachable from a phone, that never shares `~/portal`
+with the 03:00 build. It needs tmux and its own worktree, both set up once by a
+person. The script never creates either:
+
+```
+brew install tmux
+git -C ~/portal worktree add ~/portal-rc -b rc/desk origin/main
+./deploy/install.sh
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/uk.poweranalytix.portal.rc.plist
+```
+
+Attach with `tmux attach -t suite`. End it with `tmux kill-session -t suite`,
+and it comes back within ten minutes unless the job is booted out. How every
+job decides what to do is in `docs/OPERATIONS.md`.
