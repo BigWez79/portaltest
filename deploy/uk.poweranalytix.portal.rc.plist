@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.poweranalytix.portal.rc</string>
+
+    <!-- Keeps one Remote Control session reachable from the phone: tmux
+         session `suite`, running claude in ~/portal-rc, never in ~/portal.
+         See deploy/rc-keepalive.sh for why the worktree matters.
+
+         This is a LaunchAgent, so it runs only once somebody has logged in.
+         With FileVault on and no automatic login, a power cut means nothing
+         here starts until a person types the password at the Mac. -->
+
+    <!-- The INSTALLED copy, for the same reason as the other two jobs: a job
+         that reads its script out of a checkout breaks when a branch without
+         it is checked out. PATH explicit because launchd starts with almost
+         none; tmux and claude live in /opt/homebrew/bin and ~/.local/bin. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"; exec $HOME/.local/libexec/poweranalytix/rc-keepalive.sh</string>
+    </array>
+
+    <!-- At load, and every ten minutes. The script does nothing when the
+         session is already there, so the interval is how long the phone can
+         be without a session after a crash or an /exit — not a cost. -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <!-- Absolute: launchd does not expand $HOME in these. -->
+    <key>StandardOutPath</key>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/rc-keepalive.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/rc-keepalive.log</string>
+</dict>
+</plist>

@@ -37,10 +37,10 @@ AGENTS="$HOME/Library/LaunchAgents"
 # env-lib.sh is sourced by the others and is not run on its own, so it is copied
 # without the executable bit. The rest find it via `cd "$(dirname "$0")"`, which
 # is why they all have to land in the same directory.
-SCRIPTS=(env-lib.sh check-auth-config.sh staging-keepalive.sh)
-# The runner lives in the repo root, not deploy/, and does not exist yet.
+SCRIPTS=(env-lib.sh check-auth-config.sh staging-keepalive.sh rc-keepalive.sh)
+# The runner lives in the repo root, not deploy/.
 RUNNERS=(overnight.sh)
-PLISTS=(uk.poweranalytix.portal.staging-keepalive.plist uk.poweranalytix.portal.overnight.plist)
+PLISTS=(uk.poweranalytix.portal.staging-keepalive.plist uk.poweranalytix.portal.overnight.plist uk.poweranalytix.portal.rc.plist)
 
 mkdir -p "$LIBEXEC" "$LOGS" "$AGENTS"
 
