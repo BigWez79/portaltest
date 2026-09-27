@@ -24,10 +24,19 @@ LIST="$(sed -n '/^# BEGIN PROTECTED_PATHS/,/^# END PROTECTED_PATHS/p' "$HERE/ove
 eval "$LIST"
 [ "${#PROTECTED_PATHS[@]}" -gt 0 ] || { echo "PROTECTED_PATHS is empty"; exit 1; }
 
-WORK="$(mktemp -d -t merge-gate)"
+# A template with X's: GNU mktemp (CI) refuses `-t name` without them, and a
+# failed mktemp must never leave this script running git in the real checkout.
+# On 27 September it did exactly that on the CI runner — `cd ""` is a no-op,
+# and the cases ran `git init`, commits and checkouts in the repository itself.
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/merge-gate.XXXXXX")" || { echo "mktemp failed"; exit 1; }
+[ -n "$WORK" ] && [ -d "$WORK" ] || { echo "no scratch directory"; exit 1; }
 trap 'rm -rf "$WORK"' EXIT
 KILL_SWITCH="$WORK/automerge-off"
 cd "$WORK" || exit 1
+if [ "$(pwd -P)" = "$(cd "$HERE" && pwd -P)" ] || git -C "$WORK" rev-parse --git-dir >/dev/null 2>&1; then
+  echo "refusing: $WORK is inside a git repository, and this test runs git init, commit and checkout"
+  exit 1
+fi
 
 git init -q -b main .
 git config user.email gate-test@example.invalid
