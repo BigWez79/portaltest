@@ -17,9 +17,12 @@ them and what is known to be unfinished.
 
 ## The overnight runner
 
-`./overnight.sh` takes the first eligible task in `TASKS.md`, does it on a fresh
-`overnight/auto-<date>-<time>` branch, runs `npm run verify`, pushes, and opens a
-pull request. It never merges and never pushes `main`.
+`./overnight.sh` takes the first task in `TASKS.md` that no open pull request is
+building, does it on a fresh `overnight/auto-<date>-<time>` branch, runs
+`npm run verify` (letting the agent fix failures twice), pushes, and opens a
+pull request. It never pushes `main`. It merges its own pull request only when
+the merge gate passes — see `docs/OPERATIONS.md`, "Auto-merge" — and
+`touch ~/.config/poweranalytix/automerge-off` stops that entirely.
 
 It refuses to start rather than do something surprising. A dirty tree, a
 half-finished rebase, a stale `.git/index.lock` or another run still holding the
@@ -33,7 +36,9 @@ these is reading a log the morning after:
 | 65 | a rebase, merge or `index.lock` was in the way |
 | 66 | another run still held the lock |
 | 69 | the task was done but `npm run verify` failed - a **draft** pull request was opened |
-| 70 | the headless run failed or timed out |
+| 70 | the headless run failed or timed out, or ended without committing (a **draft** pull request was opened) |
+| 71 | merged, production failed its check, and the merge was reverted through the gate |
+| 72 | merged, production failed, the revert did not complete — the kill switch is now **on** |
 | 78 | a prerequisite is missing |
 
 A failing night still pushes its branch and opens a draft. A night's work

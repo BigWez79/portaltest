@@ -34,10 +34,13 @@ LIBEXEC="$HOME/.local/libexec/poweranalytix"
 LOGS="$HOME/Library/Logs/PowerAnalytix"
 AGENTS="$HOME/Library/LaunchAgents"
 
-# env-lib.sh is sourced by the others and is not run on its own, so it is copied
-# without the executable bit. The rest find it via `cd "$(dirname "$0")"`, which
-# is why they all have to land in the same directory.
-SCRIPTS=(env-lib.sh check-auth-config.sh staging-keepalive.sh rc-keepalive.sh)
+# env-lib.sh, task-headings.sh and merge-gate.sh are sourced by the others and
+# are not run on their own, so they are copied without the executable bit. The
+# rest find them beside themselves, which is why they all land in the same
+# directory. overnight.sh sources the gate from HERE, not from the repo, so a
+# branch that edits deploy/merge-gate.sh cannot change the gate that judges it.
+LIBRARIES=(env-lib.sh task-headings.sh merge-gate.sh)
+SCRIPTS=("${LIBRARIES[@]}" check-auth-config.sh staging-keepalive.sh rc-keepalive.sh)
 # The runner lives in the repo root, not deploy/.
 RUNNERS=(overnight.sh)
 PLISTS=(uk.poweranalytix.portal.staging-keepalive.plist uk.poweranalytix.portal.overnight.plist uk.poweranalytix.portal.rc.plist)
@@ -47,7 +50,10 @@ mkdir -p "$LIBEXEC" "$LOGS" "$AGENTS"
 echo "scripts -> $LIBEXEC"
 for f in "${SCRIPTS[@]}"; do
   cp "$HERE/$f" "$LIBEXEC/$f"
-  [ "$f" = "env-lib.sh" ] && chmod 0644 "$LIBEXEC/$f" || chmod 0755 "$LIBEXEC/$f"
+  case " ${LIBRARIES[*]} " in
+    *" $f "*) chmod 0644 "$LIBEXEC/$f" ;;
+    *)        chmod 0755 "$LIBEXEC/$f" ;;
+  esac
   echo "  $f"
 done
 
