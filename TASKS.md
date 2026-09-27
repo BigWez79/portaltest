@@ -8,8 +8,11 @@ Every "done when" here is meant to be checkable by something working alone at
 3am. If one is not, it is a bad task — say so in the pull request rather than
 guessing. A task that needs a person to judge it belongs in **Held**, not here.
 
-The numbers restart in each section, so "the first task" means the first one
-reading top to bottom — ports before hygiene — not the lowest number.
+Every task under a "Next up" heading is headed `### T-<n> — Title`, with an
+ID that is never reused. The 03:00 run picks the first ID, reading top to bottom,
+that no open `overnight/auto-*` pull request is already building. A heading
+without an ID is never picked, and the run's log says so. When a task moves to
+Done, its entry keeps the ID, as in `- **T-<n> — Title** — overnight/auto-…`.
 
 ---
 

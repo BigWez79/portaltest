@@ -39,3 +39,39 @@ headings_in_both() {
     printf '%s\n' "$second" | grep -qxF "$h" && printf '%s\n' "$h"
   done
 }
+
+# --------------------------------------------------------------------------
+# Task IDs. A task under "Next up" is headed `### T-12 — Title`. The ID is
+# stable where the title and the number are not: the agent renumbers, people
+# retitle, and an ID is what the runner, the stall guard and the merge gate
+# all agree on.
+# --------------------------------------------------------------------------
+
+# The IDs of the tasks under any "## Next up" heading, in reading order.
+next_up_ids() {
+  awk '/^## /{inn = ($0 ~ /^## Next up/)} inn && /^### T-[0-9]+/ {
+    match($0, /T-[0-9]+/); print substr($0, RSTART, RLENGTH)
+  }'
+}
+
+# Headings under "Next up" that carry no ID. They are never picked; the runner
+# says so, rather than letting a queue look empty when it is not.
+next_up_unnumbered() {
+  awk '/^## /{inn = ($0 ~ /^## Next up/)} inn && /^### / && !/^### T-[0-9]+/'
+}
+
+# Every T-n that appears anywhere under "## Done".
+done_ids() {
+  awk '/^## /{ind = ($0 ~ /^## Done/)} ind {
+    s = $0
+    while (match(s, /(^|[^A-Za-z0-9])T-[0-9]+/)) {
+      t = substr(s, RSTART, RLENGTH); sub(/^[^T]/, "", t); print t
+      s = substr(s, RSTART + RLENGTH)
+    }
+  }' | sort -u
+}
+
+# The full heading line for one ID, from TASKS.md on stdin.
+heading_for_id() {
+  grep -m1 -E "^### $1([^0-9]|\$)" | sed 's/^### *//'
+}

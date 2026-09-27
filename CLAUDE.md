@@ -83,6 +83,13 @@ received a 5xx. A test that expects a 404 declares it with
 ## Working rules
 
 - Branch `overnight/*` only. Never commit to `main`, never push to `main`.
+- **Decided by Wesley, 26 September 2026:** the nightly build may now merge its
+  own pull request into main, which deploys straight to the live Power Suite.
+  That's only allowed when the merge gate described in `BLOCKED.md` passes.
+  The gate is code in overnight.sh, not wording in the agent's prompt. Anything
+  the gate refuses waits for Wesley as before. This replaces the "the machine
+  never merges" rule. An agent running inside the build never merges, never
+  runs `gh pr merge`, and never decides whether anything merges.
 - Leave nothing uncommitted. Check `git stash list` before reporting done —
   swept-up work never reaches the pull request.
 - Anything a tool generates gets added to `.gitignore` **before** it is

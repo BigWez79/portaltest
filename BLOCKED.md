@@ -49,25 +49,40 @@ request. Do not work around an item on this list, and do not re-queue one.
 ## Release
 
 - **Merging.** An attended session may merge a green `overnight/*` pull request
-  into `main` when a person has asked for it in that session. The unattended
-  runner never merges, never pushes to `main`, and never merges its own work.
-  Closing a superseded pull request follows the same rule.
+  into `main` when a person has asked for it in that session. Closing a
+  superseded pull request follows the same rule.
 
-  Attended is the whole of it. The 03:00 job opens pull requests with nobody
-  watching; a runner that could also merge would be approving its own work, and
-  the two stalls this repository has had would have shipped five near-identical
-  implementations instead of stacking them somewhere a person could see them.
+  **Decided by Wesley, 26 September 2026:** the nightly build may now merge its
+  own pull request into main, which deploys straight to the live Power Suite.
+  That's only allowed when the merge gate described below passes. The gate is
+  code in overnight.sh, not wording in the agent's prompt. Anything the gate
+  refuses waits for me as before. This replaces the "the machine never merges"
+  rule.
 
-  Green is the other half, and it is structural rather than a promise: `main`
-  requires the `verify` check, so a red pull request cannot be merged by anyone.
-  If that protection is ever removed, this permission goes with it — the rule
-  was written assuming the check is what stops a bad merge, not good intentions.
+  The gate is `merge_gate` in `overnight.sh`, with its conditions in
+  `deploy/merge-gate.sh` and its tests in `scripts/test-merge-gate.sh`. It
+  merges only when every one of these holds:
+  - local verify passed on the final commit, and the pull request is not a draft;
+  - every GitHub check passed within 20 minutes;
+  - exactly one task moved to Done;
+  - no protected path is touched (the list is at the top of `overnight.sh`);
+  - no test was deleted or skipped, and no fewer pass than on main;
+  - fewer than 800 lines changed;
+  - the kill switch `~/.config/poweranalytix/automerge-off` is absent;
+  - nothing has merged yet that night.
+
+  `docs/OPERATIONS.md`, "Auto-merge", has the rest.
+
+  Green is still structural rather than a promise: `main` requires the `verify`
+  check, so a red pull request cannot be merged by anyone. If that protection
+  is ever removed, this permission goes with it.
 
   Two things stay out regardless. A pull request that changes `BLOCKED.md` or
   `CLAUDE.md` is merged by a person: a machine that can merge changes to its own
-  constraints is not constrained by them. And nothing here permits a push to
-  `main` — merging is a button on a reviewed pull request, not a shortcut past
-  the branch.
+  constraints is not constrained by them. Both are protected paths, so the gate
+  refuses them. And nothing here permits a push to `main`: merging is
+  `gh pr merge` on a pull request whose checks have passed, never `--admin`,
+  and never a shortcut past the branch.
 - **The domain cutover.** Moving `portal.poweranalytix.co.uk` to Vercel is one
   way and it is the front door for everyone.
 - **Retiring the old static portal.** The v2.0 file is archived on a branch, not
