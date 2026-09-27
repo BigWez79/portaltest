@@ -202,14 +202,18 @@ fi
 # The task arithmetic and the merge gate. Sourced from beside THIS file — the
 # installed copy in ~/.local/libexec/poweranalytix when launchd runs it — and
 # before anything is checked out, so the functions in memory are the ones that
-# were installed, not whatever a branch has made of deploy/. Falls back to the
-# repo only for a copy that was never installed.
+# were installed, not whatever a branch has made of deploy/. Run from a
+# checkout instead, they are in its deploy/; the repo's own copy is the last
+# resort.
 # --------------------------------------------------------------------------
 LIB_DIR="$(cd "$(dirname "$0")" && pwd)"
 for lib in task-headings.sh merge-gate.sh; do
   if [ -f "$LIB_DIR/$lib" ]; then
     # shellcheck source=/dev/null
     . "$LIB_DIR/$lib"
+  elif [ -f "$LIB_DIR/deploy/$lib" ]; then
+    # shellcheck source=/dev/null
+    . "$LIB_DIR/deploy/$lib"
   elif [ -f "$REPO/deploy/$lib" ]; then
     # shellcheck source=/dev/null
     . "$REPO/deploy/$lib"
