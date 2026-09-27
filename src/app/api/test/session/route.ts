@@ -64,6 +64,7 @@ const STORES: Record<string, () => Promise<{ reset: () => Promise<void> }>> = {
   invoices: async () => (await import("@/lib/invoices-store")).invoiceStore,
   timesheets: async () => (await import("@/lib/timesheets-store")).timesheetStore,
   profiles: async () => (await import("@/lib/profile-store")).profileStore,
+  marginSplit: async () => (await import("@/lib/margin-split-store")).marginSplitStore,
 };
 
 export async function POST(request: Request) {

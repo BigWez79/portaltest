@@ -1,0 +1,17 @@
+{
+  "contractors": [
+    { "id": "c5000001-0000-4000-8000-000000000001", "name": "Alex Carter", "shareBp": 3334, "position": 1 },
+    { "id": "c5000002-0000-4000-8000-000000000002", "name": "Billie Dunn", "shareBp": 3333, "position": 2 },
+    { "id": "c5000003-0000-4000-8000-000000000003", "name": "Casey Ellis", "shareBp": 3333, "position": 3 }
+  ],
+  "jobs": [
+    { "id": "d5000001-0000-4000-8000-000000000001", "name": "Northgate rewire", "jobDate": "2026-08-04", "valuePence": 1200000, "marginBp": 1250 },
+    { "id": "d5000002-0000-4000-8000-000000000002", "name": "Harbour Road survey", "jobDate": "2026-08-19", "valuePence": 333332, "marginBp": 1250 }
+  ],
+  "drawings": [
+    { "id": "e5000001-0000-4000-8000-000000000001", "contractorId": "c5000001-0000-4000-8000-000000000001", "drawDate": "2026-08-22", "amountPence": 40000, "method": "cash", "note": "Float" },
+    { "id": "e5000002-0000-4000-8000-000000000002", "contractorId": "c5000001-0000-4000-8000-000000000001", "drawDate": "2026-08-29", "amountPence": 30000, "method": "bank_transfer", "note": null },
+    { "id": "e5000003-0000-4000-8000-000000000003", "contractorId": "c5000002-0000-4000-8000-000000000002", "drawDate": "2026-08-29", "amountPence": 50000, "method": "bank_transfer", "note": null },
+    { "id": "e5000004-0000-4000-8000-000000000004", "contractorId": "c5000002-0000-4000-8000-000000000002", "drawDate": "2026-09-02", "amountPence": 3883, "method": "cash", "note": "Materials" }
+  ]
+}

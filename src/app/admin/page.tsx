@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { AuditTrail } from "@/components/admin/AuditTrail";
 import { InviteForm } from "@/components/admin/InviteForm";
@@ -55,6 +56,17 @@ export default async function AdminPage() {
           nobody else.
         </p>
         <AuditTrail groups={audit} />
+      </section>
+
+      <section className="card">
+        <h2 className="card-title">Margin Split</h2>
+        <p className="card-note">
+          Jobs feeding the shared pot, what each contractor is owed, and what they have
+          drawn.
+        </p>
+        <Link href="/admin/margin-split" data-testid="link-margin-split">
+          Open Margin Split
+        </Link>
       </section>
 
       <section className="card">

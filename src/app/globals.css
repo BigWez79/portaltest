@@ -2601,6 +2601,28 @@ tr.inactive .toggle.on {
 }
 
 /* ---------------------------------------------------------------------------
+   Margin Split (/admin/margin-split)
+
+   Wears the Expenses classes. The one addition is the summary strip: the admin
+   screen's three fixed columns hold counts, and these hold pounds — at 390 a
+   figure like £1,916.67 is wider than a third of the card and pushed the page
+   sideways. Here the stats wrap instead.
+   --------------------------------------------------------------------------- */
+
+.ms-app .admin-summary {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.ms-app .stat {
+  min-width: 0;
+}
+
+.ms-app .stat-n {
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------------------
    Invoices
 
    Ported from invoices.html. The live page is a wizard — pick a customer, save
