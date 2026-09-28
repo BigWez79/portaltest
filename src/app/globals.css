@@ -4436,3 +4436,70 @@ tr.inactive .toggle.on {
 .inline-form {
   display: inline;
 }
+
+/* Margin Split, under /admin. */
+/* --brand on white is 3.88:1 at this size; the link takes the darker blue. */
+a.btn-add {
+  display: inline-block;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--brand-dk);
+}
+
+.split-app {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.split-back {
+  text-align: left;
+  margin: 0;
+}
+
+.split-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.split-fields .field input,
+.split-fields .field select {
+  width: 100%;
+  min-width: 0;
+}
+
+.split-fields .field select {
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 13px;
+}
+
+.split-share {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+
+.split-equal {
+  width: auto;
+  margin: 0;
+  justify-self: start;
+}
+
+.split-sub {
+  font-size: 14px;
+  margin: 20px 0 10px;
+}
+
+.split-over {
+  color: var(--err);
+  font-weight: 600;
+  white-space: nowrap;
+}

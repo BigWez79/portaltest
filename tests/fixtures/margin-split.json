@@ -1,0 +1,15 @@
+{
+  "jobs": [
+    { "id": "a1000000-0000-4000-8000-000000000001", "name": "Placeholder job", "jobDate": "2026-09-01", "valuePence": 800, "marginBp": 1250 }
+  ],
+  "contractors": [
+    { "id": "c1000000-0000-4000-8000-000000000001", "name": "Contractor A", "shareBp": 3334, "position": 1 },
+    { "id": "c1000000-0000-4000-8000-000000000002", "name": "Contractor B", "shareBp": 3333, "position": 2 },
+    { "id": "c1000000-0000-4000-8000-000000000003", "name": "Contractor C", "shareBp": 3333, "position": 3 }
+  ],
+  "drawings": [
+    { "id": "d1000000-0000-4000-8000-000000000001", "contractorId": "c1000000-0000-4000-8000-000000000001", "drawnOn": "2026-09-05", "amountPence": 10, "method": "cash", "note": null },
+    { "id": "d1000000-0000-4000-8000-000000000002", "contractorId": "c1000000-0000-4000-8000-000000000001", "drawnOn": "2026-09-06", "amountPence": 20, "method": "bank_transfer", "note": "Placeholder" },
+    { "id": "d1000000-0000-4000-8000-000000000003", "contractorId": "c1000000-0000-4000-8000-000000000002", "drawnOn": "2026-09-07", "amountPence": 50, "method": "bank_transfer", "note": null }
+  ]
+}
