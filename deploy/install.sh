@@ -34,12 +34,12 @@ LIBEXEC="$HOME/.local/libexec/poweranalytix"
 LOGS="$HOME/Library/Logs/PowerAnalytix"
 AGENTS="$HOME/Library/LaunchAgents"
 
-# env-lib.sh, task-headings.sh and merge-gate.sh are sourced by the others and
-# are not run on their own, so they are copied without the executable bit. The
+# env-lib.sh, task-headings.sh, merge-gate.sh and night-loop.sh are sourced by
+# the others and are not run on their own, so they are copied without the executable bit. The
 # rest find them beside themselves, which is why they all land in the same
 # directory. overnight.sh sources the gate from HERE, not from the repo, so a
 # branch that edits deploy/merge-gate.sh cannot change the gate that judges it.
-LIBRARIES=(env-lib.sh task-headings.sh merge-gate.sh)
+LIBRARIES=(env-lib.sh task-headings.sh merge-gate.sh night-loop.sh)
 SCRIPTS=("${LIBRARIES[@]}" check-auth-config.sh staging-keepalive.sh rc-keepalive.sh)
 # The runner lives in the repo root, not deploy/.
 RUNNERS=(overnight.sh)
@@ -87,3 +87,7 @@ done
 echo
 echo "A plist change needs a bootout + bootstrap. A script change does not —"
 echo "re-running this file is enough, because the script is read at run time."
+echo
+echo "The overnight plist has RunAtLoad: bootstrapping it STARTS A RUN if none has"
+echo "started today. To load it without one, mark today first:"
+echo "  mkdir -p ~/.local/state/poweranalytix && date +%F > ~/.local/state/poweranalytix/last-start"

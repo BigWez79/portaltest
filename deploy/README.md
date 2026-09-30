@@ -7,7 +7,7 @@ commits code unattended.
 
 | Job | When | What it does |
 |---|---|---|
-| `uk.poweranalytix.portal.overnight` | 03:00 daily | Works `TASKS.md` through the installed `overnight.sh` |
+| `uk.poweranalytix.portal.overnight` | 03:00, 12:30 and at load; runs once a day | Works `TASKS.md` through the installed `overnight.sh`, task after task |
 | `uk.poweranalytix.portal.staging-keepalive` | 07:00 daily | Pings `portal-staging`, then checks its auth settings |
 | `uk.poweranalytix.portal.rc` | at load, every 10 min | Keeps tmux session `suite` running Claude Code with Remote Control in `~/portal-rc` |
 
@@ -17,12 +17,21 @@ them and what is known to be unfinished.
 
 ## The overnight runner
 
-`./overnight.sh` takes the first task in `TASKS.md` that no open pull request is
-building, does it on a fresh `overnight/auto-<date>-<time>` branch, runs
-`npm run verify` (letting the agent fix failures twice), pushes, and opens a
-pull request. It never pushes `main`. It merges its own pull request only when
-the merge gate passes — see `docs/OPERATIONS.md`, "Auto-merge" — and
-`touch ~/.config/poweranalytix/automerge-off` stops that entirely.
+`./overnight.sh` works through `TASKS.md` in a loop. For each eligible task (no
+open pull request, not under Held, any `After T-n` merged), it:
+- does the task on a fresh `overnight/auto-<date>-<time>-t-n` branch;
+- runs `npm run verify`, letting the agent fix failures twice;
+- pushes, and opens a pull request.
+
+It merges a pull request only when the merge gate passes, one merge at a time,
+each one deployed and smoke-tested before the next task starts. When the queue
+runs low, it tops it up from `docs/ROADMAP.md`, and from nowhere else. It stops
+at 06:00, after six tasks, after two failures in a row, or at a revert, a usage
+limit or the kill switch. Every night ends with a report on the pinned issue
+"Power Suite nightly reports".
+
+It never pushes `main`. See `docs/OPERATIONS.md`, and
+`touch ~/.config/poweranalytix/automerge-off` stops all merging.
 
 It refuses to start rather than do something surprising. A dirty tree, a
 half-finished rebase, a stale `.git/index.lock` or another run still holding the
@@ -31,7 +40,7 @@ these is reading a log the morning after:
 
 | Exit | Meaning |
 |---:|---|
-| 0 | a pull request was opened, or the queue was empty |
+| 0 | the night ran, or a run had already started today |
 | 64 | the working tree was dirty |
 | 65 | a rebase, merge or `index.lock` was in the way |
 | 66 | another run still held the lock |
@@ -39,9 +48,14 @@ these is reading a log the morning after:
 | 70 | the headless run failed or timed out, or ended without committing (a **draft** pull request was opened) |
 | 71 | merged, production failed its check, and the merge was reverted through the gate |
 | 72 | merged, production failed, the revert did not complete — the kill switch is now **on** |
+| 75 | Claude reported a usage or rate limit; the night stopped cleanly |
 | 78 | a prerequisite is missing |
 
-A failing night still pushes its branch and opens a draft. A night's work
+Since 30 September each **task** ends with one of these, inside the loop. 69,
+70 and 78 end that task and the loop counts them as failures; two in a row stop
+the night. The night itself exits with the worst of 72, 71, 75 and 64–66, or 0.
+
+A failing task still pushes its branch and opens a draft. A night's work
 sitting only on this Mac helps nobody, and a draft cannot be merged by accident.
 
 Overridable, mostly so it can be exercised by hand: `PORTAL_REPO`, `CLAUDE_BIN`,
