@@ -11,7 +11,9 @@
 # gate_collect. What is NOT exercised: the gh calls (draft, checks, merge,
 # comment), the Vercel wait and the smoke test. Those inputs are set here to
 # "passing" so that each case isolates one condition.
-set -u
+# pipefail, because overnight.sh runs these functions under it — and a pipe
+# into grep -q behaves differently there (see the 64 KB case at the end).
+set -u -o pipefail
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=deploy/task-headings.sh
@@ -292,6 +294,16 @@ else
   printf '  FAIL  %-40s wanted "R-2", got "%s"\n' "a finished item is not unplanned again" "$check_unplanned"; failed=1
 fi
 plan_case "queueing a finished item again"           "names R-1, which already has a task" plan_task T-10 "Source: ROADMAP — R-1 — Tidy the widget"
+
+# TASKS.md grows every night; on 30 September it was 58 KB. Past a pipe's
+# buffer, `printf "$tasks" | grep -q` under pipefail reads a match as none.
+#   big file: the reuse check would have to pipe the whole file into grep -q, which is what this caught.
+git checkout -q main
+{ cat TASKS.md; i=0; while [ "$i" -lt 3000 ]; do printf -- '- filler entry %05d, long enough to make the file big — padding padding padding\n' "$i"; i=$((i + 1)); done; } >TASKS.md.big
+mv TASKS.md.big TASKS.md
+git commit -qam "a long Done list"
+[ "$(wc -c <TASKS.md)" -gt 131072 ] || { echo "the big TASKS.md is not big"; failed=1; }
+plan_case "a reused ID in a TASKS.md over 128 KB"    "T-1 is already used" plan_task T-1 "Source: ROADMAP — R-2 — Another ready thing"
 
 if [ "$failed" -ne 0 ]; then
   printf '\nThe merge gate would decide wrongly.\n'

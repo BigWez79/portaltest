@@ -20,6 +20,12 @@
 # Written for bash 3.2, which is what /usr/bin/env bash finds under launchd on
 # this Mac: no associative arrays, no ${x,,}, and never an empty "${a[@]}"
 # under set -u.
+#
+# And for pipefail, which overnight.sh sets: `printf "$text" | grep -q` is
+# written `grep -q <<<"$text"` here. grep -q exits at its first match; once
+# the text is bigger than a pipe's buffer (TASKS.md was 58 KB on 30 September,
+# and grows every night), printf is killed by SIGPIPE and pipefail turns a
+# match into "no match".
 
 # --------------------------------------------------------------------------
 # The queue.
@@ -71,12 +77,12 @@ queue_status() {
   held="$(printf '%s\n' "$tasks" | held_ids)"
   for id in $(printf '%s\n' "$tasks" | next_up_ids); do
     case " $tried " in *" $id "*) echo "$id tried"; continue ;; esac
-    if printf '%s\n' "$held" | grep -qxF "$id"; then echo "$id held"; continue; fi
+    if grep -qxF "$id" <<<"$held"; then echo "$id held"; continue; fi
     prs="$(printf '%s\n' "$claims" | awk -v id="$id" '$1 == id { print $2 }' | sort -u | tr '\n' ' ' | sed 's/ *$//')"
     if [ -n "$prs" ]; then echo "$id open $prs"; continue; fi
     waiting=""
     for dep in $(printf '%s\n' "$tasks" | task_block "$id" | task_deps); do
-      printf '%s\n' "$done" | grep -qxF "$dep" || waiting="$waiting $dep"
+      grep -qxF "$dep" <<<"$done" || waiting="$waiting $dep"
     done
     if [ -n "$waiting" ]; then echo "$id waits$waiting"; continue; fi
     echo "$id eligible"
@@ -97,7 +103,7 @@ max_task_number() {
 # (it may not). A "Status: DRAFT" line anywhere makes the planner refuse all of
 # it: a draft is Claude's reading of the backlog, not Wesley's list.
 # --------------------------------------------------------------------------
-roadmap_is_draft() { printf '%s\n' "$1" | grep -q '^Status: *DRAFT'; }
+roadmap_is_draft() { grep -q '^Status: *DRAFT' <<<"$1"; }
 
 roadmap_ready_ids() {
   printf '%s\n' "$1" | awk '/^## /{inr = ($0 ~ /^## Ready to build/)} inr && /^### R-[0-9]+/ {
@@ -134,7 +140,7 @@ roadmap_unplanned() {
   local done_r id
   done_r="$(printf '%s\n%s\n' "$2" "${3:-}" | sourced_roadmap_ids)"
   for id in $(roadmap_ready_ids "$1"); do
-    printf '%s\n' "$done_r" | grep -qxF "$id" || echo "$id"
+    grep -qxF "$id" <<<"$done_r" || echo "$id"
   done
 }
 
@@ -155,7 +161,7 @@ planner_check() {
   PLAN_PROBLEMS=""
   _pp() { PLAN_PROBLEMS="${PLAN_PROBLEMS}$*
 "; }
-  local names base_max head_ids added ready used_r n_r=0 n_f=0 id block src r pr
+  local names base_max base_next head_ids added ready used_r n_r=0 n_f=0 id block src r pr
 
   if [ -z "${G_ROADMAP:-}" ]; then
     _pp "there is no docs/ROADMAP.md on main"
@@ -174,9 +180,10 @@ planner_check() {
   base_max="$(max_task_number "$G_TASKS_BASE")"
   head_ids="$(printf '%s\n' "$G_TASKS_HEAD" | next_up_ids)"
   added=""
+  base_next="$(printf '%s\n' "$G_TASKS_BASE" | next_up_ids)"
   for id in $head_ids; do
-    printf '%s\n' "$G_TASKS_BASE" | next_up_ids | grep -qxF "$id" && continue
-    if printf '%s\n' "$G_TASKS_BASE" | grep -Eq "(^|[^A-Za-z0-9-])$id([^0-9]|\$)"; then
+    grep -qxF "$id" <<<"$base_next" && continue
+    if grep -Eq "(^|[^A-Za-z0-9-])$id([^0-9]|\$)" <<<"$G_TASKS_BASE"; then
       _pp "$id is already used in TASKS.md; an ID is never reused"
       continue
     fi
@@ -198,18 +205,18 @@ planner_check() {
       _pp "$id has more than one Source: line"
       continue
     fi
-    if printf '%s\n' "$src" | grep -Eq '^Source: *ROADMAP *(—|-)+ *R-[0-9]+([^0-9]|$)'; then
+    if grep -Eq '^Source: *ROADMAP *(—|-)+ *R-[0-9]+([^0-9]|$)' <<<"$src"; then
       r="$(printf '%s\n' "$src" | grep -Eo 'R-[0-9]+' | head -1)"
-      if ! printf '%s\n' "$ready" | grep -qxF "$r"; then
+      if ! grep -qxF "$r" <<<"$ready"; then
         _pp "$id names $r, which is not under \"Ready to build\" in docs/ROADMAP.md"
-      elif printf '%s\n' "$used_r" | grep -qxF "$r"; then
+      elif grep -qxF "$r" <<<"$used_r"; then
         _pp "$id names $r, which already has a task"
       else
         used_r="$used_r
 $r"
         n_r=$((n_r + 1))
       fi
-    elif printf '%s\n' "$src" | grep -Eq '^Source: *FIX *(—|-)+ *#[0-9]+([^0-9]|$)'; then
+    elif grep -Eq '^Source: *FIX *(—|-)+ *#[0-9]+([^0-9]|$)' <<<"$src"; then
       pr="$(printf '%s\n' "$src" | grep -Eo '#[0-9]+' | head -1 | tr -d '#')"
       case " ${G_FIX_REFS:-} " in
         *" $pr "*) n_f=$((n_f + 1)) ;;
@@ -218,8 +225,8 @@ $r"
     else
       _pp "$id's source is neither \"ROADMAP — R-n\" nor \"FIX — #n\": $src"
     fi
-    printf '%s\n' "$block" | grep -Eq '^[*_]*Done when' || _pp "$id has no \"Done when\" line"
-    printf '%s\n' "$block" | grep -Eq '^Size: *(S|M|L)([^A-Za-z]|$)' || _pp "$id has no \"Size: S|M|L\" line"
+    grep -Eq '^[*_]*Done when' <<<"$block" || _pp "$id has no \"Done when\" line"
+    grep -Eq '^Size: *(S|M|L)([^A-Za-z]|$)' <<<"$block" || _pp "$id has no \"Size: S|M|L\" line"
   done
   [ "$n_r" -le "$PLAN_MAX_ROADMAP" ] || _pp "$n_r roadmap items queued; at most $PLAN_MAX_ROADMAP a time"
   [ "$n_f" -le "$PLAN_MAX_FIX" ] || _pp "$n_f fixes queued; at most $PLAN_MAX_FIX a time"

@@ -268,7 +268,7 @@ What the Mac itself does is reported here, not changed by the build. Read on
 
 | Setting | As found | Can it stop a night? |
 |---|---|---|
-| Install macOS updates (`AutomaticallyInstallMacOSUpdates`) | **off**. Download is on, and Security Responses and system files is on. | Not by itself. 27.0.1 was installed at 15:10 on the 30th, by hand, not overnight. |
+| Install macOS updates (`AutomaticallyInstallMacOSUpdates`) | **off**. Download is on, and Security Responses and system files is on. | Not by itself. 27.0.1 was installed at 15:10 on the 30th, with a login password entered a minute before — not overnight. |
 | FileVault | **on** | Yes. After any restart nothing runs until someone logs in. The catch-up runs the night at that login. |
 | Automatic login | **off** (and macOS doesn't allow it with FileVault on) | That is the restart case above. |
 | `pmset -g sched` | nothing scheduled | No. `sleep 0`, so the Mac never sleeps and needs no wake. `autorestart 1` powers it back on after a power cut, to the login screen. |

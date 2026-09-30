@@ -12,7 +12,8 @@
 # What is NOT exercised here: git, gh, claude, the gate's merge and the
 # production check. The gate is scripts/test-merge-gate.sh; the catch-up is
 # scripts/test-catch-up.sh, which runs overnight.sh itself.
-set -u
+# pipefail, because overnight.sh runs night_loop under it.
+set -u -o pipefail
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=deploy/task-headings.sh

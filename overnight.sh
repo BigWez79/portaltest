@@ -909,7 +909,10 @@ build_one() {
   trap 'tidy_tree' EXIT
   local main_tasks main_sha cached_sha cached_n
   main_tasks="$(git show origin/main:TASKS.md)"
-  TASK_HEADING="$(printf '%s\n' "$main_tasks" | heading_for_id "$TASK_ID")"
+  # A here-string, not a pipe: heading_for_id stops at its first match, and
+  # under pipefail a TASKS.md bigger than the pipe buffer would make that a
+  # SIGPIPE, and set -e would end the task (see night-loop.sh).
+  TASK_HEADING="$(heading_for_id "$TASK_ID" <<<"$main_tasks")"
   result heading "$TASK_HEADING"
   log "--- $TASK_HEADING ---"
 
@@ -1762,7 +1765,10 @@ esac
 
 cd "$REPO" || true
 git checkout -q main >/dev/null 2>&1 || true
-write_report || log "could not write the report"
-cat "$REPORT_FILE" | tee -a "$RUN_LOG" >/dev/null
-post_report
+if write_report; then
+  cat "$REPORT_FILE" >>"$RUN_LOG" 2>/dev/null || true
+  post_report || log "could not post the report"
+else
+  log "could not write the report"
+fi
 exit "$NIGHT_EXIT"
