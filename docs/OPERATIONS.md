@@ -4,104 +4,274 @@ How each scheduled job on the Mac Studio decides what to do, where a person is
 required, and what is known not to be guarded. `deploy/README.md` is how to
 install them; this is how they behave once installed. Written from a read of
 `overnight.sh` and `deploy/` at `5d10a6b` on 26 September 2026. Updated on 27
-September for self-correction and the merge gate.
+September for self-correction and the merge gate, and on 30 September for the
+loop, the roadmap, the nightly report and the catch-up.
 
 ## The jobs
 
 | Label | When (UK local) | Runs |
 |---|---|---|
-| `uk.poweranalytix.portal.overnight` | 03:00 daily | `~/.local/libexec/poweranalytix/overnight.sh`, cwd `~/portal` |
+| `uk.poweranalytix.portal.overnight` | 03:00 and 12:30 daily, and at load — runs once a day | `~/.local/libexec/poweranalytix/overnight.sh`, cwd `~/portal` |
 | `uk.poweranalytix.portal.staging-keepalive` | 07:00 daily, and at load | `~/.local/libexec/poweranalytix/staging-keepalive.sh` |
 | `uk.poweranalytix.portal.rc` | at load, then every 10 min | `~/.local/libexec/poweranalytix/rc-keepalive.sh` |
 
 launchd runs on local time, so these do not move when the clocks change. All
 three are LaunchAgents: they run only while somebody is logged in. With
 FileVault on and no automatic login, after a power cut nothing here runs until
-a person types the password at the Mac.
+a person types the password at the Mac. The overnight job catches up when
+that happens: see "Never miss a night".
 
 ## overnight.sh
 
-1. `cd ~/portal`, or **exit 78**. Load `task-headings.sh` and `merge-gate.sh`
-   from beside the installed script, before anything is checked out (**78** if
-   they are missing).
+A night is a loop: task after task, each on its own branch with its own pull
+request, each merged only if the gate passes, until the night reaches
+something only Wesley can do. It then says exactly what that is.
+
+### Before the loop
+
+1. `cd ~/portal`, or **exit 78**. Load `task-headings.sh`, `merge-gate.sh` and
+   `night-loop.sh` from beside the installed script, before anything is
+   checked out (**78** if they are missing).
 2. `git`, `node`, `npm`, `gh` and `claude` must be on PATH, or **78**.
    `TASKS.md` and `CLAUDE.md` must exist, or **78**.
 3. Take the lock `~/Library/Caches/uk.poweranalytix.portal.overnight.lock`
    (`mkdir`, atomic). If its PID is alive, **exit 66**. If it is dead, reclaim it.
-4. `.git/index.lock` exists → **65**. A rebase, merge or cherry-pick is in
+4. **Once a day.** If `~/.local/state/poweranalytix/last-start` holds today's
+   date, exit **0** at once. That check happens here, while the run holds the
+   lock, so two fires can't both see "not yet".
+5. `.git/index.lock` exists → **65**. A rebase, merge or cherry-pick is in
    progress → **65**. It never deletes or aborts either.
-5. `git status --porcelain` is non-empty → **64**. Untracked files count. Stashes
-   are logged but do not stop the run.
-6. `git fetch --prune origin`. If that fails (no network, no credential),
-   **78**.
-7. `git checkout main`, or **78**, then `git merge --ff-only origin/main`. If
-   they have diverged, **65**.
-8. **Pick the task, in code.**
-   - List the open PRs on `overnight/auto-*`, drafts included. If `gh` can't
-     list them, **78**.
-   - A PR is building task T-n if its body has a `Task: T-n` line, or its
-     branch has taken T-n out of Next up.
-   - Take the first `### T-n` under a "Next up" heading on `origin/main` that
-     no open PR is building.
-   - Headings without an ID are never picked, and the log lists them.
-   - If nothing is eligible, exit **0** and log either
-     `queue blocked by open PRs: #…` or `QUEUE EMPTY`.
-9. Create `overnight/auto-YYYY-MM-DD-HHMM`.
-10. `node_modules`, `.tmp`, `playwright-report` and `test-results` must be
-    ignored, or **78**.
-11. With `--dry-run`:
-    - probe claude by having it write and commit a file;
-    - run the merge gate against that commit;
-    - print each condition and `WOULD MERGE: yes/no`;
-    - delete the branch and exit **0**.
+6. `git status --porcelain` is non-empty → **64**. Untracked files count. Stashes
+   are logged but do not stop the run. Only once the tree is clean does it write
+   today's date to `last-start`, so a dirty tree still exits 64 at every fire
+   until somebody tidies it.
+7. **The window.** A run that starts before 06:00 starts no task after 06:00
+   and is over by 07:00. A catch-up that starts later gets the same three hours
+   from when it starts, plus one hour of grace.
+8. `git fetch --prune origin` (**78** on failure), `git checkout main`, then
+   `git merge --ff-only origin/main` (**65** if they have diverged).
+9. **Is the right runner running?** The installed scripts and plist are
+   compared with main's. A difference goes in the report as "run
+   `./deploy/install.sh`". Nothing is changed.
+10. **An unconfirmed merge from an earlier night.** If
+    `~/.local/state/poweranalytix/merge-in-flight` exists, production is
+    checked now. If it passes, the marker is cleared. Otherwise it stays, and
+    the loop starts nothing.
 
-    It merges, pushes and comments on nothing.
-12. `npm ci` if the lockfile moved. Then **baseline**: `npm run verify` on main,
-    recording how many tests pass. If main is red, the night goes on, but
-    nothing it does can merge.
-13. **The agent** is told the task ID, and only that task. Its rules:
-    - commit on this branch; don't create a branch, push, open a PR, or merge;
-    - run everything in the foreground;
-    - don't apply migrations;
-    - reply `BLOCKED:` if the task needs something from BLOCKED.md;
-    - move the task to Done, keeping its ID.
+### The loop (`night_loop`, `deploy/night-loop.sh`)
 
-    It is not told how the gate decides, and it has no part in the decision.
-14. **Budget.** The agent's 80 minutes plus verify's 25 are counted from the
-    moment the agent starts. Retries and fixes come out of that budget.
-15. **A transient failure gets one retry.** If the headless run exits non-zero
-    with one of these in its last lines, the runner waits 5 minutes and tries
-    once more, telling the agent to carry on from what is already on the branch:
-    `ENOTFOUND`, `ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`, `ECONNREFUSED`,
-    "socket hang up", "overloaded", or an API 5xx or 529. A timeout is not
-    retried. Any other failure → **70**.
-16. **No commits, no changes:** if the agent replied `BLOCKED:`, log it, delete
-    the branch and exit **0**. Otherwise it did nothing: exit **0**.
-17. **Changes but no commits** (what happened on 27 September). The runner asks
-    the agent once, in the same conversation, to finish and commit. If it still
-    doesn't, the files are committed by the script and published as a **draft**
-    → **70**.
-18. Leftovers are swept into a commit, unless they look like secrets → **64**.
-19. **Verify, then fix.** If `npm run verify` fails, the agent gets the last
-    120 lines and up to **two** fix attempts, each followed by verify, while at
-    least 15 minutes of budget remain. It may fix code. It may not delete, skip
-    or weaken tests, or touch the machinery.
-20. Push. Still red → **draft** PR → **69**. Otherwise a ready PR, whose first
-    body line is `Task: T-n`.
-21. Close any draft it supersedes (see `supersede_drafts`).
-22. **The merge gate** decides. See below.
-23. Clean-up (EXIT trap), only on its own branch: commit leftovers that don't
-    look like secrets, check out main, release the lock.
+Before every task, the loop stops if any of these holds, and logs which:
+
+| Stop | Because |
+|---|---|
+| Claude reported a usage or rate limit | a limit does not lift in five minutes, and retrying it is the loop to avoid |
+| a revert happened | production broke tonight |
+| the kill switch is on | a person said stop |
+| a merge was never confirmed healthy | one at a time means one at a time |
+| 2 tasks in a row failed | something is wrong beyond the task |
+| 6 tasks attempted | a night's ceiling |
+| past 06:00 (or the catch-up's cutoff) | no task starts after it |
+| no eligible task left | and the planner had nothing more (below) |
+
+Otherwise it goes on:
+
+1. Refresh: tree clean, fetch, main fast-forwarded, `TASKS.md` from main, and
+   the open pull requests. If any of those fails, the night stops.
+2. **Eligible** means a `### T-n` under a "Next up" heading that:
+   - has no open `overnight/auto-*` pull request building it (a
+     `Task: T-n` line, or its branch having taken T-n out of Next up; drafts
+     count);
+   - isn't named under `## Held`;
+   - has every `After T-m` already in Done on main;
+   - hasn't been attempted tonight.
+
+   Headings without an ID are never picked, and the log lists them.
+3. **Fewer than two eligible**, so the planner runs (see "The roadmap and the
+   planner"). Its pull request is merged and deployed before the loop goes on.
+   It runs at most twice a night, and not again after a refusal.
+4. **Build the first eligible task**, in a subshell, so its exits end the task
+   and not the night:
+   - branch `overnight/auto-<date>-<time>-t-n` from the current main;
+   - the ignore checks, and `npm ci` if the lockfile moved;
+   - the baseline `npm run verify`, measured once per main commit;
+   - the agent;
+   - a retry for transient errors, a nudge to commit, and up to two fixes;
+   - verify, push, and a pull request (a draft if it's red);
+   - the gate;
+   - on a merge, the production check, and a revert if it fails.
+5. What the task's exit means (`outcome_for_exit`):
+
+| Task ended | Counts as | The loop |
+|---|---|---|
+| merged, production healthy | merged | goes on; the failure run resets |
+| the gate refused, PR left open | held | goes on to the next task, and tasks that are `After` it wait |
+| the agent replied `BLOCKED:` | blocked | goes on; the report names what it needs |
+| 69 (verify red, draft), 70 (agent failed or didn't finish), 78, or nothing done | failed | goes on; two in a row stop it |
+| 71 / 72 (reverted; revert failed) | reverted | stops |
+| 75 (usage or rate limit) | rate-limited | stops, no retry |
+| 64 / 65 / 66 | stop | stops |
+
+**One merge at a time.** A task returns only after its merge has deployed and
+been smoke-tested. The gate writes `merge-in-flight` before `gh pr merge`, and
+only a passing production check removes it. While the marker exists, gate
+condition h refuses any other merge and the loop starts no task.
+
+**The agent's time.** Each task gets the agent's 80 minutes plus verify's 25,
+counted from the moment the agent starts, and never runs past the hard stop
+minus 25 minutes. That leaves time for the checks wait and the production
+watch. Retries and fixes come out of the same budget.
+
+A transient failure gets one retry. That means the headless run exits
+non-zero with one of these in its last lines: `ENOTFOUND`, `ECONNRESET`,
+`ETIMEDOUT`, `EAI_AGAIN`, `ECONNREFUSED`, "socket hang up", "overloaded", or an
+API 5xx or 529. A **usage or rate limit** ("usage limit", "rate limit", 429,
+"limit reached" and so on) is checked first. It is never retried: the task
+ends with 75 and the night stops.
+
+### After the loop
+
+The report (below) is written, posted, and saved. The night exits with the
+worst code among 72, 71, 75 and 64–66, or **0**.
+
+### With `--dry-run`
+
+It prints the queue and the plan, and builds nothing:
+
+```
+WOULD WAIT: T-4, until T-1 is merged
+WOULD SKIP: T-1, its pull request #53 is open
+WOULD PLAN R-1 — … (from main)
+WOULD BUILD: T-2, T-3, new-task-from-R-1
+WOULD STOP BECAUSE: roadmap exhausted — needs Wesley
+```
+
+It assumes each task is merged or held; a failure, a revert, a limit or the
+clock can stop a real night sooner. It also says whether a run has started
+today. It then probes claude by having it write and commit a file on a scratch
+branch, and runs the gate against that commit. Last, it prints the NEEDS WESLEY
+list the report would carry.
+
+It pushes, posts, merges and comments on nothing. It neither reads nor writes
+`last-start`. It puts the checkout back where it found it. Run from a checkout
+whose main has no `docs/ROADMAP.md` yet, it reads the checkout's copy and says
+so.
 
 **It will never:**
 - push to `main`;
 - merge by any route but `merge_gate`, and there only with `gh pr merge`,
   never `--admin`;
 - merge a draft, a red PR, or anything touching a protected path;
+- merge while an earlier merge is unconfirmed in production;
+- edit `docs/ROADMAP.md`, or queue a task the roadmap doesn't name;
 - apply a migration from the script;
 - start on a dirty tree, abort someone else's rebase or merge, or delete
   `.git/index.lock`;
 - pass any `SUPABASE_*` or `RESEND_*` variable to the agent.
+
+## The roadmap and the planner
+
+`docs/ROADMAP.md` is the **only** source of new work. It is Wesley's, and it is
+a protected path, so the gate never merges a change to it. It has two lists:
+
+- **Ready to build**, items headed `### R-n — Title`, which need no decision;
+- **Needs Wesley first**, which the planner never reads as work.
+
+A `Status: DRAFT` line anywhere makes the planner refuse the whole file.
+
+When fewer than two tasks are eligible, `plan_one` does this:
+
+1. Exits as **draft** or **exhausted** if the roadmap is marked DRAFT, or has
+   no Ready item that isn't already a task. An item is already a task if some
+   task in `TASKS.md` has `Source: ROADMAP — R-n`.
+2. Exits as **refused** if an earlier planner pull request (`overnight/plan-*`)
+   is still open. It won't queue the same items twice.
+3. Hands the agent up to **three** Ready items, and up to **two** fixes for
+   pull requests that failed tonight. It gives each an ID one above anything
+   in use. Each task must have:
+   - a `Source: ROADMAP — R-n — Title` line (or `Source: FIX — #n`);
+   - a `Size: S|M|L` line;
+   - a **Done when** line.
+4. Runs `planner_check` on the result before anything is opened. It must hold
+   that:
+   - only `TASKS.md` changed, and no line was removed or rewritten;
+   - Done is unchanged;
+   - every new ID is new;
+   - every task names a Ready item that has no task yet, or a pull request
+     that failed tonight;
+   - there are at most three roadmap tasks and two fixes.
+
+   A plan that fails is not opened; the report says why.
+5. Opens the pull request (`plan: queue T-a T-b from ROADMAP`) and runs it
+   through the gate in **plan mode**. There, c) is `planner_check` itself, and
+   a) doesn't ask for local verify, since only `TASKS.md` changed. CI's
+   `verify` is still required, by b) and by branch protection. On a merge, it
+   waits for production like any other.
+
+If the roadmap has nothing Ready and nothing is eligible, the night stops with
+**"roadmap exhausted — needs Wesley"**.
+
+"T-fix" tasks are ordinary `### T-n` tasks whose title starts "Fix:" and whose
+source is `FIX — #n`, the pull request that failed. The ID stays numeric
+because every part of the runner agrees on `T-<number>`.
+
+## The nightly report
+
+At the end of every night that gets past the preflight, one report goes to:
+
+- a comment on the open issue **"Power Suite nightly reports"** in
+  `BigWez79/portaltest`. The first night creates the issue and pins it;
+- `~/Library/Logs/PowerAnalytix/nightly-report.md`, the same text.
+
+It has:
+- one line for each task tried, with its pull request: merged (with the live
+  check result), held (with the gate's reasons), failed, or blocked;
+- one line for each task skipped, and why: an open PR, waiting on a parent, or
+  under Held;
+- why the night stopped;
+- **NEEDS WESLEY**, a numbered list with the exact action for each item:
+  - every open pull request, however old. One with a migration reads "apply
+    `0012_margin_split.sql` in the Supabase SQL editor, then review and merge
+    …", and the protected paths and size are named;
+  - a draft to fix or close;
+  - a `BLOCKED:` task, and what it needs;
+  - the kill switch or an unconfirmed merge, with the command that clears it;
+  - a DRAFT or exhausted roadmap, naming the Needs Wesley first items;
+  - an installed runner or plist that doesn't match main, with the commands.
+
+If `gh` can't post, the file is still written and the log says so.
+
+## Never miss a night
+
+On 29 September at 23:01 the Mac restarted, with no clean shutdown recorded,
+and sat at the FileVault login screen. LaunchAgents don't run there, so the
+30th had no night. The catch-up makes that a late night rather than a lost one:
+
+- the overnight plist fires at **03:00**, at **12:30**, and **at load**, which
+  is every login and every bootstrap;
+- the first fire of a day that gets past the preflight runs a normal night,
+  with the three-hour window counted from its start;
+- every later fire that day exits **0** at once, before it touches the
+  repository or `gh`;
+- a dirty tree still exits **64** at every fire, and doesn't use up the day.
+
+**Loading the job starts a run** if none has started today. To bootstrap
+without one, mark the day first:
+
+```
+mkdir -p ~/.local/state/poweranalytix && date +%F > ~/.local/state/poweranalytix/last-start
+```
+
+`scripts/test-catch-up.sh` runs the real `overnight.sh` to check all of this.
+
+What the Mac itself does is reported here, not changed by the build. Read on
+30 September 2026 (macOS 27.0.1):
+
+| Setting | As found | Can it stop a night? |
+|---|---|---|
+| Install macOS updates (`AutomaticallyInstallMacOSUpdates`) | **off**. Download is on, and Security Responses and system files is on. | Not by itself. 27.0.1 was installed at 15:10 on the 30th, with a login password entered a minute before — not overnight. |
+| FileVault | **on** | Yes. After any restart nothing runs until someone logs in. The catch-up runs the night at that login. |
+| Automatic login | **off** (and macOS doesn't allow it with FileVault on) | That is the restart case above. |
+| `pmset -g sched` | nothing scheduled | No. `sleep 0`, so the Mac never sleeps and needs no wake. `autorestart 1` powers it back on after a power cut, to the login screen. |
 
 ## Auto-merge
 
@@ -125,7 +295,13 @@ under "Release".
 | e | No test file deleted; no `.only`, `.skip` or `.fixme` added; no fewer tests pass than on main | name-status, added lines in test files, and the baseline vs final verify counts |
 | f | Under 800 changed lines, excluding `TASKS.md`. A binary file counts as 800. | `git diff --numstat` |
 | g | The kill switch is off | `~/.config/poweranalytix/automerge-off` does not exist |
-| h | Nothing has merged yet that night | `~/.local/state/poweranalytix/last-merge` |
+| h | No earlier merge is still waiting for its production check. (This replaced "one merge a night" on 30 September.) | `~/.local/state/poweranalytix/merge-in-flight`, written just before `gh pr merge` and removed only when production passes |
+| i | At least 15 minutes left before the night's hard stop, to watch the deploy | the clock |
+
+The planner's pull requests go through the same gate in **plan mode**. There,
+c) is `planner_check`: only `TASKS.md` changes, lines are only added, and every
+new task names a Ready roadmap item or a PR that failed tonight. a) asks only
+that it isn't a draft. e) asks that no test file is touched.
 
 If every condition holds, the gate runs `gh pr merge <n> --squash --delete-branch`.
 If any fails, the PR stays open, gets a comment listing exactly which
@@ -141,7 +317,7 @@ They're listed in one place, `PROTECTED_PATHS` at the top of `overnight.sh`:
 - the runner and gate: `overnight.sh`, `deploy/**`, `scripts/**`;
 - `.github/**`, the Playwright config, `tests/harness.ts` and
   `tests/global-setup.ts`;
-- `CLAUDE.md` and `BLOCKED.md`;
+- `CLAUDE.md`, `BLOCKED.md` and `docs/ROADMAP.md`;
 - `package.json`, `package-lock.json`, `next.config.ts`, `tsconfig.json` and
   `vercel.json`;
 - `.env*` and `.gitignore`.
@@ -170,7 +346,7 @@ Nothing else needs changing. The gate reads the file on every run.
      push and open a PR;
    - merge it through the same gate in **revert mode**. There, c becomes "it
      touches exactly the paths the merge touched", e becomes "it restores
-     those files exactly", and h doesn't apply.
+     those files exactly", and h and i don't apply.
    - Then re-check production. If it's healthy → **exit 71**.
 4. **If any part of the revert fails:** the runner turns the kill switch on,
    comments on the PR, and exits **72**. Everything is left for a person.
@@ -182,6 +358,11 @@ Nothing else needs changing. The gate reads the file on every run.
 | 71 | Merged, production failed its check, the merge was reverted through the gate, and production is healthy again |
 | 72 | Merged, production failed, and the revert could not be completed. The kill switch is **on**. |
 | 70 | Also used now when the agent ends without committing and its files are published as a draft |
+| 75 | Claude reported a usage or rate limit. The night stopped cleanly, with no retry. |
+
+Since 30 September these are what one **task** ends with, inside the loop.
+The night's own exit is the worst of 72, 71, 75 and 64–66, or 0. The report
+says which task ended how.
 
 ## staging-keepalive.sh
 
@@ -228,12 +409,17 @@ allows `overnight/*` branches only. To attach at the Mac: `tmux attach -t suite`
 
 ## Where a person is required
 
+The nightly report's NEEDS WESLEY list is this section, filled in for the
+night.
+
+- **The roadmap.** Writing `docs/ROADMAP.md`, answering its "Needs Wesley
+  first" items, and deleting the `Status: DRAFT` line. The machine never edits
+  it.
 - **Merging** whatever the gate refuses: drafts, protected paths, anything
-  over the size limit, a second PR in one night, and every PR while the kill
-  switch is on. A PR that touches `CLAUDE.md` or `BLOCKED.md` is always merged
+  over the size limit, and every PR while the kill switch is on. A PR that touches `CLAUDE.md` or `BLOCKED.md` is always merged
   by a person.
 - **Removing the kill switch** after an exit 72, once production has been
-  looked at.
+  looked at. Likewise `merge-in-flight`, if a merge was never confirmed.
 - **Migrations.** They are written and committed by the machine. A person
   applies them by typing `! supabase db push` themselves.
 - **Secrets.** Creating and rotating keys, putting them in Vercel, and putting
@@ -241,9 +427,9 @@ allows `overnight/*` branches only. To attach at the Mac: `tmux attach -t suite`
 - **DNS and SMTP.** GoDaddy DNS, the domain cutover, and Supabase Auth's SMTP.
 - **Supabase project settings.** Signups, autoconfirm, redirect URLs, email
   templates, and unpausing a paused project.
-- **This Mac.** Typing the FileVault password after a power cut, re-running
-  `deploy/install.sh` after a merge that changes `deploy/` or `overnight.sh`,
-  and loading or unloading jobs.
+- **This Mac.** Typing the FileVault password after a power cut (the night
+  then runs as a catch-up), re-running `deploy/install.sh` after a merge that
+  changes `deploy/` or `overnight.sh`, and loading or unloading jobs.
 - **`BLOCKED:` nights.** Nothing moves until someone does what the task needs.
 
 ## Known gaps
@@ -267,7 +453,17 @@ allows `overnight/*` branches only. To attach at the Mac: `tmux attach -t suite`
   directory-only pattern. The Mac Studio has `.tmp` in `.git/info/exclude` to
   cover it; any other checkout doesn't.
 - **The installed copy is what runs.** A merge that changes `deploy/` or
-  `overnight.sh` has no effect until `deploy/install.sh` is re-run. Nothing
-  detects the drift.
+  `overnight.sh` has no effect until `deploy/install.sh` is re-run. The night
+  now notices the drift and puts it in the report, but it doesn't fix it.
+- **The planner's tasks are only as good as the roadmap's items.**
+  `planner_check` proves each task names a Ready item. It can't prove the task
+  says the same thing as the item. The planner is told not to widen an item,
+  and nothing enforces that. Read the planner's PRs, which are small.
+- **A task that fails leaves its branch.** A failure before the push (agent
+  timeout, rate limit) leaves its commits on a local `overnight/auto-*` branch
+  that nobody will see. The report names it.
+- **The catch-up's clock is its own.** A run that starts at 12:30 builds until
+  15:30 and deploys to production in working hours. That is the price of not
+  losing the night.
 - **Nothing structural stops the agent running `supabase db push`.** See
   `deploy/README.md`. Whether the CLI is logged in decides whether it could.

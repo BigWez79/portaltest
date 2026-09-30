@@ -90,6 +90,18 @@ received a 5xx. A test that expects a 404 declares it with
   the gate refuses waits for Wesley as before. This replaces the "the machine
   never merges" rule. An agent running inside the build never merges, never
   runs `gh pr merge`, and never decides whether anything merges.
+- **Decided by Wesley, 30 September 2026:** a night keeps building until it
+  reaches something only Wesley can do.
+  - It builds task after task.
+  - Merges happen strictly one at a time: each is deployed and smoke-tested
+    before the next task starts.
+  - A refused pull request waits for Wesley, and the loop goes on without it.
+  - New work comes only from `docs/ROADMAP.md`, "Ready to build". That list is
+    Wesley's and a protected path. **Nothing running in the build edits it,
+    and nothing queues a task it does not name.**
+  - Each night ends with one report that says what needs Wesley.
+
+  `BLOCKED.md`, "Release", has the rule. `docs/OPERATIONS.md` has how it works.
 - Leave nothing uncommitted. Check `git stash list` before reporting done —
   swept-up work never reaches the pull request.
 - Anything a tool generates gets added to `.gitignore` **before** it is
@@ -138,6 +150,10 @@ scripts/import-staff.ts         one-off CSV import; not part of running the app
 scripts/check-bundle-secrets.mjs post-build scan of what a browser receives
 supabase/migrations/            written by the machine, applied by a person
 docs/PORTING-APPS.md            how the other three apps are folded in
+docs/ROADMAP.md                 Wesley's list — the only source of new work
+docs/OPERATIONS.md              how the scheduled jobs decide, and where a person is needed
+overnight.sh                    the nightly loop: build, gate, merge, report
+deploy/night-loop.sh            the loop's decisions: eligibility, stops, the planner check
 tests/                          Playwright; fixture staff data, no live services
 ```
 

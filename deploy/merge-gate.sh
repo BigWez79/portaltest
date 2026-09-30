@@ -13,7 +13,8 @@
 # change the gate that judges it — and deploy/** is a protected path besides.
 #
 # Needs PROTECTED_PATHS (an array of globs, defined at the top of overnight.sh)
-# and KILL_SWITCH (a path) to be set by whoever sources it.
+# and KILL_SWITCH (a path) to be set by whoever sources it, and night-loop.sh
+# sourced for plan mode (planner_check).
 
 # The size limit, excluding TASKS.md. A binary file counts as the whole limit on
 # its own: its line count is unknown, and unknown is not small.
@@ -51,6 +52,10 @@ gate_collect() {
   G_NUMSTAT="$(git diff --no-renames --numstat "$base...$head")"
   G_TASKS_BASE="$(git show "$base:TASKS.md" 2>/dev/null || true)"
   G_TASKS_HEAD="$(git show "$head:TASKS.md" 2>/dev/null || true)"
+  # Lines of TASKS.md removed or rewritten. A planner branch must have none.
+  # From numstat, not by grepping the patch for "-": a deleted line that
+  # itself starts with "-" (every Done entry, every checkbox) looks like "--".
+  G_TASKS_DELETED="$(git diff --no-renames --numstat "$base...$head" -- TASKS.md | awk '{ d += $2 } END { print d + 0 }')"
   # Added lines in test files only, without the leading '+'.
   local f added=""
   while IFS= read -r f; do
@@ -64,8 +69,9 @@ EOF
   G_TEST_ADDED="$added"
 }
 
-# gate_evaluate MODE — MODE is "task" (a night's work) or "revert" (undoing a
-# merge that broke production). Prints one line per condition and sets
+# gate_evaluate MODE — MODE is "task" (a night's work), "plan" (the planner
+# queueing roadmap items in TASKS.md) or "revert" (undoing a merge that broke
+# production). Prints one line per condition and sets
 # GATE_FAILURES to the failed ones, one per line. Returns 0 only if every
 # condition that was evaluated passed; a condition set to "skip" (the dry run
 # has no PR and runs no verify) is shown and left out of the verdict.
@@ -77,7 +83,10 @@ EOF
 #   G_TASK_ID        the ID this run was given (task mode)
 #   G_PASSED_HEAD    passing tests on the final commit
 #   G_PASSED_BASE    passing tests on main, measured before the agent ran
-#   G_MERGED_TODAY   1 if this night has already merged something
+#   G_MERGE_IN_FLIGHT 1 if an earlier merge has not yet passed its production
+#                    check (the marker file exists)
+#   G_TIME_OK        1 | 0 | skip   enough of the night left to watch a deploy
+#   G_ROADMAP, G_FIX_REFS           plan mode: see planner_check
 #   G_REVERT_PATHS   revert mode: the paths the reverted merge touched
 #   G_REVERT_EXACT   revert mode: 1 if those paths now match the pre-merge tree
 #   plus G_NAMES, G_NAME_STATUS, G_NUMSTAT, G_TASKS_BASE, G_TASKS_HEAD and
@@ -96,8 +105,16 @@ gate_evaluate() {
     fi
   }
 
-  # a) verified locally, and not a draft
-  if [ "${G_VERIFY_OK:-0}" = "skip" ]; then
+  # a) verified locally, and not a draft. A planner branch changes TASKS.md
+  #    and nothing else (c holds it to that), so it has nothing to verify
+  #    locally; b still needs CI's verify, which main's protection requires.
+  if [ "$mode" = "plan" ]; then
+    if [ "${G_IS_DRAFT:-1}" = "1" ]; then
+      _gate_line a FAIL "the pull request is a draft"
+    else
+      _gate_line a ok "not a draft (a TASKS.md-only planner branch is verified by CI, in b)"
+    fi
+  elif [ "${G_VERIFY_OK:-0}" = "skip" ]; then
     _gate_line a skip "local verify (not run in a dry run)"
   elif [ "${G_VERIFY_OK:-0}" != "1" ]; then
     _gate_line a FAIL "local npm run verify did not pass on the final commit"
@@ -115,8 +132,15 @@ gate_evaluate() {
   esac
 
   # c) exactly one task, moved to Done — or, for a revert, exactly the paths of
-  #    the merge it undoes
-  if [ "$mode" = "revert" ]; then
+  #    the merge it undoes — or, for the planner, only roadmap items and
+  #    tonight's fixes, added to TASKS.md and nothing else
+  if [ "$mode" = "plan" ]; then
+    if planner_check; then
+      _gate_line c ok "the planner only added tasks from ROADMAP.md's Ready to build (or tonight's fixes)"
+    else
+      _gate_line c FAIL "$(printf '%s' "$PLAN_PROBLEMS" | sed '/^$/d' | paste -sd ';' - | sed 's/;/; /g')"
+    fi
+  elif [ "$mode" = "revert" ]; then
     local want got
     want="$(printf '%s\n' "$G_REVERT_PATHS" | sed '/^$/d' | sort -u)"
     got="$(printf '%s\n' "$G_NAMES" | sed '/^$/d' | sort -u)"
@@ -162,7 +186,19 @@ EOF
   # e) tests not weakened. A revert is exempt from the deletion and count
   #    checks — undoing a change removes the tests it added — and is held
   #    instead to restoring the pre-merge files exactly.
-  if [ "$mode" = "revert" ]; then
+  if [ "$mode" = "plan" ]; then
+    local tests_touched=""
+    while IFS= read -r p; do
+      [ -n "$p" ] && gate_is_test_file "$p" && tests_touched="$tests_touched $p"
+    done <<EOF
+$G_NAMES
+EOF
+    if [ -n "$tests_touched" ]; then
+      _gate_line e FAIL "a planner branch touches tests:$tests_touched"
+    else
+      _gate_line e ok "no test file touched"
+    fi
+  elif [ "$mode" = "revert" ]; then
     if [ "${G_REVERT_EXACT:-0}" = "1" ]; then
       _gate_line e ok "the revert restores the pre-merge files exactly"
     else
@@ -217,15 +253,26 @@ EOF
     _gate_line g ok "kill switch is off"
   fi
 
-  # h) one merge a night. A revert is the exception: it is the undoing of that
-  #    one merge, not a second piece of work.
+  # h) one merge at a time. Before a merge the runner writes a marker; only a
+  #    passing production check removes it. While it exists, nothing else
+  #    merges — the one exception is the revert of that very merge. This
+  #    replaced "one merge a night" on 30 September 2026: a night may merge
+  #    several times, but never two that production has not seen one by one.
   if [ "$mode" = "revert" ]; then
-    _gate_line h ok "a revert is not counted against the one merge a night"
-  elif [ "${G_MERGED_TODAY:-0}" = "1" ]; then
-    _gate_line h FAIL "this night has already merged a pull request"
+    _gate_line h ok "a revert undoes the merge in flight; it is not a second one"
+  elif [ "${G_MERGE_IN_FLIGHT:-0}" = "1" ]; then
+    _gate_line h FAIL "an earlier merge has not passed its production check yet"
   else
-    _gate_line h ok "nothing merged yet tonight"
+    _gate_line h ok "no earlier merge is waiting for its production check"
   fi
+
+  # i) time to watch it. A merge is followed by up to 15 minutes of waiting
+  #    for production; a night that cannot give it that does not merge.
+  case "${G_TIME_OK:-0}" in
+    skip) _gate_line i skip "time left (not measured in a dry run)" ;;
+    1)    _gate_line i ok "enough of the night left to watch the deploy" ;;
+    *)    _gate_line i FAIL "under 15 minutes before the night's hard stop — no time to watch the deploy" ;;
+  esac
 
   return "$verdict"
 }

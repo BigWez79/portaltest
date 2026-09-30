@@ -85,12 +85,27 @@
          two headless Claude runs and two Playwright suites at once would
          contend for CPU and make both nights slower and less predictable.
          TASKS.md already measures its own tasks against "something working
-         alone at 3am", so this is the hour the queue was written for. -->
+         alone at 3am", so this is the hour the queue was written for.
+
+         12:30 is the catch-up, added 30 September 2026. On the 30th the Mac
+         restarted overnight and sat at the FileVault login screen, where no
+         LaunchAgent runs, and the night was lost. launchd runs a missed
+         calendar fire on wake, but not for a user who is not logged in.
+         So the job also fires at 12:30 and at load (below), and overnight.sh
+         runs only if no run has started today (already_started_today in
+         deploy/night-loop.sh) — every other fire exits 0 at once. A catch-up
+         gets the same three hours as a night, from when it starts. -->
     <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key><integer>3</integer>
-        <key>Minute</key><integer>0</integer>
-    </dict>
+    <array>
+        <dict>
+            <key>Hour</key><integer>3</integer>
+            <key>Minute</key><integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key><integer>12</integer>
+            <key>Minute</key><integer>30</integer>
+        </dict>
+    </array>
 
     <key>WorkingDirectory</key>
     <string>/Users/wesleyhughes/portal</string>
@@ -107,11 +122,15 @@
     <key>StandardErrorPath</key>
     <string>/Users/wesleyhughes/Library/Logs/PowerAnalytix/overnight.err.log</string>
 
-    <!-- Never at load: bootstrapping this job should not kick off a run that
-         commits code. If the Mac is asleep at 03:00, launchd runs it on wake
-         rather than skipping the night. -->
+    <!-- At load, since 30 September 2026: a login after a restart is exactly
+         when a lost night should be caught up. This used to be false, so that
+         bootstrapping would not start a run that commits code — and it still
+         WILL start one, at bootstrap, if no run has started today. To load it
+         without that, first mark today as started:
+           mkdir -p ~/.local/state/poweranalytix && date +%F > ~/.local/state/poweranalytix/last-start
+         If the Mac is asleep at 03:00, launchd runs the missed fire on wake. -->
     <key>RunAtLoad</key>
-    <false/>
+    <true/>
     <key>ProcessType</key>
     <string>Background</string>
 </dict>

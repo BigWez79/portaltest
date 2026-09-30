@@ -69,9 +69,34 @@ request. Do not work around an item on this list, and do not re-queue one.
   - no test was deleted or skipped, and no fewer pass than on main;
   - fewer than 800 lines changed;
   - the kill switch `~/.config/poweranalytix/automerge-off` is absent;
-  - nothing has merged yet that night.
+  - no earlier merge is still waiting for its production check;
+  - at least 15 minutes remain before the night's hard stop.
 
-  `docs/OPERATIONS.md`, "Auto-merge", has the rest.
+  **Decided by Wesley, 30 September 2026:** a night is a loop, not one task.
+  It builds task after task until it reaches something only Wesley can do.
+  Merges happen strictly one at a time: each one is deployed and smoke-tested
+  before the next task starts, and a refused pull request waits for Wesley
+  while the loop goes on. This replaces "one merge a night".
+
+  The loop stops at the first of these:
+  - no eligible task is left;
+  - 06:00, or a catch-up's cutoff;
+  - six tasks attempted;
+  - two failures in a row;
+  - the kill switch;
+  - a revert;
+  - a usage or rate limit.
+
+  New work comes only from `docs/ROADMAP.md`, "Ready to build". It is
+  Wesley's list, and it is a protected path. The planner turns items from it
+  into tasks through its own `TASKS.md`-only pull request. The gate checks, in
+  plan mode, that every task it adds names a roadmap item.
+
+  Every night ends with one report, a comment on the pinned issue "Power Suite
+  nightly reports". It ends with what needs Wesley.
+
+  `docs/OPERATIONS.md` has the rest: "Auto-merge", "The roadmap and the
+  planner", "The nightly report" and "Never miss a night".
 
   Green is still structural rather than a promise: `main` requires the `verify`
   check, so a red pull request cannot be merged by anyone. If that protection

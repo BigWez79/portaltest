@@ -1,8 +1,10 @@
 # Queue
 
-Read top to bottom, one task per run, one commit per task. Move a finished task
-to **Done** with the branch name beside it. Anything in **Held** needs a person
-and must not be picked up.
+Read top to bottom. The nightly run works through this in a loop, one branch
+and one pull request per task, until it reaches something only Wesley can do.
+Move a finished task to **Done** with the branch name beside it. Anything in
+**Held** needs a person and must not be picked up, and an ID named under Held
+is skipped even if it is still in Next up.
 
 Every "done when" here is meant to be checkable by something working alone at
 3am. If one is not, it is a bad task — say so in the pull request rather than
@@ -13,6 +15,22 @@ ID that is never reused. The 03:00 run picks the first ID, reading top to bottom
 that no open `overnight/auto-*` pull request is already building. A heading
 without an ID is never picked, and the run's log says so. When a task moves to
 Done, its entry keeps the ID, as in `- **T-<n> — Title** — overnight/auto-…`.
+
+A line `After T-<m>` in a task makes it wait until T-<m> is in Done on main.
+The task below it can still be built in the meantime.
+
+New tasks come only from `docs/ROADMAP.md`. The planner adds them at the end
+of "Next up — new work", in this shape, and the merge gate refuses any that
+lack a Source:
+
+    ### T-<n> — Title
+
+    Source: ROADMAP — R-<m> — Title      (or: Source: FIX — #<pr that failed tonight>)
+    Size: S | M | L — why
+
+    - [ ] criteria a script can check at 3am
+
+    **Done when** …
 
 ---
 
